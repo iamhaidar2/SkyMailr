@@ -17,7 +17,7 @@ services:
 
   web:
     build: .
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    command: gunicorn -c gunicorn.conf.py config.wsgi:application
     env_file: .env
     environment:
       DATABASE_URL: postgres://skymailr:skymailr@db:5432/skymailr

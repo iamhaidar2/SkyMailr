@@ -21,6 +21,7 @@ RUN python manage.py collectstatic --noinput
 
 ENV DJANGO_SETTINGS_MODULE=config.settings.production
 
+# Railway sets PORT at runtime — gunicorn.conf.py binds to $PORT (defaults to 8000 locally).
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "config.wsgi:application"]

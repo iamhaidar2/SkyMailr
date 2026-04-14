@@ -76,8 +76,11 @@ docker compose up --build
 
 - Set `DATABASE_URL`, `REDIS_URL`, `DJANGO_SECRET_KEY`, `ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE=config.settings.production`.
 - Run release phase: `python manage.py migrate`.
-- Web: `gunicorn config.wsgi:application`; worker: `celery -A config worker`; beat: `celery -A config beat`.
+- Web: `gunicorn -c gunicorn.conf.py config.wsgi:application` (Dockerfile uses this). Worker: `celery -A config worker`; beat: `celery -A config beat`.
 - **Unset** `DATABASE_URL` locally if you are not using Postgres to avoid connection stalls.
+- **502 Bad Gateway**: Railway injects **`PORT`**; the process must listen on `0.0.0.0:$PORT`. This repo’s `gunicorn.conf.py` does that. Do **not** hardcode `--bind 0.0.0.0:8000` in production.
+- Set **`ALLOWED_HOSTS`** to your real hostname(s), e.g. `skymailr.com,www.skymailr.com` (comma-separated). Optionally add **`ALLOWED_HOSTS_EXTRA`** for preview URLs without replacing the main list.
+- Prefer health checks on **`/api/v1/health/`** (lightweight) rather than heavy endpoints.
 
 ## Source-app client
 
