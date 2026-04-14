@@ -1,0 +1,49 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-10">
+  {% if no_tenant %}
+    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">Create a tenant (admin) and select it in the top bar.</div>
+  {% endif %}
+
+  <section class="rounded-xl border border-surface-600 bg-surface-850 p-6">
+    <h2 class="text-lg font-semibold text-white">Send raw email</h2>
+    <p class="mt-1 text-sm text-slate-500">HTML + optional plain text. Uses your active tenant.</p>
+    <form method="post" action="{% url 'ui:send_raw' %}" class="mt-6 space-y-4">
+      {% csrf_token %}
+      <div class="grid gap-4 md:grid-cols-2">
+        <div><label class="mb-1 block text-xs text-slate-500">Source app</label>{{ raw_form.source_app }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">Message type</label>{{ raw_form.message_type }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">To email</label>{{ raw_form.to_email }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">To name</label>{{ raw_form.to_name }}</div>
+      </div>
+      <div><label class="mb-1 block text-xs text-slate-500">Subject</label>{{ raw_form.subject }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">HTML body</label>{{ raw_form.html_body }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Text body</label>{{ raw_form.text_body }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Metadata (JSON)</label>{{ raw_form.metadata }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Idempotency key</label>{{ raw_form.idempotency_key }}</div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50" {% if no_tenant %}disabled{% endif %}>Send raw</button>
+    </form>
+  </section>
+
+  <section class="rounded-xl border border-surface-600 bg-surface-850 p-6">
+    <h2 class="text-lg font-semibold text-white">Send templated email</h2>
+    <p class="mt-1 text-sm text-slate-500">Requires an approved template version for the template key.</p>
+    <form method="post" action="{% url 'ui:send_template' %}" class="mt-6 space-y-4">
+      {% csrf_token %}
+      <div class="grid gap-4 md:grid-cols-2">
+        <div><label class="mb-1 block text-xs text-slate-500">Template key</label>{{ tpl_form.template_key }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">Message type</label>{{ tpl_form.message_type }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">To email</label>{{ tpl_form.to_email }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">To name</label>{{ tpl_form.to_name }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">Source app</label>{{ tpl_form.source_app }}</div>
+        <div><label class="mb-1 block text-xs text-slate-500">Scheduled for</label>{{ tpl_form.scheduled_for }}</div>
+      </div>
+      <div><label class="mb-1 block text-xs text-slate-500">Context (JSON)</label>{{ tpl_form.context }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Metadata (JSON)</label>{{ tpl_form.metadata }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Tags (JSON)</label>{{ tpl_form.tags }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Idempotency key</label>{{ tpl_form.idempotency_key }}</div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50" {% if no_tenant %}disabled{% endif %}>Send templated</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

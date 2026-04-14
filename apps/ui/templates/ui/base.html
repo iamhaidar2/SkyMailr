@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title|default:"SkyMailr" }}{% endblock %} · SkyMailr</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+  <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfWcE+56OXyC/gDTBkIyqebyRwiDBnUBwo0Toe0Uewjx+kjDormAR7r5" crossorigin="anonymous"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-surface-900 text-slate-200">
+  <div class="flex min-h-screen">
+    {% include "ui/partials/sidebar.html" %}
+    <div class="flex min-w-0 flex-1 flex-col">
+      {% include "ui/partials/topbar.html" %}
+      <main class="flex-1 overflow-auto p-6 lg:p-8">
+        {% if messages %}
+          <div class="mb-6 space-y-2">
+            {% for message in messages %}
+              <div class="rounded-lg border px-4 py-3 text-sm {% if message.tags == 'success' %}border-emerald-800 bg-emerald-950/50 text-emerald-200{% elif message.tags == 'error' %}border-red-800 bg-red-950/50 text-red-200{% elif message.tags == 'warning' %}border-amber-800 bg-amber-950/50 text-amber-200{% else %}border-surface-600 bg-surface-800 text-slate-300{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

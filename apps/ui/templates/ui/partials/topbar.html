@@ -1,0 +1,32 @@
+<header class="flex items-center justify-between gap-4 border-b border-surface-600 bg-surface-850/80 px-4 py-3 backdrop-blur lg:px-6">
+  <div class="flex min-w-0 items-center gap-3">
+    <button type="button" class="rounded-md p-2 text-slate-400 hover:bg-surface-800 lg:hidden" aria-label="Open menu">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="min-w-0">
+      <h1 class="truncate text-base font-semibold text-white lg:text-lg">{{ page_title|default:"SkyMailr" }}</h1>
+      {% block breadcrumbs %}{% endblock %}
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    {% if user.is_authenticated %}
+      <form action="{% url 'ui:switch_tenant' %}" method="post" class="flex items-center gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <label class="sr-only" for="tenant-switch">Tenant</label>
+        <select id="tenant-switch" name="tenant_id" class="max-w-[200px] rounded-md border border-surface-600 bg-surface-800 px-2 py-1.5 text-sm text-white focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent" onchange="this.form.submit()">
+          {% for t in operator_tenants %}
+            <option value="{{ t.id }}" {% if active_tenant and active_tenant.id == t.id %}selected{% endif %}>{{ t.name }}</option>
+          {% empty %}
+            <option value="">No tenants</option>
+          {% endfor %}
+        </select>
+      </form>
+      <span class="hidden text-sm text-slate-500 sm:inline">{{ user.username }}</span>
+      <form action="{% url 'ui:logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-surface-800">Log out</button>
+      </form>
+    {% endif %}
+  </div>
+</header>

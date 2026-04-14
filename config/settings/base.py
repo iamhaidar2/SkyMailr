@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "apps.llm",
     "apps.providers",
     "apps.api",
+    "apps.ui",
 ]
 
 MIDDLEWARE = [
@@ -94,6 +95,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
 
 # --- Redis / Celery ---
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")

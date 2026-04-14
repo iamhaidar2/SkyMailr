@@ -1,0 +1,19 @@
+<aside class="hidden w-56 shrink-0 flex-col border-r border-surface-600 bg-surface-850 lg:flex">
+  <div class="border-b border-surface-600 px-4 py-4">
+    <a href="{% url 'ui:dashboard' %}" class="text-lg font-semibold tracking-tight text-white">SkyMailr</a>
+    <p class="mt-1 text-xs text-slate-500">Operator</p>
+  </div>
+  <nav class="flex-1 space-y-0.5 overflow-y-auto p-3">
+    {% for item in nav_items %}
+      <a href="{{ item.url }}"
+         class="flex items-center rounded-md px-3 py-2 text-sm font-medium transition
+                {% if nav_active == item.name %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800 hover:text-white{% endif %}">
+        {{ item.label }}
+      </a>
+    {% endfor %}
+  </nav>
+  <div class="border-t border-surface-600 p-3 text-xs text-slate-500">
+    <a href="/admin/" class="block py-1 hover:text-slate-300">Django admin</a>
+    <a href="/api/v1/health/" class="block py-1 hover:text-slate-300">API health</a>
+  </div>
+</aside>

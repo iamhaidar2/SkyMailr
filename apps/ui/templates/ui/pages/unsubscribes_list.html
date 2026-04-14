@@ -1,0 +1,23 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-5xl overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+  <table class="min-w-full text-left text-sm">
+    <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+      <tr><th class="px-4 py-2">Email</th><th class="px-4 py-2">Tenant</th><th class="px-4 py-2">Channel</th><th class="px-4 py-2">Source</th><th class="px-4 py-2">When</th></tr>
+    </thead>
+    <tbody class="divide-y divide-surface-700">
+      {% for r in rows %}
+        <tr>
+          <td class="px-4 py-2">{{ r.email }}</td>
+          <td class="px-4 py-2">{{ r.tenant.slug }}</td>
+          <td class="px-4 py-2">{{ r.channel }}</td>
+          <td class="px-4 py-2 text-slate-500">{{ r.source|default:"—" }}</td>
+          <td class="px-4 py-2 text-slate-500">{{ r.created_at }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="px-4 py-10 text-center text-slate-500">No unsubscribe records.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

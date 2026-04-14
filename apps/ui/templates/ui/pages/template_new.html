@@ -1,0 +1,14 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-lg">
+  <h2 class="text-xl font-semibold text-white">New template shell</h2>
+  <p class="mt-1 text-sm text-slate-500">Creates a draft template for the active tenant. Add versions via studio or admin.</p>
+  <form method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    {% for field in form %}
+      <div><label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="mt-1 text-xs text-slate-600">{{ field.help_text }}</p>{% endif %}</div>
+    {% endfor %}
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Create</button>
+  </form>
+</div>
+{% endblock %}

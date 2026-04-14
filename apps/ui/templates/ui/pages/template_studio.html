@@ -1,0 +1,24 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+  <div>
+    <h2 class="text-2xl font-semibold text-white">Template studio</h2>
+    <p class="mt-2 text-sm text-slate-400">LLM-assisted drafts only — nothing is sent until you approve and trigger sends elsewhere.</p>
+  </div>
+  {% if no_tenant %}
+    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">Select a tenant in the top bar.</div>
+  {% endif %}
+  <form method="post" class="space-y-5">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label class="mb-1 block text-xs font-medium text-slate-500" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="mt-1 text-xs text-slate-600">{{ field.help_text }}</p>{% endif %}
+        {% for e in field.errors %}<p class="text-xs text-red-400">{{ e }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="rounded-md bg-violet-600 px-5 py-2.5 text-sm font-medium text-white disabled:opacity-40" {% if no_tenant %}disabled{% endif %}>Generate draft</button>
+  </form>
+</div>
+{% endblock %}

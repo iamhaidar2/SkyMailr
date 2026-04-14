@@ -1,0 +1,62 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-8">
+  <div>
+    <p class="text-xs text-slate-500">{{ template.tenant.slug }}</p>
+    <h2 class="text-2xl font-semibold text-white">{{ template.name }}</h2>
+    <p class="font-mono text-sm text-slate-400">{{ template.key }}</p>
+    <p class="mt-2 text-sm text-slate-400">{{ template.description }}</p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Versions</h3>
+    <div class="mt-4 overflow-x-auto">
+      <table class="min-w-full text-left text-sm">
+        <thead class="text-xs text-slate-500"><tr><th class="py-1">#</th><th>Source</th><th>Approval</th><th>Current</th><th>Created</th></tr></thead>
+        <tbody>
+          {% for v in versions %}
+            <tr class="border-t border-surface-700">
+              <td class="py-2">{{ v.version_number }}</td>
+              <td>{{ v.get_source_type_display }}</td>
+              <td>{{ v.get_approval_status_display }}</td>
+              <td>{% if v.is_current_approved %}✓{% else %}—{% endif %}</td>
+              <td class="text-slate-500">{{ v.created_at }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h3 class="text-sm font-semibold text-white">Preview with context</h3>
+      <form method="post" action="{% url 'ui:template_preview' template.id %}" class="mt-4 space-y-3">
+        {% csrf_token %}
+        <div><label class="text-xs text-slate-500">Context JSON</label>{{ preview_form.context }}</div>
+        <button type="submit" class="rounded-md bg-surface-700 px-4 py-2 text-sm text-white">Render preview</button>
+      </form>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h3 class="text-sm font-semibold text-white">Revise with LLM</h3>
+      <form method="post" action="{% url 'ui:template_revise' template.id %}" class="mt-4 space-y-3">
+        {% csrf_token %}
+        <div><label class="text-xs text-slate-500">Instructions</label>{{ revise_form.instructions }}</div>
+        <button type="submit" class="rounded-md bg-violet-600 px-4 py-2 text-sm text-white">Create revised draft</button>
+      </form>
+    </div>
+  </div>
+
+  <form method="post" action="{% url 'ui:template_approve' template.id %}" class="rounded-xl border border-emerald-900 bg-emerald-950/30 p-5">
+    {% csrf_token %}
+    {{ approve_form.note }}
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-semibold text-emerald-200">Approve latest version</h3>
+        <p class="text-xs text-emerald-700/80">Makes this version the active one for sending.</p>
+      </div>
+      <button type="submit" class="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Approve</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

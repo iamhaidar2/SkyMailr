@@ -8,19 +8,20 @@ from rest_framework.views import APIView
 from apps.api.authentication import ApiTenantUser
 from apps.api.permissions import HasTenant
 from apps.email_templates.models import (
-    ApprovalStatus,
     EmailTemplate,
     EmailTemplateVersion,
     TemplateRenderLog,
     TemplateStatus,
 )
 from apps.email_templates.services.llm_service import TemplateLLMService
+from apps.email_templates.services.version_actions import approve_latest_version
 from apps.email_templates.services.render_service import render_email_version, TemplateRenderError
 from apps.email_templates.services.validation_service import TemplateValidationService
 from apps.llm.schemas import TemplateGenerationBriefSchema
 from apps.messages.models import IdempotencyKeyRecord, OutboundMessage, OutboundStatus
 from apps.messages.services.idempotency import hash_idempotency_key
 from apps.messages.services.send_pipeline import create_raw_message, create_templated_message
+from apps.messages.services.message_actions import cancel_outbound_message, retry_outbound_message
 from apps.messages.tasks import dispatch_message_task
 from apps.providers.registry import get_email_provider
 from apps.providers.webhook_service import ProviderWebhookService
@@ -175,12 +176,10 @@ class MessageRetryView(APIView):
     def post(self, request, uuid):
         tenant = _tenant(request)
         msg = get_object_or_404(OutboundMessage, pk=uuid, tenant=tenant)
-        if msg.status not in (OutboundStatus.FAILED, OutboundStatus.DEFERRED):
-            return Response({"detail": "Not retryable"}, status=400)
-        msg.status = OutboundStatus.QUEUED
-        msg.next_retry_at = None
-        msg.save(update_fields=["status", "next_retry_at", "updated_at"])
-        dispatch_message_task.delay(str(msg.id))
+        try:
+            retry_outbound_message(msg)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
         return Response(OutboundMessageSerializer(msg).data)
 
 
@@ -190,14 +189,10 @@ class MessageCancelView(APIView):
     def post(self, request, uuid):
         tenant = _tenant(request)
         msg = get_object_or_404(OutboundMessage, pk=uuid, tenant=tenant)
-        if msg.status not in (
-            OutboundStatus.QUEUED,
-            OutboundStatus.RENDERED,
-            OutboundStatus.DEFERRED,
-        ):
-            return Response({"detail": "Cannot cancel"}, status=400)
-        msg.status = OutboundStatus.CANCELLED
-        msg.save(update_fields=["status", "updated_at"])
+        try:
+            cancel_outbound_message(msg)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=400)
         return Response({"status": "cancelled"})
 
 
@@ -265,16 +260,10 @@ class TemplateApproveView(APIView):
         tpl = get_object_or_404(EmailTemplate, pk=template_id, tenant=tenant)
         ser = ApproveVersionSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        ver = tpl.versions.order_by("-version_number").first()
-        if not ver:
+        try:
+            ver = approve_latest_version(template=tpl)
+        except ValueError:
             return Response({"detail": "No version"}, status=400)
-        EmailTemplateVersion.objects.filter(template=tpl).update(is_current_approved=False)
-        ver.approval_status = ApprovalStatus.APPROVED
-        ver.approved_at = timezone.now()
-        ver.is_current_approved = True
-        ver.save(update_fields=["approval_status", "approved_at", "is_current_approved"])
-        tpl.status = TemplateStatus.ACTIVE
-        tpl.save(update_fields=["status", "updated_at"])
         return Response({"approved_version": str(ver.id)})
 
 

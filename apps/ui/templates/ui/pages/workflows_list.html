@@ -1,0 +1,42 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-8">
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-6">
+    <h2 class="text-lg font-semibold text-white">New workflow</h2>
+    <p class="mt-1 text-sm text-slate-500">Creates a workflow for your <strong>active tenant</strong> (top bar).</p>
+    <form method="post" action="{% url 'ui:workflow_new' %}" class="mt-4 flex flex-wrap items-end gap-3">
+      {% csrf_token %}
+      <div><label class="mb-1 block text-xs text-slate-500">Name</label>{{ create_form.name }}</div>
+      <div><label class="mb-1 block text-xs text-slate-500">Slug</label>{{ create_form.slug }}</div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Create</button>
+    </form>
+  </div>
+
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-4 py-2">Tenant</th>
+          <th class="px-4 py-2">Name</th>
+          <th class="px-4 py-2">Slug</th>
+          <th class="px-4 py-2">Steps</th>
+          <th class="px-4 py-2">Enrollments</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for w in workflows %}
+          <tr class="cursor-pointer hover:bg-surface-800/80" onclick="window.location='{% url 'ui:workflow_detail' w.id %}'">
+            <td class="px-4 py-2">{{ w.tenant.slug }}</td>
+            <td class="px-4 py-2 text-blue-400">{{ w.name }}</td>
+            <td class="px-4 py-2 font-mono text-slate-400">{{ w.slug }}</td>
+            <td class="px-4 py-2">{{ w.step_count }}</td>
+            <td class="px-4 py-2">{{ w.enrollment_count }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="px-4 py-10 text-center text-slate-500">No workflows yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

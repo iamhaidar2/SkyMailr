@@ -1,0 +1,10 @@
+{
+  "name": "skymailr",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./apps/ui/static/ui/src/input.css -o ./apps/ui/static/ui/css/app.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

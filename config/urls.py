@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 admin.site.site_header = "SkyMailr administration"
-from django.urls import path
+from django.urls import include, path
 
 from apps.api.v1.views import (
     CreateApiKeyView,
@@ -28,11 +28,10 @@ from apps.core.views import (
     empty_sitemap,
     internal_dashboard,
     noop_favicon,
-    service_root,
 )
 
 urlpatterns = [
-    path("", service_root, name="service_root"),
+    path("", include("apps.ui.urls")),
     path("favicon.ico", noop_favicon),
     path("sitemap.xml", empty_sitemap),
     path("admin/", admin.site.urls),

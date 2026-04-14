@@ -1,0 +1,20 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-4">
+  <p class="text-sm text-slate-500">Inbound provider webhooks (delivery events). Endpoint: <code class="text-slate-400">/api/v1/webhooks/provider/&lt;name&gt;/</code></p>
+  <div class="space-y-3">
+    {% for e in events %}
+      <details class="rounded-xl border border-surface-600 bg-surface-850">
+        <summary class="cursor-pointer px-4 py-3 text-sm text-white">
+          <span class="text-slate-500">{{ e.created_at }}</span>
+          · {{ e.provider }}
+          · {% if e.signature_valid %}<span class="text-emerald-400">signature ok</span>{% else %}<span class="text-amber-400">signature invalid / skipped</span>{% endif %}
+        </summary>
+        <pre class="max-h-64 overflow-auto border-t border-surface-700 p-4 text-xs text-slate-400">{{ e.raw_body|truncatechars:8000 }}</pre>
+      </details>
+    {% empty %}
+      <p class="text-center text-slate-500">No webhook events stored yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

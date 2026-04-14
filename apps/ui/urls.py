@@ -1,0 +1,86 @@
+from django.urls import path
+
+from apps.ui.views import (
+    dashboard,
+    messages_views,
+    ops_views,
+    root,
+    send_mail,
+    setup_view,
+    suppressions_views,
+    template_studio,
+    templates_views,
+    tenant_switch,
+    tenants_views,
+    workflows_views,
+)
+from apps.ui.views.auth_views import OperatorLoginView, OperatorLogoutView
+
+app_name = "ui"
+
+urlpatterns = [
+    path("", dashboard.dashboard, name="dashboard"),
+    path("service/", root.service_meta, name="service_meta"),
+    path("login/", OperatorLoginView.as_view(), name="login"),
+    path("logout/", OperatorLogoutView.as_view(), name="logout"),
+    path("switch-tenant/", tenant_switch.switch_tenant, name="switch_tenant"),
+    path("messages/", messages_views.messages_list, name="messages_list"),
+    path("messages/<uuid:message_id>/", messages_views.message_detail, name="message_detail"),
+    path(
+        "messages/<uuid:message_id>/retry/",
+        messages_views.message_retry,
+        name="message_retry",
+    ),
+    path(
+        "messages/<uuid:message_id>/cancel/",
+        messages_views.message_cancel,
+        name="message_cancel",
+    ),
+    path("send/", send_mail.send_email, name="send_email"),
+    path("send/raw/", send_mail.send_raw, name="send_raw"),
+    path("send/template/", send_mail.send_template, name="send_template"),
+    path("templates/", templates_views.templates_list, name="templates_list"),
+    path("templates/new/", templates_views.template_new, name="template_new"),
+    path("templates/<uuid:template_id>/", templates_views.template_detail, name="template_detail"),
+    path(
+        "templates/<uuid:template_id>/preview/",
+        templates_views.template_preview,
+        name="template_preview",
+    ),
+    path(
+        "templates/<uuid:template_id>/approve/",
+        templates_views.template_approve,
+        name="template_approve",
+    ),
+    path(
+        "templates/<uuid:template_id>/revise/",
+        templates_views.template_revise,
+        name="template_revise",
+    ),
+    path("template-studio/", template_studio.template_studio, name="template_studio"),
+    path("workflows/", workflows_views.workflows_list, name="workflows_list"),
+    path("workflows/new/", workflows_views.workflow_new, name="workflow_new"),
+    path("workflows/<uuid:workflow_id>/", workflows_views.workflow_detail, name="workflow_detail"),
+    path(
+        "workflows/<uuid:workflow_id>/enroll/",
+        workflows_views.workflow_enroll,
+        name="workflow_enroll",
+    ),
+    path(
+        "workflows/<uuid:workflow_id>/steps/",
+        workflows_views.workflow_add_step,
+        name="workflow_add_step",
+    ),
+    path("tenants/", tenants_views.tenants_list, name="tenants_list"),
+    path("tenants/<uuid:tenant_id>/", tenants_views.tenant_detail, name="tenant_detail"),
+    path(
+        "tenants/<uuid:tenant_id>/api-keys/",
+        tenants_views.tenant_create_api_key,
+        name="tenant_create_api_key",
+    ),
+    path("providers/health/", ops_views.provider_health, name="provider_health"),
+    path("webhooks/", ops_views.webhooks_list, name="webhooks_list"),
+    path("suppressions/", suppressions_views.suppressions_list, name="suppressions_list"),
+    path("unsubscribes/", suppressions_views.unsubscribes_list, name="unsubscribes_list"),
+    path("setup/", setup_view.setup, name="setup"),
+]

@@ -19,6 +19,7 @@ SkyMailr mirrors these names in `config/settings/base.py` and implements `get_ll
 | Layer | Responsibility |
 |--------|------------------|
 | **API** (`apps/api`) | DRF endpoints, tenant API key auth |
+| **Operator UI** (`apps/ui`) | Session-auth staff UI (Tailwind + HTMX); calls same services as the API |
 | **Orchestration** | Celery tasks: dispatch, retries, workflow ticks |
 | **Templates** (`apps/email_templates`) | Versioned templates, Jinja2 sandbox render, approval, LLM draft/revise services |
 | **Messages** (`apps/messages`) | Outbound queue, idempotency, events |
@@ -62,7 +63,11 @@ Health checks:
 - `GET /api/v1/health/`
 - `GET /api/v1/providers/health/`
 
-Internal dashboard (staff): `/internal/dashboard/`
+**Operator UI** (staff): sign in at `/login/`. Main app is at `/` (dashboard). Machine-readable service JSON: **`GET /service/`** (replaces the old JSON-only `/`). Legacy URL `/internal/dashboard/` redirects to the dashboard.
+
+For production HTTPS domains, set **`CSRF_TRUSTED_ORIGINS`** (e.g. `https://skymailr.com,https://www.skymailr.com`) so browser forms (login, send mail, etc.) work.
+
+**Frontend assets**: Tailwind builds to `apps/ui/static/ui/css/app.css`. After changing templates or `tailwind.config.js`, run `npm install` and `npm run build:css`, then commit the generated CSS (the Docker image does not run Node).
 
 ## Docker Compose
 

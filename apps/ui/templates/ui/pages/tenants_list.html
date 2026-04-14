@@ -1,0 +1,21 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl">
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+        <tr><th class="px-4 py-2">Name</th><th class="px-4 py-2">Slug</th><th class="px-4 py-2">Status</th></tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for t in tenants %}
+          <tr class="cursor-pointer hover:bg-surface-800/80" onclick="window.location='{% url 'ui:tenant_detail' t.id %}'">
+            <td class="px-4 py-2 text-blue-400">{{ t.name }}</td>
+            <td class="px-4 py-2 font-mono">{{ t.slug }}</td>
+            <td class="px-4 py-2">{{ t.get_status_display }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

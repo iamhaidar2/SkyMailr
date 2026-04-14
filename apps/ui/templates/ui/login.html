@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · SkyMailr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+</head>
+<body class="flex min-h-screen items-center justify-center bg-surface-900 p-6">
+  <div class="w-full max-w-md rounded-xl border border-surface-600 bg-surface-850 p-8 shadow-xl">
+    <h1 class="text-xl font-semibold text-white">SkyMailr operator</h1>
+    <p class="mt-1 text-sm text-slate-500">Sign in with a staff account.</p>
+    {% if form.errors %}
+      <div class="mt-4 rounded-lg border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-200">Invalid username or password.</div>
+    {% endif %}
+    <form method="post" action="{% url 'ui:login' %}" class="mt-6 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <div>
+        <label class="mb-1 block text-sm text-slate-400" for="id_username">Username</label>
+        <input id="id_username" name="username" type="text" required autofocus
+               class="w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-white placeholder:text-slate-600 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+      </div>
+      <div>
+        <label class="mb-1 block text-sm text-slate-400" for="id_password">Password</label>
+        <input id="id_password" name="password" type="password" required
+               class="w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-white focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+      </div>
+      <button type="submit" class="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600">Sign in</button>
+    </form>
+    <p class="mt-6 text-center text-xs text-slate-600">Machine-readable status: <a href="{% url 'ui:service_meta' %}">/service/</a></p>
+  </div>
+</body>
+</html>

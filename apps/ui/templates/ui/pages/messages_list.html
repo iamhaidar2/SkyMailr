@@ -1,0 +1,86 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-6">
+  <form method="get" class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Tenant</label>
+        {{ filter_form.tenant }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Status</label>
+        {{ filter_form.status }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Source app</label>
+        {{ filter_form.source_app }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Search</label>
+        {{ filter_form.q }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Template key</label>
+        {{ filter_form.template_key }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">From date</label>
+        {{ filter_form.date_from }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">To date</label>
+        {{ filter_form.date_to }}
+      </div>
+    </div>
+    <div class="mt-4 flex gap-2">
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Apply filters</button>
+      <a href="{% url 'ui:messages_list' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300">Reset</a>
+    </div>
+  </form>
+
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-4 py-2">Created</th>
+          <th class="px-4 py-2">Tenant</th>
+          <th class="px-4 py-2">To</th>
+          <th class="px-4 py-2">Subject</th>
+          <th class="px-4 py-2">Template</th>
+          <th class="px-4 py-2">App</th>
+          <th class="px-4 py-2">Status</th>
+          <th class="px-4 py-2">Retries</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for m in page_obj %}
+          <tr class="cursor-pointer hover:bg-surface-800/80" onclick="window.location='{% url 'ui:message_detail' m.id %}'">
+            <td class="px-4 py-2 text-slate-500">{{ m.created_at }}</td>
+            <td class="px-4 py-2">{{ m.tenant.slug }}</td>
+            <td class="px-4 py-2 text-blue-400">{{ m.to_email }}</td>
+            <td class="max-w-xs truncate px-4 py-2 text-slate-400">{{ m.subject_rendered|default:"—" }}</td>
+            <td class="px-4 py-2">{{ m.template.key|default:"—" }}</td>
+            <td class="px-4 py-2 text-slate-400">{{ m.source_app }}</td>
+            <td class="px-4 py-2"><span class="rounded bg-surface-700 px-2 py-0.5 text-xs">{{ m.get_status_display }}</span></td>
+            <td class="px-4 py-2">{{ m.retry_count }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8" class="px-4 py-12 text-center text-slate-500">No messages match.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+    <div class="flex justify-center gap-2 text-sm">
+      {% if page_obj.has_previous %}
+        <a class="text-blue-400" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="text-blue-400" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
