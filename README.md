@@ -74,13 +74,39 @@ docker compose up --build
 
 ## Railway
 
-- Set `DATABASE_URL`, `REDIS_URL`, `DJANGO_SECRET_KEY`, `ALLOWED_HOSTS`, `DJANGO_SETTINGS_MODULE=config.settings.production`.
-- Run release phase: `python manage.py migrate`.
-- Web: `gunicorn -c gunicorn.conf.py config.wsgi:application` (Dockerfile uses this). Worker: `celery -A config worker`; beat: `celery -A config beat`.
+### Required variables
+
+- **`DATABASE_URL`** — add the Postgres service to the SkyMailr service and **reference** its `DATABASE_URL` (or paste the URL). If this is wrong or missing, **`migrate` can hang** and Gunicorn **never starts** → every request **502** (~15s timeout).
+- **`DJANGO_SECRET_KEY`** — long random string (never commit).
+- **`DJANGO_SETTINGS_MODULE`** — `config.settings.production`
+- **`ALLOWED_HOSTS`** — e.g. `skymailr.com,www.skymailr.com,skymailr-production.up.railway.app` (comma-separated, no spaces unless part of the host).
+
+### Start command (important)
+
+The **Dockerfile** runs **`/app/scripts/deploy_start.sh`**, which:
+
+1. `cd /app`
+2. `python manage.py migrate --noinput`
+3. `exec gunicorn -c gunicorn.conf.py config.wsgi:application` (binds **`$PORT`**)
+
+**Clear the “Custom Start Command”** in Railway (leave it empty) so Railway uses the image **CMD**. A broken or truncated one-liner (e.g. `config.wsgi:appli`) prevents the app from starting.
+
+If you must override, use only:
+
+```bash
+/app/scripts/deploy_start.sh
+```
+
+### If you still see 502
+
+1. Open **Deploy logs** (not HTTP logs) and look for Python tracebacks or `migrate` stuck after “Running migrations”.
+2. Confirm Postgres is **connected** to the same project and `DATABASE_URL` is present on the **SkyMailr** service.
+3. Celery/Redis are optional for “see the homepage”; omit them until the web service is healthy.
+
+Worker / beat (separate services): `celery -A config worker -l info` and `celery -A config beat -l info`.
+
 - **Unset** `DATABASE_URL` locally if you are not using Postgres to avoid connection stalls.
-- **502 Bad Gateway**: Railway injects **`PORT`**; the process must listen on `0.0.0.0:$PORT`. This repo’s `gunicorn.conf.py` does that. Do **not** hardcode `--bind 0.0.0.0:8000` in production.
-- Set **`ALLOWED_HOSTS`** to your real hostname(s), e.g. `skymailr.com,www.skymailr.com` (comma-separated). Optionally add **`ALLOWED_HOSTS_EXTRA`** for preview URLs without replacing the main list.
-- Prefer health checks on **`/api/v1/health/`** (lightweight) rather than heavy endpoints.
+- Optionally add **`ALLOWED_HOSTS_EXTRA`** for preview URLs (see `config/settings/production.py`).
 
 ## Source-app client
 
