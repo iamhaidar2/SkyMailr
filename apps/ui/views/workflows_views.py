@@ -35,6 +35,7 @@ def workflows_list(request):
             "nav_active": "workflows",
             "workflows": qs[:500],
             "create_form": WorkflowCreateForm(),
+            "show_tenant_banner": True,
         }
     )
     return render(request, "ui/pages/workflows_list.html", ctx)
@@ -92,6 +93,7 @@ def workflow_detail(request, workflow_id):
             "executions": executions,
             "enroll_form": enroll_form,
             "step_form": step_form,
+            "show_tenant_banner": True,
         }
     )
     return render(request, "ui/pages/workflow_detail.html", ctx)

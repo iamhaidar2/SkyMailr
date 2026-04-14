@@ -11,6 +11,7 @@ def operator_shell_context(request) -> dict:
     return {
         "operator_tenants": tenants,
         "active_tenant": active,
+        "show_tenant_banner": False,
         "nav_items": [
             {"label": "Dashboard", "url": reverse("ui:dashboard"), "name": "dashboard"},
             {"label": "Messages", "url": reverse("ui:messages_list"), "name": "messages"},

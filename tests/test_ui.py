@@ -40,6 +40,11 @@ def test_messages_list_ok(staff_client):
     assert r.status_code == 200
 
 
+def test_webhooks_list_ok(staff_client):
+    r = staff_client.get(reverse("ui:webhooks_list"))
+    assert r.status_code == 200
+
+
 def test_setup_page_ok(staff_client):
     r = staff_client.get(reverse("ui:setup"))
     assert r.status_code == 200

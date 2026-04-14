@@ -2,6 +2,11 @@
 {% load ui_extras %}
 {% block content %}
 <div class="mx-auto max-w-5xl space-y-8">
+  {% if just_created %}
+  <div class="rounded-lg border border-emerald-800 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-100">
+    Message saved. Track status and events below. Use Retry if delivery failed, or check suppressions if it never left the queue.
+  </div>
+  {% endif %}
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
       <p class="text-xs uppercase text-slate-500">Message</p>

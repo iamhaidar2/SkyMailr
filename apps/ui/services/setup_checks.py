@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from django.conf import settings
@@ -10,8 +9,8 @@ from django.db import connection
 from django.utils import timezone
 
 from apps.email_templates.models import EmailTemplate, TemplateStatus
-from apps.providers.registry import get_email_provider
 from apps.tenants.models import SenderProfile, Tenant, TenantAPIKey
+from apps.ui.services.delivery_context import build_delivery_context
 
 
 def gather_setup_status() -> dict[str, Any]:
@@ -22,8 +21,7 @@ def gather_setup_status() -> dict[str, Any]:
         versions__is_current_approved=True,
     ).distinct().count()
     sender_profiles = SenderProfile.objects.count()
-    provider = get_email_provider()
-    ok, detail = provider.health_check()
+    delivery = build_delivery_context()
     email_provider = getattr(settings, "EMAIL_PROVIDER", "dummy").lower()
     redis_url = getattr(settings, "CELERY_BROKER_URL", "") or ""
     db_ok = True
@@ -70,27 +68,26 @@ def gather_setup_status() -> dict[str, Any]:
             "hint": "Add sender profiles for outbound identity.",
         },
         {
-            "id": "provider",
-            "label": "Email provider healthy",
-            "ok": ok,
-            "hint": detail or "dummy is fine for development.",
+            "id": "adapter",
+            "label": "Email adapter health (technical check)",
+            "ok": delivery["adapter_ok"],
+            "hint": delivery["adapter_detail"] or "Health check on the configured provider class.",
         },
         {
-            "id": "postal",
-            "label": "Postal configured (if not using dummy/console)",
-            "ok": email_provider in ("dummy", "console") or bool(
-                os.environ.get("POSTAL_BASE_URL", "").strip()
-            ),
-            "hint": "Set POSTAL_BASE_URL and POSTAL_SERVER_API_KEY when using postal.",
+            "id": "delivery",
+            "label": "Real outbound delivery to inboxes",
+            "ok": delivery["delivery_ready_ok"],
+            "hint": delivery["delivery_readiness_hint"],
         },
     ]
 
     return {
         "checklist": checklist,
         "email_provider": email_provider,
-        "provider_name": provider.name,
-        "provider_ok": ok,
-        "provider_detail": detail,
+        "provider_name": delivery["adapter_name"],
+        "provider_ok": delivery["adapter_ok"],
+        "provider_detail": delivery["adapter_detail"],
+        "delivery": delivery,
         "llm_provider": getattr(settings, "LLM_PROVIDER", "dummy").lower(),
         "now": timezone.now(),
     }

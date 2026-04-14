@@ -19,6 +19,7 @@
     <div class="flex min-w-0 flex-1 flex-col">
       {% include "ui/partials/topbar.html" %}
       <main class="flex-1 overflow-auto p-6 lg:p-8">
+        <span class="hidden">{% csrf_token %}</span>
         {% if messages %}
           <div class="mb-6 space-y-2">
             {% for message in messages %}
@@ -28,9 +29,18 @@
             {% endfor %}
           </div>
         {% endif %}
+        {% if show_tenant_banner %}
+          {% include "ui/partials/tenant_context.html" %}
+        {% endif %}
         {% block content %}{% endblock %}
       </main>
     </div>
   </div>
+  <script>
+    document.body.addEventListener('htmx:configRequest', function (event) {
+      var el = document.querySelector('[name=csrfmiddlewaretoken]');
+      if (el) event.detail.headers['X-CSRFToken'] = el.value;
+    });
+  </script>
 </body>
 </html>

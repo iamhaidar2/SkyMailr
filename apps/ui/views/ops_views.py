@@ -1,15 +1,18 @@
 from django.conf import settings
 from django.shortcuts import render
 
+from apps.messages.models import ProviderWebhookEvent
 from apps.providers.registry import get_email_provider
 from apps.ui.context import operator_shell_context
 from apps.ui.decorators import operator_required
+from apps.ui.services.delivery_context import build_delivery_context
 
 
 @operator_required
 def provider_health(request):
     p = get_email_provider()
     ok, detail = p.health_check()
+    delivery = build_delivery_context()
     ctx = operator_shell_context(request)
     ctx.update(
         {
@@ -20,6 +23,7 @@ def provider_health(request):
             "provider_detail": detail,
             "email_provider_setting": getattr(settings, "EMAIL_PROVIDER", "dummy"),
             "postal_base": getattr(settings, "POSTAL_BASE_URL", "") or "",
+            "delivery": delivery,
         }
     )
     return render(request, "ui/pages/provider_health.html", ctx)

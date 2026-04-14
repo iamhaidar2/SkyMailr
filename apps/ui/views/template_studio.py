@@ -21,6 +21,7 @@ def template_studio(request):
             "nav_active": "studio",
             "form": form,
             "no_tenant": tenant is None,
+            "show_tenant_banner": True,
         }
     )
     if request.method == "POST":

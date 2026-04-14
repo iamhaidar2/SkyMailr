@@ -87,6 +87,7 @@ def message_detail(request, message_id):
                 OutboundStatus.RENDERED,
                 OutboundStatus.DEFERRED,
             ),
+            "just_created": request.GET.get("created") == "1",
         }
     )
     return render(request, "ui/pages/message_detail.html", ctx)

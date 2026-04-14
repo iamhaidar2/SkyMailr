@@ -1,0 +1,10 @@
+<div class="rounded-lg border border-surface-600 bg-surface-900 p-4 text-sm">
+  <p class="font-medium text-white">Subject</p>
+  <p class="mt-1 text-slate-300">{{ subject }}</p>
+  <p class="mt-4 font-medium text-white">HTML (sanitized)</p>
+  <div class="mt-2 max-h-64 overflow-auto rounded border border-surface-700 bg-white p-3 text-slate-900">{{ html|safe }}</div>
+  {% if text %}
+    <p class="mt-4 font-medium text-white">Plain text</p>
+    <pre class="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-surface-700 bg-surface-950 p-2 text-xs text-slate-400">{{ text }}</pre>
+  {% endif %}
+</div>

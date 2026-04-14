@@ -1,10 +1,25 @@
 {% extends "ui/base.html" %}
 {% block content %}
 <div class="mx-auto max-w-6xl space-y-6">
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <form method="get" class="flex flex-wrap gap-2">
-      <input type="text" name="q" value="{{ filter_q }}" placeholder="Search key or name" class="rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
-      <input type="text" name="tenant" value="{{ filter_tenant|default:'' }}" placeholder="Tenant UUID" class="rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <form method="get" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Tenant</label>
+        <select name="tenant" class="min-w-[200px] rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
+          <option value="">All tenants</option>
+          {% for row in tenant_rows %}
+            <option value="{{ row.tenant.id }}" {% if row.selected %}selected{% endif %}>{{ row.tenant.name }} ({{ row.tenant.slug }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Or filter by slug</label>
+        <input type="text" name="tenant_slug" value="{{ filter_tenant_slug }}" placeholder="e.g. brainlist" class="w-40 rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Search</label>
+        <input type="text" name="q" value="{{ filter_q }}" placeholder="Key or name" class="rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
+      </div>
       <button type="submit" class="rounded-md bg-surface-700 px-4 py-2 text-sm text-white">Filter</button>
     </form>
     <a href="{% url 'ui:template_new' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">New template</a>

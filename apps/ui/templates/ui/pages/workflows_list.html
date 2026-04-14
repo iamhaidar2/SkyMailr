@@ -12,6 +12,7 @@
     </form>
   </div>
 
+  {% if workflows %}
   <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
     <table class="min-w-full text-left text-sm">
       <thead class="bg-surface-800 text-xs uppercase text-slate-500">
@@ -32,11 +33,23 @@
             <td class="px-4 py-2">{{ w.step_count }}</td>
             <td class="px-4 py-2">{{ w.enrollment_count }}</td>
           </tr>
-        {% empty %}
-          <tr><td colspan="5" class="px-4 py-10 text-center text-slate-500">No workflows yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% else %}
+  <div class="rounded-xl border border-dashed border-surface-600 bg-surface-850/80 p-8">
+    <h3 class="text-base font-semibold text-white">No workflows yet</h3>
+    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+      Workflows orchestrate multi-step email journeys. Create one for your <strong class="text-slate-300">active tenant</strong> above, then open it to add steps (send template, wait, branch, etc.). Contacts enroll into a workflow before any steps run.
+    </p>
+    <ul class="mt-4 list-inside list-disc space-y-1 text-sm text-slate-500">
+      <li>Pick the correct tenant in the <strong class="text-slate-400">header</strong> before creating a workflow.</li>
+      <li>Define <a href="{% url 'ui:templates_list' %}" class="text-blue-400 hover:underline">email templates</a> first if steps will send mail.</li>
+      <li>Use <a href="{% url 'ui:send_email' %}" class="text-blue-400 hover:underline">Send email</a> for one-off tests while you iterate.</li>
+    </ul>
+    <p class="mt-4 text-xs text-slate-600">After the workflow exists, add steps on its detail page and enroll tenants or contacts from there.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

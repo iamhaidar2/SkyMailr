@@ -1,16 +1,32 @@
 {% extends "ui/base.html" %}
 {% block content %}
-<div class="mx-auto max-w-2xl space-y-6">
+<div class="mx-auto max-w-3xl space-y-6">
+  {% if delivery.is_non_sending_mode %}
+  <div class="rounded-xl border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+    <strong class="text-amber-50">No real email delivery.</strong>
+    EMAIL_PROVIDER is <code class="text-amber-200">{{ delivery.email_provider_setting }}</code>.
+    The adapter may still report healthy; outbound does not reach real inboxes in dummy/console modes.
+  </div>
+  {% endif %}
+
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-6">
-    <h2 class="text-lg font-semibold text-white">Email provider</h2>
-    <p class="mt-2 text-sm text-slate-400">Configured: <code class="text-slate-300">{{ email_provider_setting }}</code></p>
-    <p class="mt-4 text-sm">Adapter: <strong class="text-white">{{ provider_name }}</strong></p>
-    <p class="mt-2 text-sm">{% if provider_ok %}<span class="text-emerald-400">Healthy</span>{% else %}<span class="text-red-400">Unhealthy or misconfigured</span>{% endif %}</p>
-    <pre class="mt-4 overflow-auto rounded-lg border border-surface-700 bg-surface-900 p-4 text-xs text-slate-400">{{ provider_detail }}</pre>
+    <h2 class="text-lg font-semibold text-white">Adapter health</h2>
+    <p class="mt-2 text-sm text-slate-400">Technical check: can the configured provider class initialize and respond?</p>
+    <p class="mt-4 text-sm">Adapter: <strong class="text-white">{{ delivery.adapter_name }}</strong></p>
+    <p class="mt-2 text-sm">{% if delivery.adapter_ok %}<span class="text-emerald-400">Healthy</span>{% else %}<span class="text-red-400">Unhealthy or misconfigured</span>{% endif %}</p>
+    <pre class="mt-4 overflow-auto rounded-lg border border-surface-700 bg-surface-900 p-4 text-xs text-slate-400">{{ delivery.adapter_detail }}</pre>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-6">
+    <h2 class="text-lg font-semibold text-white">Outbound delivery readiness</h2>
+    <p class="mt-2 text-sm text-slate-400">Whether SkyMailr is configured to hand off mail to a real delivery path (not just logs / no-op).</p>
+    <p class="mt-4 text-sm font-medium text-white">{{ delivery.delivery_readiness_label }}</p>
+    <p class="mt-2 text-sm text-slate-500">{{ delivery.delivery_readiness_hint }}</p>
+    <p class="mt-4 text-xs text-slate-500">Configured EMAIL_PROVIDER: <code class="text-slate-400">{{ email_provider_setting }}</code></p>
     {% if postal_base %}
-      <p class="mt-4 text-xs text-slate-500">POSTAL_BASE_URL is set.</p>
-    {% else %}
-      <p class="mt-4 text-xs text-amber-500">POSTAL_BASE_URL not set — required for postal provider.</p>
+      <p class="mt-2 text-xs text-slate-500">POSTAL_BASE_URL is set.</p>
+    {% elif delivery.email_provider_setting == "postal" %}
+      <p class="mt-2 text-xs text-amber-500">POSTAL_BASE_URL not set — required for postal provider.</p>
     {% endif %}
   </div>
 </div>

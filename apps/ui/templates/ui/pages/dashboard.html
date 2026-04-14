@@ -21,22 +21,38 @@
     </div>
   </div>
 
+  {% if delivery.is_non_sending_mode %}
+  <div class="rounded-xl border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+    <strong class="text-amber-50">No real email delivery:</strong>
+    EMAIL_PROVIDER is <code class="text-amber-200">{{ delivery.email_provider_setting }}</code>.
+    Messages are not sent to real inboxes. Use Postal or another real provider for production.
+  </div>
+  {% endif %}
+
   <div class="grid gap-6 lg:grid-cols-2">
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-      <h2 class="text-sm font-semibold text-white">Provider</h2>
-      <p class="mt-2 text-sm text-slate-400">{{ setup.provider_name }} — {% if setup.provider_ok %}<span class="text-emerald-400">healthy</span>{% else %}<span class="text-red-400">check required</span>{% endif %}</p>
-      <p class="mt-1 text-xs text-slate-500">{{ setup.provider_detail }}</p>
+      <h2 class="text-sm font-semibold text-white">Adapter health</h2>
+      <p class="mt-1 text-xs text-slate-500">Technical: can the provider class run its health check?</p>
+      <p class="mt-2 text-sm text-slate-400">{{ delivery.adapter_name }} — {% if delivery.adapter_ok %}<span class="text-emerald-400">OK</span>{% else %}<span class="text-red-400">Failing</span>{% endif %}</p>
+      <p class="mt-1 text-xs text-slate-500">{{ delivery.adapter_detail }}</p>
       <a href="{% url 'ui:provider_health' %}" class="mt-3 inline-block text-sm text-blue-400">Details →</a>
     </div>
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-      <h2 class="text-sm font-semibold text-white">Quick actions</h2>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <a href="{% url 'ui:send_email' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Send test email</a>
-        <a href="{% url 'ui:template_studio' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Template studio</a>
-        <a href="{% url 'ui:tenants_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">API keys</a>
-        <a href="{% url 'ui:workflows_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Workflows</a>
-        <a href="{% url 'ui:suppressions_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Suppressions</a>
-      </div>
+      <h2 class="text-sm font-semibold text-white">Outbound delivery</h2>
+      <p class="mt-1 text-xs text-slate-500">Will mail reach real recipients?</p>
+      <p class="mt-2 text-sm text-white">{{ delivery.delivery_readiness_label }}</p>
+      <p class="mt-1 text-xs text-slate-500">{{ delivery.delivery_readiness_hint }}</p>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h2 class="text-sm font-semibold text-white">Quick actions</h2>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <a href="{% url 'ui:send_email' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Send test email</a>
+      <a href="{% url 'ui:template_studio' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Template studio</a>
+      <a href="{% url 'ui:tenants_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">API keys</a>
+      <a href="{% url 'ui:workflows_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Workflows</a>
+      <a href="{% url 'ui:suppressions_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Suppressions</a>
     </div>
   </div>
 

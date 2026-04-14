@@ -1,0 +1,12 @@
+<div class="mb-6 rounded-lg border border-blue-900/60 bg-blue-950/40 px-4 py-3 text-sm text-slate-200">
+  {% if active_tenant %}
+    <span class="font-medium text-white">Active tenant:</span>
+    {{ active_tenant.name }}
+    <span class="text-slate-500">({{ active_tenant.slug }})</span>
+  {% else %}
+    <span class="text-amber-200">No tenant selected.</span> Use the tenant menu in the header or create a tenant in Django admin.
+  {% endif %}
+  {% if workflow and active_tenant and workflow.tenant_id != active_tenant.id %}
+    <p class="mt-2 text-xs text-amber-200/90">This workflow belongs to <strong class="text-white">{{ workflow.tenant.slug }}</strong>, which is not the active tenant.</p>
+  {% endif %}
+</div>

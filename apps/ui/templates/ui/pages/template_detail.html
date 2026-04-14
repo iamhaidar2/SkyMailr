@@ -8,8 +8,56 @@
     <p class="mt-2 text-sm text-slate-400">{{ template.description }}</p>
   </div>
 
+  <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-5">
+    <h3 class="text-sm font-semibold text-emerald-100">Current approved version</h3>
+    {% if approved_version %}
+      <p class="mt-1 text-xs text-slate-500">This is what SkyMailr uses when sending templated mail for this key.</p>
+      <div class="mt-4 space-y-3 text-sm">
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-500">Subject line</p>
+          <p class="mt-1 text-white">{{ approved_version.subject_template }}</p>
+        </div>
+        {% if approved_version.preview_text_template %}
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-500">Preview text</p>
+          <p class="mt-1 text-slate-300">{{ approved_version.preview_text_template }}</p>
+        </div>
+        {% endif %}
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-500">HTML</p>
+          <div class="mt-2 max-h-56 overflow-auto rounded border border-surface-700 bg-white p-3 text-xs text-slate-900">{{ approved_version.html_template|safe }}</div>
+        </div>
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-500">Plain text</p>
+          <pre class="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded border border-surface-700 bg-surface-900 p-3 text-xs text-slate-400">{{ approved_version.text_template }}</pre>
+        </div>
+      </div>
+    {% else %}
+      <p class="mt-2 text-sm text-amber-200">No approved version yet. Approve a version below or generate one in Template studio — sends will fail until you do.</p>
+    {% endif %}
+  </div>
+
+  {% if template.variables.count %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">Versions</h3>
+    <h3 class="text-sm font-semibold text-white">Required / declared variables</h3>
+    <p class="mt-1 text-xs text-slate-500">Use these keys in the JSON context when previewing or sending.</p>
+    <ul class="mt-3 space-y-2 text-sm">
+      {% for v in template.variables.all %}
+        <li class="flex gap-2 border-b border-surface-700 pb-2">
+          <code class="text-violet-300">{{ v.name }}</code>
+          {% if v.is_required %}<span class="text-amber-400">required</span>{% endif %}
+          <span class="text-slate-500">{{ v.description }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Version history</h3>
+    {% if latest_version %}
+      <p class="mt-1 text-xs text-slate-500">Latest draft / head: v{{ latest_version.version_number }} ({{ latest_version.get_source_type_display }})</p>
+    {% endif %}
     <div class="mt-4 overflow-x-auto">
       <table class="min-w-full text-left text-sm">
         <thead class="text-xs text-slate-500"><tr><th class="py-1">#</th><th>Source</th><th>Approval</th><th>Current</th><th>Created</th></tr></thead>
@@ -28,9 +76,31 @@
     </div>
   </div>
 
+  {% if diff_subject %}
+  <details class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <summary class="cursor-pointer text-sm font-semibold text-white">Diff: previous version → latest (v{{ latest_version.version_number }})</summary>
+    <p class="mt-2 text-xs text-slate-500">Subject and text diffs are easiest to read; HTML can be long.</p>
+    <div class="mt-4 space-y-4">
+      <div>
+        <p class="text-xs font-medium text-slate-500">Subject</p>
+        <pre class="mt-1 max-h-32 overflow-auto rounded border border-surface-700 bg-surface-900 p-3 text-xs text-slate-400">{{ diff_subject }}</pre>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-slate-500">Plain text</p>
+        <pre class="mt-1 max-h-40 overflow-auto rounded border border-surface-700 bg-surface-900 p-3 text-xs text-slate-400">{{ diff_text }}</pre>
+      </div>
+      <div>
+        <p class="text-xs font-medium text-slate-500">HTML</p>
+        <pre class="mt-1 max-h-48 overflow-auto rounded border border-surface-700 bg-surface-900 p-3 text-xs text-slate-400">{{ diff_html }}</pre>
+      </div>
+    </div>
+  </details>
+  {% endif %}
+
   <div class="grid gap-6 lg:grid-cols-2">
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
       <h3 class="text-sm font-semibold text-white">Preview with context</h3>
+      <p class="mt-1 text-xs text-slate-500">JSON keys must match variables above. Renders the latest version, not necessarily the approved one.</p>
       <form method="post" action="{% url 'ui:template_preview' template.id %}" class="mt-4 space-y-3">
         {% csrf_token %}
         <div><label class="text-xs text-slate-500">Context JSON</label>{{ preview_form.context }}</div>
