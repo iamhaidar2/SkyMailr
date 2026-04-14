@@ -1,0 +1,121 @@
+import uuid
+
+from django.db import models
+
+
+class TenantStatus(models.TextChoices):
+    ACTIVE = "active", "Active"
+    SUSPENDED = "suspended", "Suspended"
+
+
+class SenderCategory(models.TextChoices):
+    TRANSACTIONAL = "transactional", "Transactional"
+    MARKETING = "marketing", "Marketing / lifecycle"
+
+
+class Tenant(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, max_length=64)
+    status = models.CharField(
+        max_length=32, choices=TenantStatus.choices, default=TenantStatus.ACTIVE
+    )
+    default_sender_name = models.CharField(max_length=200, blank=True)
+    default_sender_email = models.EmailField(blank=True)
+    reply_to = models.EmailField(blank=True)
+    sending_domain = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Expected outbound domain / subdomain metadata for DNS alignment.",
+    )
+    transactional_enabled = models.BooleanField(default=True)
+    marketing_enabled = models.BooleanField(default=True)
+    timezone = models.CharField(max_length=64, default="UTC")
+    rate_limit_per_minute = models.PositiveIntegerField(
+        default=120, help_text="Soft cap; enforced in dispatcher."
+    )
+    webhook_secret = models.CharField(max_length=128, blank=True)
+    branding = models.JSONField(default=dict, blank=True)
+    llm_defaults = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Keys: default_model, temperature, tone_profile, brand_voice_notes",
+    )
+    compliance_footer_html = models.TextField(
+        blank=True,
+        help_text="Appended to marketing HTML when tenant requires legal block.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class TenantDomain(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="domains")
+    domain = models.CharField(max_length=255, unique=True)
+    verified = models.BooleanField(default=False)
+    is_primary = models.BooleanField(default=False)
+    dkim_status = models.CharField(max_length=64, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["tenant", "domain"]
+
+    def __str__(self):
+        return f"{self.domain} ({self.tenant.slug})"
+
+
+class SenderProfile(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="sender_profiles")
+    name = models.CharField(max_length=200)
+    category = models.CharField(max_length=32, choices=SenderCategory.choices)
+    from_name = models.CharField(max_length=200)
+    from_email = models.EmailField()
+    reply_to = models.EmailField(blank=True)
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["tenant", "category", "name"]
+
+    def __str__(self):
+        return f"{self.tenant.slug}:{self.name} ({self.category})"
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            SenderProfile.objects.filter(
+                tenant=self.tenant, category=self.category, is_default=True
+            ).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+
+class TenantAPIKey(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="api_keys")
+    name = models.CharField(max_length=120)
+    key_hash = models.CharField(max_length=128, unique=True, editable=False)
+    prefix = models.CharField(max_length=16, default="sk_live_")
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Tenant API key"
+        verbose_name_plural = "Tenant API keys"
+
+    def __str__(self):
+        return f"{self.tenant.slug}:{self.name}"
+
+    @property
+    def is_revoked(self) -> bool:
+        return self.revoked_at is not None

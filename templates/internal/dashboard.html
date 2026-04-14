@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SkyMailr — Internal</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #0f1419; color: #e6edf3; }
+    h1 { font-weight: 600; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .card { background: #1a2332; padding: 1rem; border-radius: 8px; }
+    .card span { display: block; font-size: 1.5rem; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-top: 2rem; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #2d3a4d; }
+    a { color: #58a6ff; }
+  </style>
+</head>
+<body>
+  <h1>SkyMailr dashboard</h1>
+  <p>Last 24 hours</p>
+  <div class="grid">
+    <div class="card">Total <span>{{ stats.total_24h }}</span></div>
+    <div class="card">Queued <span>{{ stats.queued }}</span></div>
+    <div class="card">Sent <span>{{ stats.sent }}</span></div>
+    <div class="card">Delivered <span>{{ stats.delivered }}</span></div>
+    <div class="card">Failed <span>{{ stats.failed }}</span></div>
+  </div>
+  <h2>Per tenant</h2>
+  <ul>
+    {% for row in by_tenant %}
+      <li>{{ row.tenant__slug }} — {{ row.c }}</li>
+    {% empty %}
+      <li>No data</li>
+    {% endfor %}
+  </ul>
+  <h2>Recent messages</h2>
+  <table>
+    <thead><tr><th>Time</th><th>Tenant</th><th>To</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for m in latest %}
+      <tr>
+        <td>{{ m.created_at }}</td>
+        <td>{{ m.tenant.slug }}</td>
+        <td>{{ m.to_email }}</td>
+        <td>{{ m.status }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
