@@ -1,7 +1,8 @@
-from django.contrib.admin.views.decorators import staff_member_required
 from datetime import timedelta
 
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -35,3 +36,26 @@ def internal_dashboard(request):
             "latest": latest,
         },
     )
+
+
+def service_root(request):
+    """Avoid 404 noise when browsers or uptime checks hit `/` on Railway."""
+    return JsonResponse(
+        {
+            "service": "SkyMailr",
+            "health": "/api/v1/health/",
+            "admin": "/admin/",
+        }
+    )
+
+
+def noop_favicon(request):
+    return HttpResponse(status=204)
+
+
+def empty_sitemap(request):
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+    )
+    return HttpResponse(body, content_type="application/xml")

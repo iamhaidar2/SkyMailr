@@ -24,9 +24,17 @@ from apps.api.v1.views import (
     WorkflowCreateView,
     WorkflowEnrollView,
 )
-from apps.core.views import internal_dashboard
+from apps.core.views import (
+    empty_sitemap,
+    internal_dashboard,
+    noop_favicon,
+    service_root,
+)
 
 urlpatterns = [
+    path("", service_root, name="service_root"),
+    path("favicon.ico", noop_favicon),
+    path("sitemap.xml", empty_sitemap),
     path("admin/", admin.site.urls),
     path("internal/dashboard/", internal_dashboard, name="internal_dashboard"),
     path("api/v1/health/", HealthView.as_view()),
