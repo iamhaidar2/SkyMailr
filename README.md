@@ -99,9 +99,10 @@ If you must override, use only:
 
 ### If you still see 502
 
-1. Open **Deploy logs** (not HTTP logs) and look for Python tracebacks or `migrate` stuck after “Running migrations”.
-2. Confirm Postgres is **connected** to the same project and `DATABASE_URL` is present on the **SkyMailr** service.
-3. Celery/Redis are optional for “see the homepage”; omit them until the web service is healthy.
+1. Open **Deploy logs**. If you see **only** Django migrate output (`No migrations to apply.`) and **nothing after that** (no `[skymailr]` lines, no Gunicorn “Listening”), your **Custom Start Command is probably only** `python manage.py migrate`. That runs migrations and then **exits** — **no web server** → **502**. **Clear** the custom start command so the Docker **`CMD`** runs `scripts/deploy_start.sh`, or set it to **`/app/scripts/deploy_start.sh`** only.
+2. Look for Python tracebacks or `migrate` stuck after “Running migrations”.
+3. Confirm Postgres is **connected** and `DATABASE_URL` is on the **SkyMailr** service.
+4. Celery/Redis are optional until the web service is healthy.
 
 Worker / beat (separate services): `celery -A config worker -l info` and `celery -A config beat -l info`.
 
