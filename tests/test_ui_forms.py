@@ -16,6 +16,7 @@ def test_json_object_field_empty_metadata_raw_send():
             "text_body": "",
             "metadata": "",
             "idempotency_key": "",
+            "sender_profile": "",
         }
     )
     assert f.is_valid(), f.errors
@@ -31,6 +32,7 @@ def test_json_object_field_object_metadata_raw_send():
             "subject": "Test",
             "html_body": "<p>Hi</p>",
             "metadata": '{"foo": 1}',
+            "sender_profile": "",
         }
     )
     assert f.is_valid(), f.errors
@@ -47,6 +49,7 @@ def test_send_template_form_json_fields():
             "context": "{}",
             "metadata": "",
             "tags": "{}",
+            "sender_profile": "",
         }
     )
     assert f.is_valid(), f.errors

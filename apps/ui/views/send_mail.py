@@ -12,7 +12,7 @@ from apps.messages.services.idempotency import hash_idempotency_key
 from apps.messages.services.send_pipeline import create_raw_message, create_templated_message
 from apps.ui.context import operator_shell_context
 from apps.ui.decorators import operator_required
-from apps.ui.forms import SendRawForm, SendTemplateForm
+from apps.ui.forms import SendRawForm, SendTemplateForm, send_forms_for_tenant
 from apps.ui.services.operator import get_active_tenant
 
 
@@ -29,8 +29,7 @@ def _idem_attach(tenant, raw_key: str, msg):
 @operator_required
 def send_email(request):
     tenant = get_active_tenant(request)
-    raw_form = SendRawForm()
-    tpl_form = SendTemplateForm()
+    raw_form, tpl_form = send_forms_for_tenant(tenant)
     ctx = operator_shell_context(request)
     ctx.update(
         {
@@ -52,8 +51,9 @@ def send_raw(request):
     if not tenant:
         django_messages.error(request, "Select an active tenant first.")
         return redirect("ui:send_email")
-    form = SendRawForm(request.POST)
+    form = SendRawForm(request.POST, tenant=tenant)
     if not form.is_valid():
+        _, tpl_empty = send_forms_for_tenant(tenant)
         ctx = operator_shell_context(request)
         ctx.update(
             {
@@ -61,11 +61,26 @@ def send_raw(request):
                 "nav_active": "send",
                 "active_tenant": tenant,
                 "raw_form": form,
-                "tpl_form": SendTemplateForm(),
+                "tpl_form": tpl_empty,
             }
         )
         return render(request, "ui/pages/send_email.html", ctx, status=400)
     d = form.cleaned_data
+    sp = d.get("sender_profile")
+    if sp is not None and sp.tenant_id != tenant.id:
+        form.add_error("sender_profile", "That sender profile does not belong to the active tenant.")
+        _, tpl_empty = send_forms_for_tenant(tenant)
+        ctx = operator_shell_context(request)
+        ctx.update(
+            {
+                "page_title": "Send email",
+                "nav_active": "send",
+                "active_tenant": tenant,
+                "raw_form": form,
+                "tpl_form": tpl_empty,
+            }
+        )
+        return render(request, "ui/pages/send_email.html", ctx, status=400)
     raw_idem = (d.get("idempotency_key") or "").strip()
     if raw_idem:
         h = hash_idempotency_key(str(tenant.id), raw_idem)
@@ -84,6 +99,7 @@ def send_raw(request):
         text_body=d.get("text_body") or "",
         metadata=d.get("metadata") or {},
         idempotency_key=raw_idem or None,
+        sender_profile=sp,
     )
     _idem_attach(tenant, raw_idem, msg)
     django_messages.success(
@@ -101,30 +117,47 @@ def send_template(request):
     if not tenant:
         django_messages.error(request, "Select an active tenant first.")
         return redirect("ui:send_email")
-    form = SendTemplateForm(request.POST)
+    form = SendTemplateForm(request.POST, tenant=tenant)
     if not form.is_valid():
+        raw_empty, _ = send_forms_for_tenant(tenant)
         ctx = operator_shell_context(request)
         ctx.update(
             {
                 "page_title": "Send email",
                 "nav_active": "send",
                 "active_tenant": tenant,
-                "raw_form": SendRawForm(),
+                "raw_form": raw_empty,
                 "tpl_form": form,
             }
         )
         return render(request, "ui/pages/send_email.html", ctx, status=400)
     d = form.cleaned_data
-    tpl = EmailTemplate.objects.filter(tenant=tenant, key=d["template_key"]).first()
-    if not tpl:
-        form.add_error("template_key", "Unknown template key for this tenant.")
+    sp = d.get("sender_profile")
+    if sp is not None and sp.tenant_id != tenant.id:
+        form.add_error("sender_profile", "That sender profile does not belong to the active tenant.")
+        raw_empty, _ = send_forms_for_tenant(tenant)
         ctx = operator_shell_context(request)
         ctx.update(
             {
                 "page_title": "Send email",
                 "nav_active": "send",
                 "active_tenant": tenant,
-                "raw_form": SendRawForm(),
+                "raw_form": raw_empty,
+                "tpl_form": form,
+            }
+        )
+        return render(request, "ui/pages/send_email.html", ctx, status=400)
+    tpl = EmailTemplate.objects.filter(tenant=tenant, key=d["template_key"]).first()
+    if not tpl:
+        form.add_error("template_key", "Unknown template key for this tenant.")
+        raw_empty, _ = send_forms_for_tenant(tenant)
+        ctx = operator_shell_context(request)
+        ctx.update(
+            {
+                "page_title": "Send email",
+                "nav_active": "send",
+                "active_tenant": tenant,
+                "raw_form": raw_empty,
                 "tpl_form": form,
                 "show_tenant_banner": True,
             }
@@ -150,16 +183,18 @@ def send_template(request):
             tags=d.get("tags") or {},
             idempotency_key=raw_idem or None,
             scheduled_for=d.get("scheduled_for"),
+            sender_profile=sp,
         )
     except ValueError as e:
         form.add_error(None, str(e))
+        raw_empty, _ = send_forms_for_tenant(tenant)
         ctx = operator_shell_context(request)
         ctx.update(
             {
                 "page_title": "Send email",
                 "nav_active": "send",
                 "active_tenant": tenant,
-                "raw_form": SendRawForm(),
+                "raw_form": raw_empty,
                 "tpl_form": form,
             }
         )
@@ -167,13 +202,14 @@ def send_template(request):
     _idem_attach(tenant, raw_idem, msg)
     if msg.status == OutboundStatus.FAILED:
         form.add_error(None, msg.last_error or "Send failed")
+        raw_empty, _ = send_forms_for_tenant(tenant)
         ctx = operator_shell_context(request)
         ctx.update(
             {
                 "page_title": "Send email",
                 "nav_active": "send",
                 "active_tenant": tenant,
-                "raw_form": SendRawForm(),
+                "raw_form": raw_empty,
                 "tpl_form": form,
                 "show_tenant_banner": True,
             }
@@ -198,7 +234,7 @@ def send_preview_raw(request):
             {"error": "Select an active tenant first."},
             status=400,
         )
-    form = SendRawForm(request.POST)
+    form = SendRawForm(request.POST, tenant=tenant)
     if not form.is_valid():
         return render(
             request,
@@ -230,7 +266,7 @@ def send_preview_template(request):
             {"error": "Select an active tenant first."},
             status=400,
         )
-    form = SendTemplateForm(request.POST)
+    form = SendTemplateForm(request.POST, tenant=tenant)
     if not form.is_valid():
         return render(
             request,

@@ -1,6 +1,9 @@
 {% extends "ui/base.html" %}
 {% block content %}
-<div class="mx-auto max-w-3xl">
+<div class="mx-auto max-w-3xl space-y-4">
+  <div class="flex justify-end">
+    <a href="{% url 'ui:tenant_create' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:opacity-90">New tenant</a>
+  </div>
   <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
     <table class="min-w-full text-left text-sm">
       <thead class="bg-surface-800 text-xs uppercase text-slate-500">

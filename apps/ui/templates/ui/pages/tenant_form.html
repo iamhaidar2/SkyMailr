@@ -1,0 +1,28 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-2xl">
+  <h2 class="text-xl font-semibold text-white">{{ page_title }}</h2>
+  <form method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="rounded-lg border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-200">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
+        {% if field.help_text %}<p class="mt-1 text-xs text-slate-600">{{ field.help_text }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <div class="flex flex-wrap gap-3 pt-2">
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">{{ submit_label }}</button>
+      {% if tenant %}
+        <a href="{% url 'ui:tenant_detail' tenant.id %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Cancel</a>
+      {% else %}
+        <a href="{% url 'ui:tenants_list' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Cancel</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -74,6 +74,24 @@ urlpatterns = [
         name="workflow_add_step",
     ),
     path("tenants/", tenants_views.tenants_list, name="tenants_list"),
+    path("tenants/new/", tenants_views.tenant_create, name="tenant_create"),
+    path("tenants/<uuid:tenant_id>/edit/", tenants_views.tenant_edit, name="tenant_edit"),
+    path("tenants/<uuid:tenant_id>/delete/", tenants_views.tenant_delete, name="tenant_delete"),
+    path(
+        "tenants/<uuid:tenant_id>/sender-profiles/new/",
+        tenants_views.sender_profile_create,
+        name="sender_profile_create",
+    ),
+    path(
+        "tenants/<uuid:tenant_id>/sender-profiles/<uuid:profile_id>/edit/",
+        tenants_views.sender_profile_edit,
+        name="sender_profile_edit",
+    ),
+    path(
+        "tenants/<uuid:tenant_id>/sender-profiles/<uuid:profile_id>/delete/",
+        tenants_views.sender_profile_delete,
+        name="sender_profile_delete",
+    ),
     path("tenants/<uuid:tenant_id>/", tenants_views.tenant_detail, name="tenant_detail"),
     path(
         "tenants/<uuid:tenant_id>/api-keys/",

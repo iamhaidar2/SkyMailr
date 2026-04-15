@@ -25,3 +25,10 @@ def get_active_tenant(request) -> Tenant | None:
 def set_active_tenant(session: SessionBase, tenant: Tenant) -> None:
     session[SESSION_ACTIVE_TENANT_KEY] = str(tenant.pk)
     session.modified = True
+
+
+def clear_active_tenant_if_deleted(session: SessionBase, tenant: Tenant) -> None:
+    """Remove active-tenant session if it pointed at a deleted tenant."""
+    if str(session.get(SESSION_ACTIVE_TENANT_KEY)) == str(tenant.pk):
+        session.pop(SESSION_ACTIVE_TENANT_KEY, None)
+        session.modified = True

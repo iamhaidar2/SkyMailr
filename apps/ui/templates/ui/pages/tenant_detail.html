@@ -1,10 +1,33 @@
 {% extends "ui/base.html" %}
 {% block content %}
 <div class="mx-auto max-w-3xl space-y-8">
-  <div>
-    <h2 class="text-2xl font-semibold text-white">{{ tenant.name }}</h2>
-    <p class="font-mono text-sm text-slate-400">{{ tenant.slug }}</p>
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-semibold text-white">{{ tenant.name }}</h2>
+      <p class="font-mono text-sm text-slate-400">{{ tenant.slug }}</p>
+      <p class="mt-1 text-sm text-slate-500">Status: {{ tenant.get_status_display }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'ui:tenant_edit' tenant.id %}" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-surface-800">Edit tenant</a>
+      <a href="{% url 'ui:tenant_delete' tenant.id %}" class="rounded-md border border-red-900/60 px-3 py-1.5 text-sm text-red-300 hover:bg-red-950/50">Delete tenant</a>
+    </div>
   </div>
+
+  {% if sending_domain_missing %}
+    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      No <strong>sending domain</strong> is configured. Set one to align outbound identity and validate sender profile addresses.
+    </div>
+  {% endif %}
+  {% if default_sender_blank %}
+    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      <strong>Default sender email</strong> is empty. Some flows may fall back only to sender profiles.
+    </div>
+  {% endif %}
+  {% if default_sender_domain_mismatch %}
+    <div class="rounded-lg border border-orange-800 bg-orange-950/40 px-4 py-3 text-sm text-orange-100">
+      Default sender email domain does not match the configured <strong>sending domain</strong> ({{ tenant.sending_domain }}).
+    </div>
+  {% endif %}
 
   {% if new_api_key %}
     <div class="rounded-xl border border-amber-700 bg-amber-950/50 p-4">
@@ -12,6 +35,61 @@
       <code class="mt-2 block break-all rounded bg-surface-900 p-3 text-xs text-emerald-300">{{ new_api_key }}</code>
     </div>
   {% endif %}
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Tenant settings</h3>
+    <dl class="mt-4 space-y-2 text-sm text-slate-400">
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Reply-to</dt><dd>{% if tenant.reply_to %}{{ tenant.reply_to }}{% else %}—{% endif %}</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Sending domain</dt><dd>{% if tenant.sending_domain %}{{ tenant.sending_domain }}{% else %}—{% endif %}</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Default sender</dt><dd>{{ tenant.default_sender_name }} &lt;{{ tenant.default_sender_email|default:"" }}&gt;</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Timezone</dt><dd>{{ tenant.timezone }}</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Rate limit / min</dt><dd>{{ tenant.rate_limit_per_minute }}</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Webhook secret</dt><dd>{% if tenant.webhook_secret %}set{% else %}not set{% endif %}</dd></div>
+    </dl>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h3 class="text-sm font-semibold text-white">Sender profiles</h3>
+      <a href="{% url 'ui:sender_profile_create' tenant.id %}" class="text-sm text-blue-400 hover:underline">Add profile</a>
+    </div>
+    {% if sender_profiles %}
+      <div class="mt-4 overflow-hidden rounded-lg border border-surface-700">
+        <table class="min-w-full text-left text-sm">
+          <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-3 py-2">Name</th>
+              <th class="px-3 py-2">Category</th>
+              <th class="px-3 py-2">From</th>
+              <th class="px-3 py-2">Reply-to</th>
+              <th class="px-3 py-2">Default</th>
+              <th class="px-3 py-2">Active</th>
+              <th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-700">
+            {% for p in sender_profiles %}
+              <tr class="{% if p.is_default %}border-l-2 border-l-emerald-500 bg-emerald-950/20{% endif %}">
+                <td class="px-3 py-2 text-slate-200">{{ p.name }}</td>
+                <td class="px-3 py-2 text-slate-400">{{ p.get_category_display }}</td>
+                <td class="px-3 py-2 text-slate-300">{{ p.from_name }} &lt;{{ p.from_email }}&gt;</td>
+                <td class="px-3 py-2 text-slate-500">{% if p.reply_to %}{{ p.reply_to }}{% else %}—{% endif %}</td>
+                <td class="px-3 py-2">{% if p.is_default %}<span class="text-emerald-400">Yes</span>{% else %}—{% endif %}</td>
+                <td class="px-3 py-2">{% if p.is_active %}<span class="text-slate-300">Yes</span>{% else %}<span class="text-slate-600">No</span>{% endif %}</td>
+                <td class="px-3 py-2 whitespace-nowrap text-right text-xs">
+                  <a href="{% url 'ui:sender_profile_edit' tenant.id p.id %}" class="text-blue-400 hover:underline">Edit</a>
+                  <span class="text-slate-600">·</span>
+                  <a href="{% url 'ui:sender_profile_delete' tenant.id p.id %}" class="text-red-400/90 hover:underline">Delete</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="mt-3 text-sm text-slate-500">No sender profiles yet. Add one to override the tenant default per category.</p>
+    {% endif %}
+  </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Create API key</h3>
@@ -31,12 +109,6 @@
         <li>No keys yet.</li>
       {% endfor %}
     </ul>
-  </div>
-
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-400">
-    <p><span class="text-slate-500">Default sender:</span> {{ tenant.default_sender_name }} &lt;{{ tenant.default_sender_email }}&gt;</p>
-    <p class="mt-2"><span class="text-slate-500">Timezone:</span> {{ tenant.timezone }}</p>
-    <p class="mt-2"><span class="text-slate-500">Webhook secret:</span> {% if tenant.webhook_secret %}set{% else %}not set{% endif %}</p>
   </div>
 </div>
 {% endblock %}

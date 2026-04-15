@@ -2,7 +2,9 @@
 {% block content %}
 <div class="mx-auto max-w-5xl space-y-10">
   {% if no_tenant %}
-    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">Create a tenant (Django admin) and select it in the header menu.</div>
+    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">
+      <a href="{% url 'ui:tenant_create' %}" class="text-amber-100 underline">Create a tenant</a> or pick one under Tenants, then select it in the header menu.
+    </div>
   {% else %}
     <div class="rounded-xl border border-blue-900/50 bg-blue-950/50 px-4 py-4 text-sm text-slate-200">
       <p class="font-semibold text-white">Sending as tenant: {{ active_tenant.name }}</p>
@@ -32,7 +34,12 @@
       <div><label class="mb-1 block text-xs text-slate-500">Text body</label>{{ raw_form.text_body }}</div>
       <div><label class="mb-1 block text-xs text-slate-500">Metadata (JSON)</label>{{ raw_form.metadata }}</div>
       <div><label class="mb-1 block text-xs text-slate-500">Idempotency key</label>{{ raw_form.idempotency_key }}</div>
-      <div id="raw-preview-out" class="min-h-[1rem]"></div>
+      <div class="md:col-span-2">
+        <label class="mb-1 block text-xs text-slate-500">{{ raw_form.sender_profile.label }}</label>
+        {{ raw_form.sender_profile }}
+        <p class="mt-1 text-xs text-slate-500">Optional. Leave blank to use the tenant’s default sender (name and email from tenant settings).</p>
+      </div>
+      <div id="raw-preview-out" class="min-h-[1rem] md:col-span-2"></div>
       <div class="flex flex-wrap gap-2">
         <button type="button" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-200 hover:bg-surface-800"
                 hx-post="{% url 'ui:send_preview_raw' %}"
@@ -62,7 +69,12 @@
       <div><label class="mb-1 block text-xs text-slate-500">Metadata (JSON)</label>{{ tpl_form.metadata }}</div>
       <div><label class="mb-1 block text-xs text-slate-500">Tags (JSON)</label>{{ tpl_form.tags }}</div>
       <div><label class="mb-1 block text-xs text-slate-500">Idempotency key</label>{{ tpl_form.idempotency_key }}</div>
-      <div id="tpl-preview-out" class="min-h-[1rem]"></div>
+      <div class="md:col-span-2">
+        <label class="mb-1 block text-xs text-slate-500">{{ tpl_form.sender_profile.label }}</label>
+        {{ tpl_form.sender_profile }}
+        <p class="mt-1 text-xs text-slate-500">Optional. Blank uses the tenant default; otherwise the selected active profile supplies from/reply identity for this send.</p>
+      </div>
+      <div id="tpl-preview-out" class="min-h-[1rem] md:col-span-2"></div>
       <div class="flex flex-wrap gap-2">
         <button type="button" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-200 hover:bg-surface-800"
                 hx-post="{% url 'ui:send_preview_template' %}"

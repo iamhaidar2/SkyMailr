@@ -9,7 +9,8 @@ from django import forms
 
 from apps.email_templates.models import TemplateCategory
 from apps.messages.models import MessageType, OutboundStatus
-from apps.tenants.models import Tenant
+from apps.tenants.models import SenderProfile, Tenant
+from apps.ui.tenant_validators import from_email_allowed_for_tenant
 from apps.workflows.models import WorkflowStepType
 
 
@@ -66,6 +67,102 @@ class MessageFilterForm(forms.Form):
 
 
 _inp = "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white"
+_chk = "h-4 w-4 rounded border-surface-600 text-accent"
+
+
+def _sender_profile_label(obj: SenderProfile) -> str:
+    return f"{obj.name} — {obj.from_email}"
+
+
+class TenantForm(forms.ModelForm):
+    """Create or edit a tenant (pass instance= for edit)."""
+
+    class Meta:
+        model = Tenant
+        fields = [
+            "name",
+            "slug",
+            "status",
+            "default_sender_name",
+            "default_sender_email",
+            "reply_to",
+            "sending_domain",
+            "timezone",
+            "rate_limit_per_minute",
+            "webhook_secret",
+        ]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": _inp}),
+            "slug": forms.TextInput(attrs={"class": _inp}),
+            "status": forms.Select(attrs={"class": _inp}),
+            "default_sender_name": forms.TextInput(attrs={"class": _inp}),
+            "default_sender_email": forms.EmailInput(attrs={"class": _inp}),
+            "reply_to": forms.EmailInput(attrs={"class": _inp}),
+            "sending_domain": forms.TextInput(attrs={"class": _inp}),
+            "timezone": forms.TextInput(attrs={"class": _inp}),
+            "rate_limit_per_minute": forms.NumberInput(attrs={"class": _inp, "min": 1}),
+            "webhook_secret": forms.TextInput(attrs={"class": _inp}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["webhook_secret"].required = False
+        self.fields["default_sender_email"].required = False
+        self.fields["reply_to"].required = False
+        self.fields["sending_domain"].required = False
+        self.fields["timezone"].initial = self.fields["timezone"].initial or "UTC"
+
+    def clean_slug(self):
+        slug = (self.cleaned_data.get("slug") or "").strip()
+        if not slug:
+            raise forms.ValidationError("Slug is required.")
+        qs = Tenant.objects.filter(slug__iexact=slug)
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError("A tenant with this slug already exists.")
+        return slug.lower()
+
+    def clean_sending_domain(self):
+        raw = self.cleaned_data.get("sending_domain") or ""
+        return raw.strip().lower() if raw else ""
+
+    def clean_timezone(self):
+        tz = (self.cleaned_data.get("timezone") or "").strip()
+        return tz or "UTC"
+
+
+class SenderProfileForm(forms.ModelForm):
+    class Meta:
+        model = SenderProfile
+        fields = ["name", "category", "from_name", "from_email", "reply_to", "is_default", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": _inp}),
+            "category": forms.Select(attrs={"class": _inp}),
+            "from_name": forms.TextInput(attrs={"class": _inp}),
+            "from_email": forms.EmailInput(attrs={"class": _inp}),
+            "reply_to": forms.EmailInput(attrs={"class": _inp}),
+            "is_default": forms.CheckboxInput(attrs={"class": _chk}),
+            "is_active": forms.CheckboxInput(attrs={"class": _chk}),
+        }
+
+    def __init__(self, *args, tenant: Tenant, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tenant = tenant
+        self.fields["reply_to"].required = False
+
+    def clean_from_email(self):
+        email = self.cleaned_data["from_email"].strip()
+        sd = (self._tenant.sending_domain or "").strip()
+        if sd and not from_email_allowed_for_tenant(email, sd):
+            raise forms.ValidationError(
+                f"From address must be on the tenant sending domain ({sd}).",
+            )
+        return email
+
+    def save(self, commit: bool = True):
+        self.instance.tenant = self._tenant
+        return super().save(commit=commit)
 
 
 class SendRawForm(forms.Form):
@@ -84,6 +181,31 @@ class SendRawForm(forms.Form):
     )
     metadata = JsonObjectField()
     idempotency_key = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
+    sender_profile = forms.ModelChoiceField(
+        queryset=SenderProfile.objects.none(),
+        required=False,
+        empty_label="Use tenant default sender",
+        label="Sender profile",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+
+    def __init__(self, *args, tenant: Tenant | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tenant = tenant
+        sp = self.fields["sender_profile"]
+        sp.label_from_instance = _sender_profile_label
+        if tenant is not None:
+            sp.queryset = SenderProfile.objects.filter(tenant=tenant, is_active=True).order_by(
+                "category", "name"
+            )
+        else:
+            sp.queryset = SenderProfile.objects.none()
+
+    def clean_sender_profile(self):
+        sp = self.cleaned_data.get("sender_profile")
+        if sp is not None and self._tenant is not None and sp.tenant_id != self._tenant.id:
+            raise forms.ValidationError("That sender profile does not belong to the active tenant.")
+        return sp
 
 
 class SendTemplateForm(forms.Form):
@@ -104,6 +226,36 @@ class SendTemplateForm(forms.Form):
         widget=forms.DateTimeInput(attrs={"type": "datetime-local", "class": _inp}),
     )
     idempotency_key = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
+    sender_profile = forms.ModelChoiceField(
+        queryset=SenderProfile.objects.none(),
+        required=False,
+        empty_label="Use tenant default sender",
+        label="Sender profile",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+
+    def __init__(self, *args, tenant: Tenant | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tenant = tenant
+        sp = self.fields["sender_profile"]
+        sp.label_from_instance = _sender_profile_label
+        if tenant is not None:
+            sp.queryset = SenderProfile.objects.filter(tenant=tenant, is_active=True).order_by(
+                "category", "name"
+            )
+        else:
+            sp.queryset = SenderProfile.objects.none()
+
+    def clean_sender_profile(self):
+        sp = self.cleaned_data.get("sender_profile")
+        if sp is not None and self._tenant is not None and sp.tenant_id != self._tenant.id:
+            raise forms.ValidationError("That sender profile does not belong to the active tenant.")
+        return sp
+
+
+def send_forms_for_tenant(tenant: Tenant | None) -> tuple[SendRawForm, SendTemplateForm]:
+    """Pair of send forms scoped to tenant (or empty sender profile queryset)."""
+    return SendRawForm(tenant=tenant), SendTemplateForm(tenant=tenant)
 
 
 class TemplatePreviewForm(forms.Form):
