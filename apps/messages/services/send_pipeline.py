@@ -21,6 +21,16 @@ from apps.tenants.models import SenderProfile, Tenant
 logger = logging.getLogger(__name__)
 
 
+def _queue_dispatch_if_ready(msg: OutboundMessage) -> None:
+    """Enqueue Celery dispatch for messages ready to send (API, UI, workflows)."""
+    if msg.status != OutboundStatus.QUEUED:
+        return
+    # Local import avoids import cycles (tasks may import this module).
+    from apps.messages.tasks import dispatch_message_task
+
+    dispatch_message_task.delay(str(msg.id))
+
+
 def _priority_for(message_type: str) -> int:
     mapping = {
         MessageType.TRANSACTIONAL.value: MessagePriority.NORMAL_TX,
@@ -136,7 +146,10 @@ def create_templated_message(
             event_type=MessageEventType.FAILED,
             payload={"error": str(e)},
         )
-        raise
+        # Do not re-raise: @transaction.atomic would roll back the FAILED row and break idempotency.
+
+    if msg.status == OutboundStatus.FAILED:
+        return msg
 
     msg.subject_rendered = rendered["subject"]
     msg.html_rendered = rendered["html"]
@@ -157,6 +170,7 @@ def create_templated_message(
         payload={"preview": rendered.get("preview", "")},
     )
     apply_send_schedule(msg)
+    _queue_dispatch_if_ready(msg)
     return msg
 
 
@@ -230,4 +244,5 @@ def create_raw_message(
     )
     MessageEvent.objects.create(message=msg, event_type=MessageEventType.RENDERED, payload={})
     apply_send_schedule(msg)
+    _queue_dispatch_if_ready(msg)
     return msg

@@ -70,6 +70,7 @@ class OutboundMessageSerializer(serializers.ModelSerializer):
             "to_email",
             "status",
             "subject_rendered",
+            "last_error",
             "provider_name",
             "provider_message_id",
             "created_at",

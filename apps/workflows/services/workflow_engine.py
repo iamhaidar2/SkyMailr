@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.email_templates.models import EmailTemplate
-from apps.messages.models import MessageType
+from apps.messages.models import MessageType, OutboundStatus
 from apps.messages.services.send_pipeline import create_templated_message
 from apps.workflows.models import (
     EnrollmentStatus,
@@ -101,7 +101,7 @@ def _process_one_execution(ex: WorkflowExecution) -> None:
             raise ValueError("Workflow step missing template")
         meta = dict(ex.enrollment.metadata or {})
         ctx = meta.get("template_context") or {}
-        create_templated_message(
+        msg = create_templated_message(
             tenant=tenant,
             template=tpl,
             source_app=meta.get("source_app", "workflow"),
@@ -114,7 +114,11 @@ def _process_one_execution(ex: WorkflowExecution) -> None:
             idempotency_key=None,
             workflow_execution=ex,
         )
-        WorkflowStepRun.objects.create(execution=ex, step=step, status="sent")
+        if msg.status == OutboundStatus.FAILED:
+            WorkflowStepRun.objects.create(execution=ex, step=step, status="failed")
+            raise ValueError(msg.last_error or "template send failed")
+        run_status = "sent" if msg.status == OutboundStatus.QUEUED else "suppressed"
+        WorkflowStepRun.objects.create(execution=ex, step=step, status=run_status)
         nxt = next_linear_step(wf, step.order)
         if not nxt:
             _complete(ex)

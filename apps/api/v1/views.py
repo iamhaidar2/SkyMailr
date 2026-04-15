@@ -22,7 +22,6 @@ from apps.messages.models import IdempotencyKeyRecord, OutboundMessage, Outbound
 from apps.messages.services.idempotency import hash_idempotency_key
 from apps.messages.services.send_pipeline import create_raw_message, create_templated_message
 from apps.messages.services.message_actions import cancel_outbound_message, retry_outbound_message
-from apps.messages.tasks import dispatch_message_task
 from apps.providers.registry import get_email_provider
 from apps.providers.webhook_service import ProviderWebhookService
 from apps.subscriptions.models import UnsubscribeRecord
@@ -108,14 +107,17 @@ class SendTemplateView(APIView):
             )
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
-        if raw_idem and msg.status != OutboundStatus.SUPPRESSED:
+        if raw_idem:
             IdempotencyKeyRecord.objects.get_or_create(
                 tenant=tenant,
                 key_hash=hash_idempotency_key(str(tenant.id), raw_idem),
                 defaults={"message": msg},
             )
-        if msg.status == OutboundStatus.QUEUED:
-            dispatch_message_task.delay(str(msg.id))
+        if msg.status == OutboundStatus.FAILED:
+            return Response(
+                {"detail": msg.last_error or "Render failed"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(OutboundMessageSerializer(msg).data, status=201)
 
 
@@ -150,14 +152,12 @@ class SendRawView(APIView):
             metadata=d.get("metadata"),
             idempotency_key=raw_idem or None,
         )
-        if raw_idem and msg.status != OutboundStatus.SUPPRESSED:
+        if raw_idem:
             IdempotencyKeyRecord.objects.get_or_create(
                 tenant=tenant,
                 key_hash=hash_idempotency_key(str(tenant.id), raw_idem),
                 defaults={"message": msg},
             )
-        if msg.status == OutboundStatus.QUEUED:
-            dispatch_message_task.delay(str(msg.id))
         return Response(OutboundMessageSerializer(msg).data, status=201)
 
 

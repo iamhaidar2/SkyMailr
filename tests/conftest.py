@@ -16,6 +16,20 @@ def tenant(db):
 
 
 @pytest.fixture
+def other_tenant(db):
+    from apps.tenants.models import Tenant, TenantStatus
+
+    return Tenant.objects.create(
+        name="OtherCo",
+        slug="otherco",
+        status=TenantStatus.ACTIVE,
+        default_sender_email="noreply@otherco.example",
+        default_sender_name="OtherCo",
+        llm_defaults={"default_model": "gpt-4o-mini", "temperature": 0.2},
+    )
+
+
+@pytest.fixture
 def api_key(db, tenant):
     from apps.tenants.crypto import generate_api_key, hash_api_key
     from apps.tenants.models import TenantAPIKey
@@ -24,6 +38,20 @@ def api_key(db, tenant):
     TenantAPIKey.objects.create(
         tenant=tenant,
         name="test",
+        key_hash=hash_api_key(raw),
+    )
+    return raw
+
+
+@pytest.fixture
+def api_key_other(db, other_tenant):
+    from apps.tenants.crypto import generate_api_key, hash_api_key
+    from apps.tenants.models import TenantAPIKey
+
+    raw = generate_api_key()
+    TenantAPIKey.objects.create(
+        tenant=other_tenant,
+        name="test-other",
         key_hash=hash_api_key(raw),
     )
     return raw

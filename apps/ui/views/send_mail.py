@@ -10,7 +10,6 @@ from apps.email_templates.services.validation_service import TemplateValidationS
 from apps.messages.models import IdempotencyKeyRecord, OutboundStatus
 from apps.messages.services.idempotency import hash_idempotency_key
 from apps.messages.services.send_pipeline import create_raw_message, create_templated_message
-from apps.messages.tasks import dispatch_message_task
 from apps.ui.context import operator_shell_context
 from apps.ui.decorators import operator_required
 from apps.ui.forms import SendRawForm, SendTemplateForm
@@ -18,7 +17,7 @@ from apps.ui.services.operator import get_active_tenant
 
 
 def _idem_attach(tenant, raw_key: str, msg):
-    if not raw_key or msg.status == OutboundStatus.SUPPRESSED:
+    if not raw_key:
         return
     IdempotencyKeyRecord.objects.get_or_create(
         tenant=tenant,
@@ -87,8 +86,6 @@ def send_raw(request):
         idempotency_key=raw_idem or None,
     )
     _idem_attach(tenant, raw_idem, msg)
-    if msg.status == OutboundStatus.QUEUED:
-        dispatch_message_task.delay(str(msg.id))
     django_messages.success(
         request,
         "Message created — queued for sending (or suppressed). Open the detail below to track status.",
@@ -154,7 +151,7 @@ def send_template(request):
             idempotency_key=raw_idem or None,
             scheduled_for=d.get("scheduled_for"),
         )
-    except Exception as e:
+    except ValueError as e:
         form.add_error(None, str(e))
         ctx = operator_shell_context(request)
         ctx.update(
@@ -168,8 +165,20 @@ def send_template(request):
         )
         return render(request, "ui/pages/send_email.html", ctx, status=400)
     _idem_attach(tenant, raw_idem, msg)
-    if msg.status == OutboundStatus.QUEUED:
-        dispatch_message_task.delay(str(msg.id))
+    if msg.status == OutboundStatus.FAILED:
+        form.add_error(None, msg.last_error or "Send failed")
+        ctx = operator_shell_context(request)
+        ctx.update(
+            {
+                "page_title": "Send email",
+                "nav_active": "send",
+                "active_tenant": tenant,
+                "raw_form": SendRawForm(),
+                "tpl_form": form,
+                "show_tenant_banner": True,
+            }
+        )
+        return render(request, "ui/pages/send_email.html", ctx, status=400)
     django_messages.success(
         request,
         "Templated message created — queued for sending (or suppressed). Track it on the detail page.",
