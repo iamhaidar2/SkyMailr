@@ -31,15 +31,50 @@ class PostalEmailProvider(BaseEmailProvider):
         return True, ""
 
     def health_check(self) -> tuple[bool, str]:
+        """
+        Postal's HTTP API is RPC-style (POST + JSON); there is no guaranteed GET /api/v1/status
+        on every install (often 404). We check:
+        1) TLS + host reachability via GET on the base URL (web UI / redirect).
+        2) API + server key via POST api/v1/send/message with an empty body — Postal returns
+           JSON with a `status` field (e.g. parameter-error) without sending mail.
+        """
         ok, msg = self.validate_config()
         if not ok:
             return False, msg
         try:
-            url = urljoin(self.base_url + "/", "api/v1/status")
-            r = httpx.get(url, headers={"X-Server-API-Key": self.api_key}, timeout=self.timeout, verify=self.verify)
-            if r.status_code < 400:
-                return True, r.text[:500]
-            return False, f"status_code={r.status_code}"
+            root = self.base_url.rstrip("/") + "/"
+            r0 = httpx.get(
+                root,
+                timeout=self.timeout,
+                verify=self.verify,
+                follow_redirects=True,
+            )
+            if r0.status_code >= 500:
+                return False, f"host HTTP {r0.status_code}"
+
+            url = urljoin(self.base_url + "/", "api/v1/send/message")
+            r = httpx.post(
+                url,
+                json={},
+                headers={"X-Server-API-Key": self.api_key},
+                timeout=self.timeout,
+                verify=self.verify,
+            )
+            ct = r.headers.get("content-type", "")
+            data: dict[str, Any] = {}
+            if ct.startswith("application/json"):
+                try:
+                    parsed = r.json()
+                    if isinstance(parsed, dict):
+                        data = parsed
+                except Exception:
+                    pass
+            if isinstance(data, dict) and "status" in data:
+                st = data.get("status")
+                return True, f"postal_api status={st!r} host_http={r0.status_code} api_http={r.status_code}"
+            if r.status_code < 500:
+                return True, f"host_http={r0.status_code} api_http={r.status_code} body={r.text[:300]}"
+            return False, f"api_http={r.status_code} {r.text[:500]}"
         except Exception as e:
             return False, str(e)
 

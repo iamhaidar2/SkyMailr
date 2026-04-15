@@ -24,7 +24,7 @@
 | **console** | `console` | Logs email; no real delivery |
 | **Postal** | `postal` | HTTP API to Postal server (`POSTAL_BASE_URL`, `POSTAL_SERVER_API_KEY`, etc.) |
 
-Adapter health: `get_email_provider().health_check()` — used by `/api/v1/providers/health/` and operator **Provider health** page.
+Adapter health: `get_email_provider().health_check()` — used by `/api/v1/providers/health/` and operator **Provider health** page. For **postal**, this probes host reachability plus a no-op API POST (see [09-debugging-and-runbook.md](09-debugging-and-runbook.md)); it does not prove inbox delivery.
 
 ## How source apps interact
 

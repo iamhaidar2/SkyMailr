@@ -100,7 +100,7 @@ SkyMailr does not ship a separate log aggregation product — use Railway logs o
 ### What “provider healthy” means
 
 - **dummy:** In-process check — **does not** prove internet, DNS, or Postal.
-- **postal:** Typically HTTP reachability / auth to Postal API (see implementation in `apps/providers`).
+- **postal:** `PostalEmailProvider.health_check()` GETs your `POSTAL_BASE_URL` (host/TLS reachability), then POSTs to `api/v1/send/message` with an **empty JSON body** so Postal returns a normal JSON `status` (e.g. parameter error) — that proves the **server API key** works without sending mail. It is **not** a full deliverability test.
 
 Before blaming Postal in production: confirm **worker** processed the message (`sent` vs `failed` on `OutboundMessage`), then **webhooks** and **Postal dashboard** for that message id.
 

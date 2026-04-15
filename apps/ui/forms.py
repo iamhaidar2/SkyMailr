@@ -29,8 +29,9 @@ class JsonObjectField(forms.CharField):
         kwargs.setdefault("required", False)
         super().__init__(*args, **kwargs)
 
-    def clean(self) -> dict[str, Any]:
-        raw = (self.cleaned_data or "").strip()
+    def clean(self, value):
+        raw = super().clean(value)
+        raw = (raw or "").strip()
         if not raw:
             return {}
         try:
