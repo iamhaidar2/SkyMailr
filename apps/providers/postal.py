@@ -4,6 +4,7 @@ Postal HTTP API adapter (skeleton + working send path via httpx).
 Designed for self-hosted Postal on a VPS; safe to leave unconfigured in dev.
 """
 
+import json
 import logging
 from typing import Any
 from urllib.parse import urljoin
@@ -14,6 +15,31 @@ from django.conf import settings
 from apps.providers.base import BaseEmailProvider, EmailMessageDTO, SendResult
 
 logger = logging.getLogger(__name__)
+
+
+def _postal_error_detail_from_body(data: dict[str, Any]) -> str:
+    for key in ("message", "error", "details"):
+        v = data.get(key)
+        if v is not None and str(v).strip():
+            return str(v)[:2000]
+    try:
+        return json.dumps(data)[:2000]
+    except Exception:
+        return repr(data)[:2000]
+
+
+def _extract_postal_message_id(data: dict[str, Any]) -> str:
+    for key in ("message_id", "id"):
+        v = data.get(key)
+        if v is not None and str(v).strip():
+            return str(v).strip()
+    nested = data.get("data")
+    if isinstance(nested, dict):
+        for key in ("message_id", "id"):
+            v = nested.get(key)
+            if v is not None and str(v).strip():
+                return str(v).strip()
+    return ""
 
 
 class PostalEmailProvider(BaseEmailProvider):
@@ -108,18 +134,54 @@ class PostalEmailProvider(BaseEmailProvider):
                 timeout=self.timeout,
                 verify=self.verify,
             )
-            data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+            ct = r.headers.get("content-type", "")
+            raw_dict: dict[str, Any] | None = None
+            if ct.startswith("application/json"):
+                try:
+                    parsed = r.json()
+                    raw_dict = parsed if isinstance(parsed, dict) else None
+                except Exception:
+                    raw_dict = None
+
             if r.status_code >= 400:
                 return SendResult(
                     success=False,
                     error_code=f"http_{r.status_code}",
                     error_detail=r.text[:2000],
-                    raw_response=data if isinstance(data, dict) else {},
+                    raw_response=raw_dict if raw_dict is not None else {},
                 )
-            mid = ""
-            if isinstance(data, dict):
-                mid = str(data.get("message_id") or data.get("id") or "")
-            return SendResult(success=True, provider_message_id=mid, raw_response=data if isinstance(data, dict) else {})
+
+            if raw_dict is None:
+                return SendResult(
+                    success=False,
+                    error_code="postal_unexpected_response",
+                    error_detail=r.text[:2000] if r.text else "Empty or non-JSON response",
+                    raw_response={},
+                )
+
+            st = raw_dict.get("status")
+            if isinstance(st, str) and st.lower() == "error":
+                return SendResult(
+                    success=False,
+                    error_code="postal_error",
+                    error_detail=_postal_error_detail_from_body(raw_dict),
+                    raw_response=raw_dict,
+                )
+
+            mid = _extract_postal_message_id(raw_dict)
+            if mid:
+                return SendResult(
+                    success=True,
+                    provider_message_id=mid,
+                    raw_response=raw_dict,
+                )
+
+            return SendResult(
+                success=False,
+                error_code="postal_unexpected_response",
+                error_detail=_postal_error_detail_from_body(raw_dict),
+                raw_response=raw_dict,
+            )
         except Exception as e:
             code, detail = self.normalize_error(e)
             logger.exception("Postal send failed")
