@@ -1,5 +1,5 @@
 <div class="mk-container max-w-6xl px-4 lg:px-6">
-  <h2 id="portals-heading" class="mk-section-title mb-3 text-center">Customer portal &amp; operator portal</h2>
+  <h2 id="portals-heading" class="mk-section-title mb-3 text-center">Customer portal &amp; staff portal</h2>
   <p class="mk-section-lead mx-auto mb-12 max-w-2xl text-center">Two interfaces on the same platform: self-service for customer accounts and oversight for your team.</p>
   <div class="grid gap-8 lg:grid-cols-2 lg:items-stretch">
     <article class="mk-card mk-card-pad flex flex-col">
@@ -12,13 +12,13 @@
         <li>Message history scoped to the signed-in account</li>
       </ul>
       <div class="mt-auto flex flex-wrap gap-2">
-        <a href="{% url 'portal:signup' %}" class="mk-btn-primary px-4 py-2 text-sm">Start free</a>
-        <a href="{% url 'portal:login' %}" class="mk-btn-secondary px-4 py-2 text-sm">Login</a>
+        <a href="{% url 'portal:signup' %}" class="mk-btn-primary text-sm">Start free</a>
+        <a href="{% url 'portal:login' %}" class="mk-btn-secondary text-sm">Login</a>
       </div>
     </article>
     <article class="mk-card mk-card-subtle mk-card-pad flex flex-col">
-      <h3 class="mb-1 text-lg font-semibold text-[var(--mk-text)]">Operator portal</h3>
-      <p class="mb-5 text-xs text-[var(--mk-text-subtle)]">Staff access · cross-account</p>
+      <h3 class="mb-1 text-lg font-semibold text-[var(--mk-text)]">Staff portal</h3>
+      <p class="mb-5 text-xs text-[var(--mk-text-subtle)]">Cross-account access for your team</p>
       <ul class="mb-8 flex-1 space-y-2.5 text-sm text-[var(--mk-text-muted)]">
         <li>Cross-tenant operations and support</li>
         <li>Suppressions and incident visibility</li>
@@ -26,7 +26,7 @@
         <li>Provider health and webhook intake</li>
       </ul>
       <div class="mt-auto">
-        <a href="{% url 'ui:login' %}" class="mk-btn-secondary px-4 py-2 text-sm">Operator login</a>
+        <a href="{% url 'ui:login' %}" class="mk-btn-secondary text-sm">Staff sign-in</a>
       </div>
     </article>
   </div>

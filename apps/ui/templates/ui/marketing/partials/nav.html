@@ -1,13 +1,13 @@
 <header class="mk-nav">
-  <div class="mk-container flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3.5">
-    <a href="{% url 'ui:home' %}" class="mk-wordmark text-lg">SkyMailr</a>
-    <nav class="order-3 flex w-full flex-wrap items-center gap-x-5 gap-y-1 text-sm md:order-none md:w-auto" aria-label="Primary">
+  <div class="mk-container mk-nav-bar">
+    <a href="{% url 'ui:home' %}" class="mk-nav-brand mk-wordmark text-lg">SkyMailr</a>
+    <nav class="mk-nav-primary" aria-label="Primary">
       <a href="#product" class="mk-nav-link">Product</a>
       <a href="#use-cases" class="mk-nav-link">Use cases</a>
       <a href="#pricing" class="mk-nav-link">Pricing</a>
       <a href="#developer-api" class="mk-nav-link">Docs / API</a>
     </nav>
-    <div class="flex flex-wrap items-center justify-end gap-2">
+    <div class="mk-nav-actions">
       <div class="mk-theme-toggle" role="group" aria-label="Theme">
         <button type="button" id="mk-theme-light" title="Light" aria-label="Light theme" aria-pressed="true">
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
@@ -16,13 +16,8 @@
           <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         </button>
       </div>
-      <a href="{% url 'portal:login' %}" class="mk-nav-link px-1 text-sm">Login</a>
-      <a href="{% url 'portal:signup' %}" class="mk-btn-primary px-4 py-2 text-sm">Start free</a>
-      <span class="hidden text-xs text-[var(--mk-text-subtle)] sm:inline" aria-hidden="true">·</span>
-      <a href="{% url 'ui:login' %}" class="mk-btn-ghost hidden text-xs sm:inline">Operator</a>
+      <a href="{% url 'portal:login' %}" class="mk-nav-link mk-nav-link--cta">Login</a>
+      <a href="{% url 'portal:signup' %}" class="mk-btn-primary mk-btn--nav">Start free</a>
     </div>
   </div>
-  <p class="mk-container max-w-7xl pb-2.5 pl-4 text-right text-xs sm:hidden">
-    <a href="{% url 'ui:login' %}" class="mk-btn-ghost">Operator login</a>
-  </p>
 </header>
