@@ -68,6 +68,15 @@ class DomainVerificationStatus(models.TextChoices):
     FAILED_CHECK = "failed_check", "Check failed"
 
 
+class DnsMetadataSource(models.TextChoices):
+    """Where expected DNS values were last set (staff/admin visibility)."""
+
+    UNKNOWN = "unknown", "Unknown"
+    POSTAL_API = "postal_api", "Postal API"
+    SETTINGS = "settings", "Operator settings"
+    ADMIN = "admin", "Admin"
+
+
 class TenantDomain(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="domains")
@@ -88,6 +97,42 @@ class TenantDomain(models.Model):
     dmarc_status = models.CharField(max_length=64, blank=True)
     last_checked_at = models.DateTimeField(null=True, blank=True)
     verification_notes = models.TextField(blank=True)
+    # Expected DNS (from Postal sync, operator settings merge, or admin). NULL = unknown; never store placeholder tokens.
+    spf_txt_expected = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Full SPF TXT value customers should publish at the domain name (e.g. v=spf1 include:… ~all).",
+    )
+    dkim_selector = models.CharField(max_length=255, blank=True, null=True)
+    dkim_txt_value = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Full DKIM TXT record value (v=DKIM1; …).",
+    )
+    return_path_cname_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Return-path hostname (FQDN). If empty, defaults to rp.<domain> when a target exists.",
+    )
+    return_path_cname_target = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="CNAME target for return-path/bounce handling.",
+    )
+    dmarc_txt_expected = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Full DMARC TXT for _dmarc.<domain>.",
+    )
+    dns_source = models.CharField(
+        max_length=32,
+        choices=DnsMetadataSource.choices,
+        default=DnsMetadataSource.UNKNOWN,
+        db_index=True,
+    )
+    dns_last_synced_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

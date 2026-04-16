@@ -27,13 +27,53 @@ class TenantDomainAdmin(admin.ModelAdmin):
         "verification_status",
         "verified",
         "is_primary",
+        "dns_source",
+        "dns_last_synced_at",
         "spf_status",
         "dkim_status",
         "dmarc_status",
         "last_checked_at",
     )
-    list_filter = ("verification_status", "verified", "is_primary")
+    list_filter = ("verification_status", "verified", "is_primary", "dns_source")
     search_fields = ("domain", "tenant__name", "tenant__slug")
+    readonly_fields = ("id", "created_at", "updated_at")
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "id",
+                    "tenant",
+                    "domain",
+                    "verified",
+                    "is_primary",
+                    "verification_status",
+                    "spf_status",
+                    "dkim_status",
+                    "dmarc_status",
+                    "last_checked_at",
+                    "verification_notes",
+                )
+            },
+        ),
+        (
+            "Expected DNS (provider / overrides)",
+            {
+                "fields": (
+                    "spf_txt_expected",
+                    "dkim_selector",
+                    "dkim_txt_value",
+                    "return_path_cname_name",
+                    "return_path_cname_target",
+                    "dmarc_txt_expected",
+                    "dns_source",
+                    "dns_last_synced_at",
+                ),
+                "description": "Leave blank when unknown. Do not paste placeholder tokens — use NULL and set dns source to Unknown.",
+            },
+        ),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
 
 
 @admin.register(SenderProfile)

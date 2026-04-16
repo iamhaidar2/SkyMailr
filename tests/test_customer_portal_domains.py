@@ -208,6 +208,8 @@ def test_check_tenant_domain_dns_verified_when_all_match(db):
         tenant=tenant,
         domain="example.com",
         verification_status=DomainVerificationStatus.UNVERIFIED,
+        dkim_txt_value="v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA",
+        dkim_selector="postal",
     )
 
     def fake_resolve(qname: str) -> list[str]:
@@ -241,6 +243,8 @@ def test_check_tenant_domain_dns_failed_when_no_txt_records(db):
         tenant=tenant,
         domain="empty.example.com",
         verification_status=DomainVerificationStatus.UNVERIFIED,
+        dkim_txt_value="v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA",
+        dkim_selector="postal",
     )
 
     def empty(_q: str) -> list[str]:

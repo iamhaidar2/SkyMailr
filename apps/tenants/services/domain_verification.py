@@ -6,11 +6,15 @@ import logging
 import re
 from typing import Callable
 
-from django.conf import settings
 from django.utils import timezone
 
 from apps.tenants.models import DomainVerificationStatus, TenantDomain
-from apps.tenants.services.domain_dns_instructions import normalize_fqdn
+from apps.tenants.services.domain_dns_instructions import (
+    normalize_fqdn,
+    resolve_dmarc_txt,
+    resolve_dkim,
+    resolve_expected_spf_txt,
+)
 from apps.ui.tenant_validators import email_domain
 
 logger = logging.getLogger(__name__)
@@ -21,7 +25,6 @@ ResolveTxtFn = Callable[[str], list[str]]
 def _default_resolve_txt(qname: str) -> list[str]:
     try:
         import dns.resolver
-        import dns.rdatatype
     except ImportError:
         logger.warning("dnspython not installed; DNS verification unavailable.")
         return []
@@ -40,12 +43,35 @@ def _default_resolve_txt(qname: str) -> list[str]:
     return out
 
 
-def _spf_include_hint() -> str:
-    return (getattr(settings, "SKYMAILR_SPF_INCLUDE_HINT", None) or "").strip().lower()
+def _extract_dkim_p(txt: str) -> str | None:
+    compact = re.sub(r"\s+", "", txt)
+    m = re.search(r"\bp=([A-Za-z0-9+/=]+)", compact, re.I)
+    return m.group(1) if m else None
 
 
-def _dkim_selector() -> str:
-    return (getattr(settings, "SKYMAILR_DKIM_SELECTOR", None) or "postal").strip()
+def _spf_matches_expectation(live_joined: str, expected: str) -> bool:
+    lj = live_joined.lower()
+    ex = expected.strip().lower()
+    if not ex:
+        return False
+    if ex.replace(" ", "") in lj.replace(" ", ""):
+        return True
+    if "v=spf1" not in lj:
+        return False
+    includes = re.findall(r"include:([^\s;]+)", ex)
+    if includes:
+        return all(inc.rstrip(".").lower() in lj for inc in includes)
+    return False
+
+
+def _dmarc_matches(live_joined: str, expected: str) -> bool:
+    lj = live_joined.lower()
+    if "v=dmarc1" not in lj:
+        return False
+    m = re.search(r"p=([a-z]+)", expected, re.I)
+    if m:
+        return f"p={m.group(1).lower()}" in lj
+    return True
 
 
 def check_tenant_domain_dns(
@@ -60,73 +86,98 @@ def check_tenant_domain_dns(
     d = normalize_fqdn(td.domain)
     if not d:
         td.verification_status = DomainVerificationStatus.FAILED_CHECK
-        td.verification_notes = "Invalid domain value."
+        td.verification_notes = "This domain value is not valid."
         td.last_checked_at = timezone.now()
         return td
 
-    spf_hint = _spf_include_hint()
-    dkim_sel = _dkim_selector()
-    dkim_name = f"{dkim_sel}._domainkey.{d}"
+    spf_expected, _ = resolve_expected_spf_txt(td)
+    dkim_sel, dkim_expected, _ = resolve_dkim(td)
+    dmarc_expected, _ = resolve_dmarc_txt(td)
 
     spf_txts = resolver(d)
-    spf_joined = " ".join(spf_txts).lower()
-    spf_ok = bool(spf_hint and spf_hint in spf_joined and "v=spf1" in spf_joined)
-    if not spf_hint:
-        td.spf_status = "manual"
-    elif spf_ok:
-        td.spf_status = "pass"
-    else:
-        td.spf_status = "fail"
+    spf_joined = " ".join(spf_txts)
 
-    dkim_txts = resolver(dkim_name)
-    dkim_joined = " ".join(dkim_txts)
-    dkim_ok = bool(re.search(r"\bp=", dkim_joined, re.I))
-    if dkim_ok:
-        td.dkim_status = "pass"
-    elif dkim_joined:
-        td.dkim_status = "partial"
+    if spf_expected:
+        spf_ok = _spf_matches_expectation(spf_joined, spf_expected)
+        td.spf_status = "pass" if spf_ok else "fail"
     else:
-        td.dkim_status = "fail"
+        spf_ok = False
+        td.spf_status = "manual"
+
+    dkim_name = f"{dkim_sel}._domainkey.{d}" if dkim_sel else ""
+    dkim_txts = resolver(dkim_name) if dkim_name else []
+    dkim_joined = " ".join(dkim_txts)
+
+    dkim_ok = False
+    if dkim_expected and dkim_sel:
+        exp_p = _extract_dkim_p(dkim_expected)
+        live_p = _extract_dkim_p(dkim_joined)
+        if exp_p and live_p and exp_p == live_p:
+            td.dkim_status = "pass"
+            dkim_ok = True
+        elif live_p and exp_p and exp_p != live_p:
+            td.dkim_status = "fail"
+        elif re.search(r"\bp=", dkim_joined, re.I) and exp_p:
+            td.dkim_status = "fail"
+        else:
+            td.dkim_status = "fail"
+    else:
+        if dkim_joined and re.search(r"\bp=", dkim_joined, re.I):
+            td.dkim_status = "partial"
+        elif dkim_joined:
+            td.dkim_status = "partial"
+        else:
+            td.dkim_status = "manual"
 
     dmarc_txts = resolver(f"_dmarc.{d}")
-    dmarc_joined = " ".join(dmarc_txts).lower()
-    dmarc_ok = "v=dmarc1" in dmarc_joined
+    dmarc_joined = " ".join(dmarc_txts)
+    dmarc_ok = _dmarc_matches(dmarc_joined, dmarc_expected) if dmarc_expected else False
     if dmarc_ok:
         td.dmarc_status = "pass"
+    elif dmarc_joined and "v=dmarc1" in dmarc_joined.lower():
+        td.dmarc_status = "partial"
     elif dmarc_joined:
         td.dmarc_status = "partial"
     else:
         td.dmarc_status = "missing"
 
-    if not spf_hint:
-        overall = DomainVerificationStatus.PARTIALLY_VERIFIED
-        notes = (
-            "Automatic SPF check skipped — set SKYMAILR_SPF_INCLUDE_HINT to your provider’s include "
-            "so SkyMailr can validate SPF. DKIM/DMARC checked against live DNS."
+    can_verify_all = bool(spf_expected and dkim_expected)
+
+    if not can_verify_all:
+        td.verification_status = DomainVerificationStatus.PARTIALLY_VERIFIED
+        td.verified = False
+        td.verification_notes = (
+            "We do not yet have the full expected DNS values for this domain "
+            "(SPF and DKIM). Contact support or wait until your domain page shows complete records."
         )
-    elif spf_ok and dkim_ok and dmarc_ok:
-        overall = DomainVerificationStatus.VERIFIED
-        notes = "SPF, DKIM, and DMARC records detected."
+        td.last_checked_at = timezone.now()
+        return td
+
+    if spf_ok and dkim_ok and dmarc_ok:
+        td.verification_status = DomainVerificationStatus.VERIFIED
         td.verified = True
+        td.verification_notes = (
+            "SPF, DKIM, and DMARC match the values we expect for this domain."
+        )
     elif spf_ok and dkim_ok:
-        overall = DomainVerificationStatus.PARTIALLY_VERIFIED
-        notes = "SPF and DKIM look good; add or tighten DMARC for full policy coverage."
+        td.verification_status = DomainVerificationStatus.PARTIALLY_VERIFIED
         td.verified = True
+        td.verification_notes = (
+            "SPF and DKIM match. DMARC is not present yet or does not match the suggested record."
+        )
     elif spf_ok or dkim_ok:
-        overall = DomainVerificationStatus.PARTIALLY_VERIFIED
-        notes = "Some records found; publish missing TXT records from the instructions below."
+        td.verification_status = DomainVerificationStatus.PARTIALLY_VERIFIED
         td.verified = False
-    else:
-        overall = DomainVerificationStatus.DNS_PENDING
-        notes = "No matching SPF/DKIM TXT records yet — DNS may still be propagating."
+        td.verification_notes = (
+            "Some DNS records match, but others do not yet. Compare each row below with your DNS host."
+        )
+    elif not spf_ok and not dkim_ok:
+        td.verification_status = DomainVerificationStatus.FAILED_CHECK
         td.verified = False
+        td.verification_notes = (
+            "We could not confirm SPF or DKIM yet. If you already published records, DNS may still be updating."
+        )
 
-    if td.spf_status == "fail" and td.dkim_status == "fail" and spf_hint:
-        overall = DomainVerificationStatus.FAILED_CHECK
-        notes = "SPF/DKIM checks did not match expected patterns. Compare with Postal’s domain page."
-
-    td.verification_status = overall
-    td.verification_notes = notes
     td.last_checked_at = timezone.now()
     return td
 

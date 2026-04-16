@@ -12,7 +12,8 @@ from django.views.decorators.http import require_POST
 from apps.accounts.policy import PolicyError
 from apps.accounts.services.enforcement import assert_tenant_operational
 from apps.tenants.models import DomainVerificationStatus, Tenant, TenantDomain
-from apps.tenants.services.domain_dns_instructions import build_dns_instructions
+from apps.tenants.services.domain_dns_instructions import build_dns_instructions_for_domain
+from apps.tenants.services.domain_dns_sync import sync_domain_dns_metadata
 from apps.tenants.services.domain_verification import check_tenant_domain_dns
 from apps.tenants.services.sending_readiness import compute_sending_readiness
 from apps.ui.decorators import customer_login_required, portal_account_required, portal_manage_required
@@ -83,6 +84,20 @@ def tenant_domain_new(request, tenant_id):
                     domain=d,
                     verification_status=DomainVerificationStatus.UNVERIFIED,
                 )
+                if sync_domain_dns_metadata(td, timeout=5.0):
+                    td.save(
+                        update_fields=[
+                            "spf_txt_expected",
+                            "dkim_selector",
+                            "dkim_txt_value",
+                            "return_path_cname_name",
+                            "return_path_cname_target",
+                            "dmarc_txt_expected",
+                            "dns_source",
+                            "dns_last_synced_at",
+                            "updated_at",
+                        ]
+                    )
                 if is_first and not (tenant.sending_domain or "").strip():
                     tenant.sending_domain = d
                     tenant.save(update_fields=["sending_domain", "updated_at"])
@@ -110,14 +125,30 @@ def tenant_domain_detail(request, tenant_id, domain_id):
     tenant, td = _tenant_and_domain(request, tenant_id, domain_id)
     account = get_active_portal_account(request)
     assert account is not None
-    instructions = build_dns_instructions(td.domain)
+    if sync_domain_dns_metadata(td, timeout=4.0):
+        td.save(
+            update_fields=[
+                "spf_txt_expected",
+                "dkim_selector",
+                "dkim_txt_value",
+                "return_path_cname_name",
+                "return_path_cname_target",
+                "dmarc_txt_expected",
+                "dns_source",
+                "dns_last_synced_at",
+                "updated_at",
+            ]
+        )
+    dns_instruction_set = build_dns_instructions_for_domain(td)
+    dns_rows = dns_instruction_set.rows if dns_instruction_set.is_customer_ready else ()
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, td.domain, "tenants")
     ctx.update(
         {
             "tenant": tenant,
             "td": td,
-            "dns_rows": instructions,
+            "dns_instruction_set": dns_instruction_set,
+            "dns_rows": dns_rows,
             "readiness": readiness,
             "can_manage": portal_user_can_manage_tenants(request.user, account),
             "DomainVerificationStatus": DomainVerificationStatus,

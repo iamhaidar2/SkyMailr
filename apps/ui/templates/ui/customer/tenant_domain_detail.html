@@ -22,27 +22,67 @@
   {% endif %}
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Set up DNS for this domain</h3>
+    <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
+      <li>Open your DNS host (where you bought the domain or your IT team manages DNS).</li>
+      <li>Add the records below <strong class="text-slate-200">exactly</strong> as shown — do not paste example values from other documentation.</li>
+      <li>Wait for propagation (often minutes, sometimes up to 48 hours).</li>
+      <li>Return here and use “Check records now” to confirm.</li>
+    </ol>
+    <p class="mt-3 text-xs text-slate-500">
+      Many DNS panels ask for a short <em>host</em> or <em>name</em> instead of the full hostname.
+      Use the host column when your provider wants only the left-hand label; use full hostnames if your provider stores the complete name.
+    </p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">DNS records to publish</h3>
-    <p class="mt-1 text-xs text-slate-500">Values marked as placeholders must be copied from Postal (or your provider) when they differ from what SkyMailr can infer from configuration.</p>
-    <div class="mt-4 overflow-x-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead class="text-xs uppercase text-slate-500">
-          <tr><th class="py-2 pr-4">Type</th><th class="py-2 pr-4">Name / host</th><th class="py-2 pr-4">Value</th><th class="py-2 pr-4">TTL</th><th class="py-2">Why</th></tr>
-        </thead>
-        <tbody class="divide-y divide-surface-700 text-slate-300">
-          {% for row in dns_rows %}
+    {% if not dns_instruction_set.is_customer_ready %}
+      <p class="mt-3 text-sm text-slate-300">{{ dns_instruction_set.incomplete_message }}</p>
+    {% else %}
+      <p class="mt-2 text-xs text-slate-500">
+        Copy each value carefully. SPF authorizes sending; DKIM signs messages; DMARC sets policy; return-path (if listed) helps bounces align with your provider.
+      </p>
+      <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
+        <label class="inline-flex cursor-pointer items-center gap-2">
+          <input type="checkbox" id="dns-host-toggle" class="rounded border-surface-500 bg-surface-800" />
+          Show full hostnames (instead of short host / @)
+        </label>
+      </div>
+      <div class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="text-xs uppercase text-slate-500">
             <tr>
-              <td class="py-3 pr-4 font-mono text-xs">{{ row.record_type }}</td>
-              <td class="py-3 pr-4 font-mono text-xs break-all">{{ row.name }}</td>
-              <td class="py-3 pr-4 font-mono text-xs break-all">{{ row.value }}</td>
-              <td class="py-3 pr-4">{{ row.ttl }}</td>
-              <td class="py-3 text-slate-400">{{ row.purpose }}</td>
+              <th class="py-2 pr-4">Type</th>
+              <th class="py-2 pr-4">Host</th>
+              <th class="py-2 pr-4">Value</th>
+              <th class="py-2 pr-4">TTL</th>
+              <th class="py-2 pr-2">What this is</th>
+              <th class="py-2"></th>
             </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <p class="mt-3 text-xs text-slate-500">SPF / DKIM / DMARC checks use public DNS. If SkyMailr cannot validate SPF automatically, set <code class="text-slate-400">SKYMAILR_SPF_INCLUDE_HINT</code> to your provider’s include.</p>
+          </thead>
+          <tbody class="divide-y divide-surface-700 text-slate-300">
+            {% for row in dns_rows %}
+              <tr>
+                <td class="py-3 pr-4 font-mono text-xs align-top">{{ row.record_type }}</td>
+                <td class="py-3 pr-4 font-mono text-xs break-all align-top">
+                  <span class="dns-host-cell" data-full="{{ row.name }}" data-short="{{ row.host_label }}">{{ row.host_label }}</span>
+                </td>
+                <td class="py-3 pr-4 font-mono text-xs break-all align-top">{{ row.value }}</td>
+                <td class="py-3 pr-4 align-top">{{ row.ttl }}</td>
+                <td class="py-3 pr-2 text-slate-400 align-top">
+                  <span class="font-medium text-slate-300">{{ row.title }}</span> — {{ row.purpose }}
+                </td>
+                <td class="py-3 align-top whitespace-nowrap">
+                  <button type="button" class="rounded border border-surface-600 px-2 py-1 text-xs text-slate-300 hover:bg-surface-800" data-copy="{{ row.value }}" title="Copy value">Copy value</button>
+                  <button type="button" class="ml-1 rounded border border-surface-600 px-2 py-1 text-xs text-slate-300 hover:bg-surface-800" data-copy="{{ row.name }}" title="Copy hostname">Copy host</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
@@ -74,4 +114,42 @@
     </div>
   {% endif %}
 </div>
+<script>
+(function () {
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "absolute";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } finally { document.body.removeChild(ta); }
+    return Promise.resolve();
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var v = btn.getAttribute("data-copy") || "";
+      copyText(v).then(function () {
+        var prev = btn.textContent;
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = prev; }, 1200);
+      });
+    });
+  });
+  var cb = document.getElementById("dns-host-toggle");
+  if (cb) {
+    cb.addEventListener("change", function () {
+      document.querySelectorAll(".dns-host-cell").forEach(function (el) {
+        var full = el.getAttribute("data-full") || "";
+        var short = el.getAttribute("data-short") || "";
+        el.textContent = cb.checked ? full : short;
+      });
+    });
+  }
+})();
+</script>
 {% endblock %}
