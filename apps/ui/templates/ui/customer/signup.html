@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create account · SkyMailr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+</head>
+<body class="flex min-h-screen items-center justify-center bg-surface-900 p-6">
+  <div class="w-full max-w-lg rounded-xl border border-surface-600 bg-surface-850 p-8 shadow-xl">
+    <h1 class="text-xl font-semibold text-white">Create your account</h1>
+    <p class="mt-1 text-sm text-slate-500">One organization; you’ll add email apps (tenants) next.</p>
+    <p class="mt-2 text-sm"><a href="{% url 'portal:login' %}" class="text-blue-400 hover:underline">Already have an account? Sign in</a></p>
+    <form method="post" class="mt-6 space-y-4">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="rounded-lg border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-200">{{ form.non_field_errors }}</div>
+      {% endif %}
+      {% for field in form %}
+        <div>
+          <label class="mb-1 block text-xs text-slate-500" for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<p class="mt-1 text-xs text-slate-600">{{ field.help_text }}</p>{% endif %}
+          {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit" class="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600">Create account</button>
+    </form>
+    <p class="mt-6 text-center text-xs text-slate-600">Staff? <a href="{% url 'ui:login' %}" class="text-slate-400 hover:underline">Operator sign-in</a></p>
+  </div>
+  <script>
+    (function () {
+      var nameEl = document.querySelector('[name="account_name"]');
+      var slugEl = document.querySelector('[name="account_slug"]');
+      if (!nameEl || !slugEl) return;
+      nameEl.addEventListener("blur", function () {
+        if (slugEl.dataset.touched) return;
+        if (slugEl.value) return;
+        var v = nameEl.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        slugEl.value = v.slice(0, 64);
+      });
+      slugEl.addEventListener("input", function () {
+        slugEl.dataset.touched = "1";
+      });
+    })();
+  </script>
+</body>
+</html>

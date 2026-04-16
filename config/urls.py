@@ -31,6 +31,7 @@ from apps.core.views import (
 )
 
 urlpatterns = [
+    path("app/", include("apps.ui.portal_urls")),
     path("", include("apps.ui.urls")),
     path("favicon.ico", noop_favicon),
     path("sitemap.xml", empty_sitemap),

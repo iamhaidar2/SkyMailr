@@ -1,0 +1,29 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <h2 class="text-2xl font-semibold text-white">Tenants</h2>
+    {% if portal_can_manage %}
+      <a href="{% url 'portal:tenant_new' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">New tenant</a>
+    {% endif %}
+  </div>
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+        <tr><th class="px-4 py-2">Name</th><th class="px-4 py-2">Slug</th><th class="px-4 py-2">Status</th></tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for t in tenants %}
+          <tr class="hover:bg-surface-800/80">
+            <td class="px-4 py-2"><a href="{% url 'portal:tenant_detail' t.id %}" class="text-blue-400 hover:underline">{{ t.name }}</a></td>
+            <td class="px-4 py-2 font-mono text-slate-400">{{ t.slug }}</td>
+            <td class="px-4 py-2">{{ t.get_status_display }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="px-4 py-6 text-center text-slate-500">No tenants yet.{% if portal_can_manage %} Create one to get started.{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

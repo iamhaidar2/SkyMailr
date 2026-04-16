@@ -1,0 +1,71 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title|default:"App" }}{% endblock %} · SkyMailr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+</head>
+<body class="min-h-screen bg-surface-900 text-slate-200">
+  <div class="flex min-h-screen">
+    <aside class="hidden w-56 shrink-0 border-r border-surface-700 bg-surface-850 lg:block">
+      <div class="border-b border-surface-700 px-4 py-4">
+        <a href="{% url 'portal:dashboard' %}" class="text-lg font-semibold text-white">SkyMailr</a>
+        <p class="mt-1 text-xs text-slate-500">Customer app</p>
+      </div>
+      <nav class="space-y-1 p-3 text-sm">
+        <a href="{% url 'portal:dashboard' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'dashboard' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Dashboard</a>
+        <a href="{% url 'portal:tenant_list' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'tenants' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Tenants</a>
+        <a href="{% url 'portal:api_keys' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'api_keys' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">API keys</a>
+        <a href="{% url 'portal:sender_profiles_placeholder' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'sender_profiles' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Sender profiles</a>
+        <a href="{% url 'portal:templates_placeholder' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'templates' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Templates</a>
+        <a href="{% url 'portal:workflows_placeholder' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'workflows' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Workflows</a>
+        <a href="{% url 'portal:messages_list' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'messages' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Messages</a>
+      </nav>
+    </aside>
+    <div class="flex min-w-0 flex-1 flex-col">
+      <header class="flex flex-wrap items-center justify-between gap-3 border-b border-surface-700 bg-surface-850 px-4 py-3 lg:px-6">
+        <div class="flex min-w-0 items-center gap-3">
+          <span class="text-sm text-slate-500 lg:hidden"><a href="{% url 'portal:dashboard' %}" class="text-white">SkyMailr</a></span>
+          {% if portal_account %}
+            <span class="truncate text-sm text-slate-300">{{ portal_account.name }}</span>
+            {% if portal_role %}<span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-400">{{ portal_role }}</span>{% endif %}
+          {% endif %}
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          {% if portal_accounts|length > 1 %}
+            <form method="post" action="{% url 'portal:switch_account' %}" class="inline">
+              {% csrf_token %}
+              <label class="sr-only" for="acct-switch">Account</label>
+              <select id="acct-switch" name="account_id" class="rounded-md border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-white" onchange="this.form.submit()">
+                {% for a in portal_accounts %}
+                  <option value="{{ a.id }}" {% if portal_account and a.id == portal_account.id %}selected{% endif %}>{{ a.name }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          {% endif %}
+          {% if user.is_staff %}
+            <a href="{% url 'ui:dashboard' %}" class="text-xs text-amber-400/90 hover:underline">Operator</a>
+          {% endif %}
+          <form method="post" action="{% url 'portal:logout' %}" class="inline">{% csrf_token %}
+            <button type="submit" class="text-xs text-slate-500 hover:text-white">Log out</button>
+          </form>
+        </div>
+      </header>
+      <main class="flex-1 overflow-auto p-4 lg:p-8">
+        <span class="hidden">{% csrf_token %}</span>
+        {% if messages %}
+          <div class="mb-6 space-y-2">
+            {% for message in messages %}
+              <div class="rounded-lg border px-4 py-3 text-sm {% if message.tags == 'success' %}border-emerald-800 bg-emerald-950/50 text-emerald-200{% elif message.tags == 'error' %}border-red-800 bg-red-950/50 text-red-200{% elif message.tags == 'warning' %}border-amber-800 bg-amber-950/50 text-amber-200{% else %}border-surface-600 bg-surface-800 text-slate-300{% endif %}">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h2 class="text-2xl font-semibold text-white">{{ tenant.name }}</h2>
+      <p class="font-mono text-sm text-slate-400">{{ tenant.slug }}</p>
+    </div>
+    <a href="{% url 'portal:tenant_list' %}" class="text-sm text-slate-400 hover:text-white">← All tenants</a>
+  </div>
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-300">
+    <h3 class="text-sm font-semibold text-white">Sender defaults</h3>
+    <dl class="mt-3 space-y-2">
+      <div><span class="text-slate-500">Default sender:</span> {{ tenant.default_sender_name }} &lt;{{ tenant.default_sender_email|default:"" }}&gt;</div>
+      <div><span class="text-slate-500">Reply-to:</span> {{ tenant.reply_to|default:"—" }}</div>
+      <div><span class="text-slate-500">Sending domain:</span> {{ tenant.sending_domain|default:"—" }}</div>
+      <div><span class="text-slate-500">Timezone:</span> {{ tenant.timezone }}</div>
+      <div><span class="text-slate-500">Rate limit/min:</span> {{ tenant.rate_limit_per_minute }}</div>
+    </dl>
+  </div>
+  {% if new_api_key %}
+    <div class="rounded-xl border border-amber-700 bg-amber-950/50 p-4">
+      <p class="text-sm font-medium text-amber-200">New API key (copy now)</p>
+      <code class="mt-2 block break-all rounded bg-surface-900 p-3 text-xs text-emerald-300">{{ new_api_key }}</code>
+    </div>
+  {% endif %}
+  {% if can_manage %}
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h3 class="text-sm font-semibold text-white">Create API key</h3>
+      <form method="post" action="{% url 'portal:tenant_create_api_key' tenant.id %}" class="mt-3 flex flex-wrap items-end gap-3">
+        {% csrf_token %}
+        <div><label class="text-xs text-slate-500">Label</label>{{ api_key_form.name }}</div>
+        <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Generate</button>
+      </form>
+    </div>
+  {% endif %}
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Existing keys</h3>
+    <ul class="mt-3 space-y-2 text-sm text-slate-400">
+      {% for k in api_keys %}
+        <li>{{ k.name }} · created {{ k.created_at }}{% if k.revoked_at %} · <span class="text-red-400">revoked</span>{% endif %}</li>
+      {% empty %}
+        <li>No keys yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endblock %}

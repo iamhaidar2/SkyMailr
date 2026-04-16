@@ -17,6 +17,6 @@ Start here if you opened the `docs/` folder directly.
 | [10-hostinger-postal-setup-plan.md](10-hostinger-postal-setup-plan.md) | Next phase: VPS + Postal |
 | [11-production-checklists.md](11-production-checklists.md) | Deploy / onboarding checklists |
 | [12-known-limitations.md](12-known-limitations.md) | Honest scope boundaries |
-| [13-multi-account-saas-plan.md](13-multi-account-saas-plan.md) | Accounts above tenants (Phase 1+) |
+| [13-multi-account-saas-plan.md](13-multi-account-saas-plan.md) | Accounts above tenants; customer `/app/` portal |
 
 The repository **[README.md](../README.md)** is the top-level entry point.
