@@ -14,15 +14,73 @@ from apps.ui.views.customer_portal import (
     tenant_list,
     tenant_new,
 )
+from apps.ui.views.portal_invite_public import invite_accept, signup_via_invite
+from apps.ui.views.portal_members import (
+    invite_cancel,
+    invite_resend,
+    member_deactivate,
+    member_edit,
+    members_invite,
+    members_list,
+)
+from apps.ui.views.portal_password import (
+    PortalPasswordResetCompleteView,
+    PortalPasswordResetConfirmView,
+    PortalPasswordResetDoneView,
+    PortalPasswordResetView,
+)
+from apps.ui.views.portal_verify_email import verify_email_confirm
 
 app_name = "portal"
 
 urlpatterns = [
     path("", dashboard, name="dashboard"),
     path("signup/", signup, name="signup"),
+    path("signup/invite/<str:token>/", signup_via_invite, name="signup_invite"),
     path("login/", CustomerLoginView.as_view(), name="login"),
     path("logout/", CustomerLogoutView.as_view(), name="logout"),
     path("switch-account/", switch_account, name="switch_account"),
+    # Password reset
+    path("password-reset/", PortalPasswordResetView.as_view(), name="password_reset"),
+    path(
+        "password-reset/done/",
+        PortalPasswordResetDoneView.as_view(),
+        name="password_reset_done",
+    ),
+    path(
+        "reset/<uidb64>/<token>/",
+        PortalPasswordResetConfirmView.as_view(),
+        name="password_reset_confirm",
+    ),
+    path(
+        "reset/done/",
+        PortalPasswordResetCompleteView.as_view(),
+        name="password_reset_complete",
+    ),
+    path("verify-email/<str:token>/", verify_email_confirm, name="verify_email_confirm"),
+    path("invites/<str:token>/accept/", invite_accept, name="invite_accept"),
+    path("account/members/", members_list, name="members_list"),
+    path("account/members/invite/", members_invite, name="members_invite"),
+    path(
+        "account/members/<uuid:membership_id>/edit/",
+        member_edit,
+        name="member_edit",
+    ),
+    path(
+        "account/members/<uuid:membership_id>/deactivate/",
+        member_deactivate,
+        name="member_deactivate",
+    ),
+    path(
+        "account/invites/<uuid:invite_id>/cancel/",
+        invite_cancel,
+        name="invite_cancel",
+    ),
+    path(
+        "account/invites/<uuid:invite_id>/resend/",
+        invite_resend,
+        name="invite_resend",
+    ),
     path("account/tenants/", tenant_list, name="tenant_list"),
     path("account/tenants/new/", tenant_new, name="tenant_new"),
     path("account/tenants/<uuid:tenant_id>/", tenant_detail, name="tenant_detail"),

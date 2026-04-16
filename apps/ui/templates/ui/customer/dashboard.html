@@ -7,6 +7,14 @@
   </div>
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Members</p>
+      <p class="mt-1 text-2xl font-semibold text-white">{{ member_count }}</p>
+      {% if pending_invite_count %}
+        <p class="mt-1 text-xs text-amber-200/90">{{ pending_invite_count }} invite{{ pending_invite_count|pluralize }} pending</p>
+      {% endif %}
+      <a href="{% url 'portal:members_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">Manage</a>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
       <p class="text-xs uppercase text-slate-500">Tenants</p>
       <p class="mt-1 text-2xl font-semibold text-white">{{ tenant_count }}</p>
       <a href="{% url 'portal:tenant_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">View</a>

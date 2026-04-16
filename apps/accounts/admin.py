@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.utils.html import format_html
 
-from apps.accounts.models import Account, AccountMembership
+from apps.accounts.models import Account, AccountInvite, AccountMembership
 
 
 @admin.register(Account)
@@ -49,3 +49,11 @@ class AccountMembershipAdmin(admin.ModelAdmin):
         if db_field.name == "user":
             kwargs["queryset"] = get_user_model().objects.order_by("username")
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+@admin.register(AccountInvite)
+class AccountInviteAdmin(admin.ModelAdmin):
+    list_display = ("email", "account", "role", "status", "expires_at", "created_at")
+    list_filter = ("status", "role", "account")
+    search_fields = ("email", "account__name", "account__slug")
+    readonly_fields = ("id", "token_hash", "created_at", "updated_at", "accepted_at")

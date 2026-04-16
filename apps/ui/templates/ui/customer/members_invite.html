@@ -1,0 +1,19 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-lg space-y-6">
+  <h2 class="text-xl font-semibold text-white">{{ page_title }}</h2>
+  <p class="text-sm text-slate-400">We’ll email a secure link. Invited users must sign in or register with the same email address.</p>
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Send invite</button>
+    <a href="{% url 'portal:members_list' %}" class="ml-2 text-sm text-slate-400 hover:text-white">Cancel</a>
+  </form>
+</div>
+{% endblock %}

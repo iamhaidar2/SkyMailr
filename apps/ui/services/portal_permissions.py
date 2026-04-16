@@ -19,6 +19,11 @@ def portal_user_can_manage_tenants(user: AbstractBaseUser | AnonymousUser, accou
     ).exists()
 
 
+def portal_user_can_manage_members(user: AbstractBaseUser | AnonymousUser, account: Account) -> bool:
+    """Owner or admin may invite members and change roles (same privilege tier as tenant management)."""
+    return portal_user_can_manage_tenants(user, account)
+
+
 def portal_user_can_edit_content(user: AbstractBaseUser | AnonymousUser, account: Account) -> bool:
     """Owner, admin, or editor may edit automation content (not viewer)."""
     if not user.is_authenticated:

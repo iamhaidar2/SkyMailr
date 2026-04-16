@@ -1,0 +1,12 @@
+Hello,
+
+You've been invited to join "{{ account_name }}" on SkyMailr as {{ role }}.
+
+This invitation was sent to {{ invite_email }}.
+
+Open this link to accept (expires {{ expires_at }} UTC):
+{{ link }}
+
+If you did not expect this message, you can ignore it.
+
+— SkyMailr

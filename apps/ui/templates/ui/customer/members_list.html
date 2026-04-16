@@ -1,0 +1,78 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-5xl space-y-8">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h2 class="text-2xl font-semibold text-white">Members</h2>
+      <p class="mt-1 text-sm text-slate-500">Owners and admins can invite teammates and change roles. Admins cannot modify owner accounts.</p>
+    </div>
+    {% if portal_can_manage_members %}
+      <a href="{% url 'portal:members_invite' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Invite member</a>
+    {% endif %}
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Active members</h3>
+    {% if not memberships %}
+      <p class="mt-3 text-sm text-slate-500">No members yet (unexpected).</p>
+    {% else %}
+      <div class="mt-4 overflow-x-auto">
+        <table class="min-w-full text-left text-sm">
+          <thead class="text-xs uppercase text-slate-500">
+            <tr><th class="py-2">User</th><th>Role</th><th>Status</th><th>Joined</th>{% if portal_can_manage_members %}<th></th>{% endif %}</tr>
+          </thead>
+          <tbody class="divide-y divide-surface-700">
+            {% for m in memberships %}
+              <tr>
+                <td class="py-2">
+                  <span class="text-white">{{ m.user.get_full_name|default:m.user.email }}</span>
+                  <span class="block font-mono text-xs text-slate-500">{{ m.user.email }}</span>
+                </td>
+                <td>
+                  <span class="rounded bg-surface-800 px-2 py-0.5 text-xs">{{ m.get_role_display }}</span>
+                  {% if m.role == 'owner' %}<span class="ml-1 text-xs text-amber-400">full access</span>{% endif %}
+                </td>
+                <td>{% if m.is_active %}<span class="text-emerald-400">Active</span>{% else %}<span class="text-slate-500">Inactive</span>{% endif %}</td>
+                <td class="text-slate-500">{{ m.created_at|date:"M j, Y" }}</td>
+                {% if portal_can_manage_members %}
+                  <td class="text-right">
+                    <a href="{% url 'portal:member_edit' m.id %}" class="text-blue-400 hover:underline">Edit</a>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Pending invitations</h3>
+    {% if not pending_invites %}
+      <p class="mt-3 text-sm text-slate-500">No pending invites.</p>
+    {% else %}
+      <ul class="mt-4 divide-y divide-surface-700 text-sm">
+        {% for inv in pending_invites %}
+          <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+            <div>
+              <span class="text-slate-200">{{ inv.email }}</span>
+              <span class="ml-2 text-xs text-slate-500">{{ inv.get_role_display }} · expires {{ inv.expires_at|date:"M j, Y" }}</span>
+            </div>
+            {% if portal_can_manage_members %}
+              <div class="flex flex-wrap gap-2">
+                <form method="post" action="{% url 'portal:invite_resend' inv.id %}" class="inline">{% csrf_token %}
+                  <button type="submit" class="text-xs text-blue-400 hover:underline">Resend</button>
+                </form>
+                <form method="post" action="{% url 'portal:invite_cancel' inv.id %}" class="inline" onsubmit="return confirm('Cancel this invite?');">{% csrf_token %}
+                  <button type="submit" class="text-xs text-red-400 hover:underline">Cancel</button>
+                </form>
+              </div>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

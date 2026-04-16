@@ -164,6 +164,18 @@ class PortalWorkflowStepForm(forms.Form):
 
 
 class CustomerSignupForm(forms.Form):
+    company_website = forms.CharField(
+        required=False,
+        label="",
+        widget=forms.TextInput(
+            attrs={
+                "class": "absolute -left-[9999px] h-px w-px opacity-0",
+                "tabindex": "-1",
+                "autocomplete": "off",
+                "aria-hidden": "true",
+            }
+        ),
+    )
     display_name = forms.CharField(
         max_length=150,
         label="Your name",
@@ -210,6 +222,8 @@ class CustomerSignupForm(forms.Form):
         return slug
 
     def clean(self):
+        if (self.data.get("company_website") or "").strip():
+            raise forms.ValidationError("Unable to complete signup.")
         p1 = self.cleaned_data.get("password1")
         p2 = self.cleaned_data.get("password2")
         if p1 and p2 and p1 != p2:
@@ -246,3 +260,71 @@ class PortalApiKeyForm(forms.Form):
         initial="default",
         widget=forms.TextInput(attrs={"class": _inp}),
     )
+
+
+class PortalInviteForm(forms.Form):
+    email = forms.EmailField(widget=forms.EmailInput(attrs={"class": _inp, "autocomplete": "email"}))
+    role = forms.ChoiceField(choices=[], widget=forms.Select(attrs={"class": _inp}))
+
+    def __init__(self, *args, inviter_role: str = "", **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [
+            (AccountRole.ADMIN, "Admin"),
+            (AccountRole.EDITOR, "Editor"),
+            (AccountRole.VIEWER, "Viewer"),
+            (AccountRole.BILLING, "Billing"),
+        ]
+        if inviter_role == AccountRole.OWNER:
+            choices = [(AccountRole.OWNER, "Owner")] + choices
+        self.fields["role"].choices = choices
+
+    def clean_email(self):
+        return (self.cleaned_data.get("email") or "").strip().lower()
+
+
+class PortalMembershipEditForm(forms.ModelForm):
+    class Meta:
+        model = AccountMembership
+        fields = ["role", "is_active"]
+        widgets = {
+            "role": forms.Select(attrs={"class": _inp}),
+            "is_active": forms.CheckboxInput(attrs={"class": _chk}),
+        }
+
+    def __init__(self, *args, actor_role: str = "", **kwargs):
+        super().__init__(*args, **kwargs)
+        self._actor_role = actor_role
+        choices = list(AccountRole.choices)
+        if actor_role == AccountRole.ADMIN:
+            choices = [c for c in choices if c[0] != AccountRole.OWNER]
+        self.fields["role"].choices = choices
+        self.fields["is_active"].label = "Active"
+
+
+class InviteSignupForm(forms.Form):
+    display_name = forms.CharField(
+        max_length=150,
+        label="Your name",
+        widget=forms.TextInput(attrs={"class": _inp, "autocomplete": "name"}),
+    )
+    password1 = forms.CharField(
+        label="Password",
+        widget=forms.PasswordInput(attrs={"class": _inp, "autocomplete": "new-password"}),
+    )
+    password2 = forms.CharField(
+        label="Confirm password",
+        widget=forms.PasswordInput(attrs={"class": _inp, "autocomplete": "new-password"}),
+    )
+
+    def __init__(self, *args, invite_email: str = "", **kwargs):
+        self._invite_email = (invite_email or "").strip().lower()
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        p1 = self.cleaned_data.get("password1")
+        p2 = self.cleaned_data.get("password2")
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError("Passwords do not match.")
+        if p1:
+            validate_password(p1)
+        return self.cleaned_data

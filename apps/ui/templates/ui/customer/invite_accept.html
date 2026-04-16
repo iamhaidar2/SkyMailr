@@ -1,0 +1,33 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accept invitation · SkyMailr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+</head>
+<body class="flex min-h-screen items-center justify-center bg-surface-900 p-6">
+  <div class="w-full max-w-lg rounded-xl border border-surface-600 bg-surface-850 p-8 shadow-xl">
+    <h1 class="text-xl font-semibold text-white">Join {{ invite.account.name }}</h1>
+    <p class="mt-2 text-sm text-slate-400">You’ve been invited as <strong class="text-slate-200">{{ invite.get_role_display }}</strong> for <span class="font-mono text-xs">{{ invite.email }}</span>.</p>
+    {% if user.is_authenticated %}
+      {% if email_match %}
+        <form method="post" class="mt-6">{% csrf_token %}
+          <button type="submit" class="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white">Accept and join</button>
+        </form>
+      {% else %}
+        <p class="mt-4 text-sm text-amber-200">You’re signed in as {{ user.email }}. Sign out and sign in as {{ invite.email }}, or use a private window.</p>
+        <p class="mt-4 text-sm"><a href="{% url 'portal:logout' %}" class="text-blue-400 hover:underline">Sign out</a></p>
+      {% endif %}
+    {% else %}
+      <p class="mt-4 text-sm text-slate-400">Sign in with {{ invite.email }} or create an account for that address.</p>
+      <div class="mt-6 flex flex-col gap-3">
+        <a href="{% url 'portal:login' %}?next={{ login_next|urlencode }}" class="block rounded-md bg-accent px-4 py-2.5 text-center text-sm font-medium text-white">Sign in</a>
+        <a href="{% url 'portal:signup_invite' token=token %}" class="block rounded-md border border-surface-600 px-4 py-2.5 text-center text-sm text-white hover:bg-surface-800">Create account</a>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>

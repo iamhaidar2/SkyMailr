@@ -26,7 +26,8 @@
       {% endfor %}
       <button type="submit" class="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600">Sign in</button>
     </form>
-    <p class="mt-6 text-center text-sm"><a href="{% url 'portal:signup' %}" class="text-blue-400 hover:underline">Create an account</a></p>
+    <p class="mt-4 text-center text-sm"><a href="{% url 'portal:password_reset' %}" class="text-slate-400 hover:text-white">Forgot password?</a></p>
+    <p class="mt-4 text-center text-sm"><a href="{% url 'portal:signup' %}" class="text-blue-400 hover:underline">Create an account</a></p>
     <p class="mt-4 text-center text-xs text-slate-600">Staff operator? <a href="{% url 'ui:login' %}" class="text-slate-400 hover:underline">Staff sign-in</a></p>
   </div>
 </body>

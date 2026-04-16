@@ -1,0 +1,17 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verification · SkyMailr</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+</head>
+<body class="flex min-h-screen items-center justify-center bg-surface-900 p-6">
+  <div class="w-full max-w-md rounded-xl border border-surface-600 bg-surface-850 p-8 text-center shadow-xl">
+    <p class="text-sm text-amber-200">{{ reason }}</p>
+    <p class="mt-6"><a href="{% url 'portal:login' %}" class="text-blue-400 hover:underline">Sign in</a></p>
+  </div>
+</body>
+</html>

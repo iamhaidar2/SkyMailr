@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from django.contrib import messages as django_messages
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
@@ -11,7 +13,16 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.decorators.http import require_POST
 
-from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
+from apps.accounts.models import (
+    Account,
+    AccountInvite,
+    AccountInviteStatus,
+    AccountMembership,
+    AccountRole,
+    AccountStatus,
+)
+from apps.accounts.services.email_verification import create_verification_token
+from apps.accounts.services.invite_service import ensure_user_profile
 from apps.messages.models import OutboundMessage
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey
@@ -23,21 +34,27 @@ from apps.ui.services.portal_account import (
     get_portal_accounts_for_user,
     set_active_portal_account,
 )
+from apps.ui.services.portal_mail import send_email_verification_email
+from apps.ui.services.rate_limit import allow_request
 from apps.ui.services.portal_permissions import (
     portal_membership_role,
     portal_user_can_approve_templates,
     portal_user_can_edit_content,
+    portal_user_can_manage_members,
     portal_user_can_manage_tenants,
     portal_user_is_viewer_only,
 )
 
 SESSION_PORTAL_NEW_API_KEY = "_portal_new_api_key_once"
 
+logger = logging.getLogger("apps.accounts.audit")
+
 
 def _portal_ctx(request, page_title: str, nav_active: str):
     account = get_active_portal_account(request)
     role = portal_membership_role(request.user, account) if account else None
     can_manage = portal_user_can_manage_tenants(request.user, account) if account else False
+    can_manage_members = portal_user_can_manage_members(request.user, account) if account else False
     can_edit = portal_user_can_edit_content(request.user, account) if account else False
     can_approve = portal_user_can_approve_templates(request.user, account) if account else False
     is_viewer = portal_user_is_viewer_only(request.user, account) if account else False
@@ -47,6 +64,7 @@ def _portal_ctx(request, page_title: str, nav_active: str):
         "portal_account": account,
         "portal_role": role,
         "portal_can_manage": can_manage,
+        "portal_can_manage_members": can_manage_members,
         "portal_can_edit": can_edit,
         "portal_can_approve": can_approve,
         "portal_is_viewer": is_viewer,
@@ -59,34 +77,57 @@ def signup(request):
         return redirect("portal:dashboard")
     if request.method == "POST":
         form = CustomerSignupForm(request.POST)
-        if form.is_valid():
-            from django.contrib.auth import get_user_model
+        ip = (
+            (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")[0].strip()
+            or request.META.get("REMOTE_ADDR")
+            or "unknown"
+        )
+        if not allow_request(f"portal:signup:ip:{ip}", limit=10, window_seconds=3600):
+            django_messages.error(request, "Too many signup attempts from this network. Try again later.")
+        elif form.is_valid():
+            email = form.cleaned_data["email"]
+            if not allow_request(f"portal:signup:email:{email}", limit=5, window_seconds=3600):
+                django_messages.error(request, "Too many signup attempts for this email. Try again later.")
+            else:
+                from django.contrib.auth import get_user_model
 
-            User = get_user_model()
-            data = form.cleaned_data
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username=data["email"],
-                    email=data["email"],
-                    password=data["password1"],
-                    first_name=data["display_name"][:150],
+                User = get_user_model()
+                data = form.cleaned_data
+                with transaction.atomic():
+                    user = User.objects.create_user(
+                        username=data["email"],
+                        email=data["email"],
+                        password=data["password1"],
+                        first_name=data["display_name"][:150],
+                    )
+                    ensure_user_profile(user)
+                    account = Account.objects.create(
+                        name=data["account_name"],
+                        slug=data["account_slug"],
+                        status=AccountStatus.ACTIVE,
+                        billing_email=data["email"],
+                    )
+                    AccountMembership.objects.create(
+                        account=account,
+                        user=user,
+                        role=AccountRole.OWNER,
+                        is_active=True,
+                    )
+                login(request, user)
+                set_active_portal_account(request.session, account)
+                try:
+                    _tok, raw_v = create_verification_token(user)
+                    send_email_verification_email(request=request, user=user, raw_token=raw_v)
+                except Exception as exc:
+                    logger.warning("signup_verification_email_failed user_id=%s err=%s", user.pk, exc)
+                logger.info(
+                    "signup_completed user_id=%s account_id=%s slug=%s",
+                    user.pk,
+                    account.id,
+                    account.slug,
                 )
-                account = Account.objects.create(
-                    name=data["account_name"],
-                    slug=data["account_slug"],
-                    status=AccountStatus.ACTIVE,
-                    billing_email=data["email"],
-                )
-                AccountMembership.objects.create(
-                    account=account,
-                    user=user,
-                    role=AccountRole.OWNER,
-                    is_active=True,
-                )
-            login(request, user)
-            set_active_portal_account(request.session, account)
-            django_messages.success(request, "Welcome! Your account is ready.")
-            return redirect("portal:dashboard")
+                django_messages.success(request, "Welcome! Your account is ready.")
+                return redirect("portal:dashboard")
     else:
         form = CustomerSignupForm()
     return render(
@@ -147,6 +188,10 @@ def dashboard(request):
         .select_related("tenant")
         .order_by("-created_at")[:8]
     )
+    member_count = AccountMembership.objects.filter(account=account, is_active=True).count()
+    pending_invite_count = AccountInvite.objects.filter(
+        account=account, status=AccountInviteStatus.PENDING
+    ).count()
     ctx = _portal_ctx(request, "Dashboard", "dashboard")
     ctx.update(
         {
@@ -157,6 +202,8 @@ def dashboard(request):
             "sender_profile_count": sp_count,
             "template_count": tpl_count,
             "workflow_count": wf_count,
+            "member_count": member_count,
+            "pending_invite_count": pending_invite_count,
             "recent_messages": recent_messages,
         }
     )

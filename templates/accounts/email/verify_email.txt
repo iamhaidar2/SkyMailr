@@ -1,0 +1,8 @@
+Hello{% if user.first_name %} {{ user.first_name }}{% endif %},
+
+Verify your email address for SkyMailr by opening:
+{{ link }}
+
+This link expires in a few days.
+
+— SkyMailr
