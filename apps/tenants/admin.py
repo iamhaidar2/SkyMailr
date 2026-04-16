@@ -5,8 +5,17 @@ from apps.tenants.models import SenderProfile, Tenant, TenantAPIKey, TenantDomai
 
 @admin.register(Tenant)
 class TenantAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "status", "transactional_enabled", "marketing_enabled")
-    search_fields = ("name", "slug")
+    list_display = (
+        "name",
+        "slug",
+        "account",
+        "status",
+        "transactional_enabled",
+        "marketing_enabled",
+    )
+    list_filter = ("status", "account")
+    search_fields = ("name", "slug", "account__name", "account__slug")
+    autocomplete_fields = ("account",)
     readonly_fields = ("id", "created_at", "updated_at")
 
 

@@ -2,6 +2,8 @@
 
 This doc turns SkyMailr from an internal multi-tenant email orchestration tool into a customer-facing application email automation service.
 
+**Phase 1 status:** The data model, migrations (`haidar-internal` backfill, non-null `Tenant.account`), admin, and permission helpers are implemented in `apps/accounts`. Tenant API key auth is unchanged. See Sprint 1 below — **done** for model/migration/admin/tests; portal work remains future phases.
+
 ## Why this exists
 
 SkyMailr already has:
@@ -387,12 +389,6 @@ This remains compatible with the future account model because tenants will simpl
 
 ## Immediate next implementation task
 
-Start with the data model and migration:
+Phase 1 (data model + migration) is **shipped**. Next focus: **Phase B** in this doc — customer auth, portal guardrails, account-scoped permission decorators.
 
-- create `Account`
-- create `AccountMembership`
-- attach `Tenant` to `Account`
-- migrate existing tenants into one internal account
-- add permission helpers and tests
-
-This is the foundation everything else depends on.
+Operational note: new tenants must belong to an **Account**; operator UI and `seed_skymailr` attach the internal default (`haidar-internal`) unless you extend the flow. See [07-tenants-and-onboarding.md](07-tenants-and-onboarding.md).

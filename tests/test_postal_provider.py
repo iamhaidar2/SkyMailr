@@ -120,9 +120,11 @@ def test_dispatch_marks_failed_when_postal_returns_postal_error():
     """Service-level: failed SendResult must not leave message as SENT."""
     from apps.messages.models import MessageType, OutboundStatus
     from apps.messages.services.dispatch import EmailDispatchService
+    from apps.accounts.defaults import get_or_create_internal_account
     from apps.tenants.models import Tenant, TenantStatus
 
     tenant = Tenant.objects.create(
+        account=get_or_create_internal_account(),
         name="T",
         slug="t-postal-dispatch",
         status=TenantStatus.ACTIVE,

@@ -2,10 +2,18 @@ import pytest
 
 
 @pytest.fixture
-def tenant(db):
+def default_account(db):
+    from apps.accounts.defaults import get_or_create_internal_account
+
+    return get_or_create_internal_account()
+
+
+@pytest.fixture
+def tenant(db, default_account):
     from apps.tenants.models import Tenant, TenantStatus
 
     return Tenant.objects.create(
+        account=default_account,
         name="TestCo",
         slug="testco",
         status=TenantStatus.ACTIVE,
@@ -16,10 +24,11 @@ def tenant(db):
 
 
 @pytest.fixture
-def other_tenant(db):
+def other_tenant(db, default_account):
     from apps.tenants.models import Tenant, TenantStatus
 
     return Tenant.objects.create(
+        account=default_account,
         name="OtherCo",
         slug="otherco",
         status=TenantStatus.ACTIVE,

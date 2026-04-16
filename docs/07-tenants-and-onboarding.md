@@ -2,10 +2,15 @@
 
 This doc is the **reference for adding a new product/tenant** to SkyMailr without rediscovering process from scratch.
 
+## Accounts vs tenants
+
+Every **`Tenant`** belongs to an **`Account`** (org / billing grouping). Mail, templates, workflows, and **tenant API keys** remain scoped to the tenant, not the account. For a single internal stack, operator-created tenants and seeds typically use the default internal account (`haidar-internal`).
+
 ## What a tenant needs
 
 | Need | Why |
 |------|-----|
+| **`Account`** | Container for one or more tenants (use internal default or your org’s account) |
 | **`Tenant` row** | Isolation root (templates, messages, keys, workflows) |
 | **Sender identity** | `default_sender_email`, `default_sender_name` (and optionally compliance footer for marketing) |
 | **At least one API key** | Source app authenticates with `Bearer` |
@@ -20,7 +25,7 @@ Optional:
 
 ## Create a tenant
 
-**Option A — Django admin:** Add `Tenant` with unique `slug`, active status, sender defaults.
+**Option A — Django admin:** Add `Tenant` with **account**, unique `slug`, active status, sender defaults.
 
 **Option B — seed / migrations:** `seed_skymailr` may create demo tenants; adjust for your environment.
 

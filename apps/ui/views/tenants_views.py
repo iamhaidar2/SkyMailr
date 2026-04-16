@@ -2,6 +2,7 @@ from django.contrib import messages as django_messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.defaults import get_or_create_internal_account
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import SenderProfile, Tenant, TenantAPIKey
 from apps.ui.context import operator_shell_context
@@ -26,7 +27,9 @@ def tenant_create(request):
     if request.method == "POST":
         form = TenantForm(request.POST)
         if form.is_valid():
-            tenant = form.save()
+            tenant = form.save(commit=False)
+            tenant.account = get_or_create_internal_account()
+            tenant.save()
             django_messages.success(request, f"Tenant “{tenant.name}” created.")
             return redirect("ui:tenant_detail", tenant_id=tenant.id)
     else:

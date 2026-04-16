@@ -70,8 +70,9 @@ def test_tenant_edit_post_updates(staff_client, tenant):
     assert tenant.name == "Renamed"
 
 
-def test_tenant_delete_post_removes_and_clears_active_session(staff_client, db):
+def test_tenant_delete_post_removes_and_clears_active_session(staff_client, db, default_account):
     t = Tenant.objects.create(
+        account=default_account,
         name="GoneCo",
         slug="goneco",
         status=TenantStatus.ACTIVE,

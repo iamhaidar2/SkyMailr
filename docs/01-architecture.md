@@ -11,7 +11,8 @@
 | **Providers** | `apps/providers` | `BaseEmailProvider` + dummy / console / Postal |
 | **Workflows** | `apps/workflows` | `Workflow`, steps, enrollments, executions |
 | **LLM** | `apps/llm` | Clients for structured JSON (draft/revise flows only) |
-| **Tenants** | `apps/tenants` | `Tenant`, `TenantAPIKey`, crypto for keys |
+| **Accounts** | `apps/accounts` | `Account`, `AccountMembership` — org layer above tenants (mail data still isolated per tenant) |
+| **Tenants** | `apps/tenants` | `Tenant` (required `account` FK), `TenantAPIKey`, crypto for keys |
 | **Subscriptions** | `apps/subscriptions` | Unsubscribe + suppression checks used by pipeline |
 
 **Orchestration:** `config/celery.py` + `apps/messages/tasks.py`, `apps/workflows/tasks.py`, plus **django-celery-beat** schedules in `config/settings/base.py` (sweep dispatch, workflow ticks, retry deferred).
@@ -38,7 +39,9 @@ Adapter health: `get_email_provider().health_check()` — used by `/api/v1/provi
 
 | Model | Role |
 |-------|------|
-| `Tenant` | Isolation root; sender defaults, rate limits, etc. |
+| `Account` | Org / plan container; owns many `Tenant`s |
+| `AccountMembership` | Django `User` ↔ `Account` with role |
+| `Tenant` | Isolation root for mail data; sender defaults, rate limits, API keys; **belongs to an `Account`** |
 | `TenantAPIKey` | Hashed keys; `Bearer` resolves to one tenant |
 | `EmailTemplate` / `EmailTemplateVersion` | Versioned content; **approved** version drives sends |
 | `TemplateVariable` | Declared variables + required flags for validation |

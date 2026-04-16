@@ -115,10 +115,14 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        from apps.accounts.defaults import get_or_create_internal_account
+
+        account = get_or_create_internal_account()
         for spec in TENANTS:
             tenant, created = Tenant.objects.get_or_create(
                 slug=spec["slug"],
                 defaults={
+                    "account": account,
                     "name": spec["name"],
                     "status": TenantStatus.ACTIVE,
                     "default_sender_name": spec["name"],

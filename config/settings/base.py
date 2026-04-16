@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "rest_framework",
     "apps.core",
+    "apps.accounts",
     "apps.tenants",
     "apps.email_templates",
     "apps.messages",

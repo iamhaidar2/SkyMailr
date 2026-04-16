@@ -15,6 +15,11 @@ class SenderCategory(models.TextChoices):
 
 class Tenant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    account = models.ForeignKey(
+        "accounts.Account",
+        on_delete=models.PROTECT,
+        related_name="tenants",
+    )
     name = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, max_length=64)
     status = models.CharField(
