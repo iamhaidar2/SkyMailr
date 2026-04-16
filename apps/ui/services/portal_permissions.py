@@ -19,6 +19,41 @@ def portal_user_can_manage_tenants(user: AbstractBaseUser | AnonymousUser, accou
     ).exists()
 
 
+def portal_user_can_edit_content(user: AbstractBaseUser | AnonymousUser, account: Account) -> bool:
+    """Owner, admin, or editor may edit automation content (not viewer)."""
+    if not user.is_authenticated:
+        return False
+    return AccountMembership.objects.filter(
+        account_id=account.id,
+        user_id=user.pk,
+        is_active=True,
+        role__in=(AccountRole.OWNER, AccountRole.ADMIN, AccountRole.EDITOR),
+    ).exists()
+
+
+def portal_user_can_approve_templates(user: AbstractBaseUser | AnonymousUser, account: Account) -> bool:
+    """Approve template versions: owner or admin only."""
+    if not user.is_authenticated:
+        return False
+    return AccountMembership.objects.filter(
+        account_id=account.id,
+        user_id=user.pk,
+        is_active=True,
+        role__in=(AccountRole.OWNER, AccountRole.ADMIN),
+    ).exists()
+
+
+def portal_user_is_viewer_only(user: AbstractBaseUser | AnonymousUser, account: Account) -> bool:
+    if not user.is_authenticated:
+        return False
+    return AccountMembership.objects.filter(
+        account_id=account.id,
+        user_id=user.pk,
+        is_active=True,
+        role=AccountRole.VIEWER,
+    ).exists()
+
+
 def portal_membership_role(user: AbstractBaseUser | AnonymousUser, account: Account) -> str | None:
     if not user.is_authenticated:
         return None

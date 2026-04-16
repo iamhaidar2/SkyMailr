@@ -1,0 +1,28 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-2xl">
+  <h2 class="text-xl font-semibold text-white">{{ page_title }}</h2>
+  <p class="mt-1 text-sm text-slate-400">Choose the tenant, then name and slug for this workflow.</p>
+  <form method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    <div>
+      <label class="mb-1 block text-xs text-slate-500" for="id_tenant_sel">App / tenant</label>
+      <select name="tenant" id="id_tenant_sel" required class="w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
+        <option value="">— Select —</option>
+        {% for t in tenants %}
+          <option value="{{ t.id }}">{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% for field in form %}
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Create workflow</button>
+    <a href="{% url 'portal:workflow_list' %}" class="ml-2 text-sm text-slate-400 hover:text-white">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,4 +1,15 @@
 import pytest
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+@pytest.fixture
+def staff_client(db, client):
+    """Staff session for operator UI tests."""
+    u = User.objects.create_user("staffop", password="pass12345", is_staff=True)
+    client.login(username="staffop", password="pass12345")
+    return client
 
 
 @pytest.fixture

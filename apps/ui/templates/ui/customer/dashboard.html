@@ -1,28 +1,61 @@
 {% extends "ui/customer/base.html" %}
 {% block content %}
-<div class="mx-auto max-w-3xl space-y-8">
+<div class="mx-auto max-w-4xl space-y-8">
   <div>
     <h2 class="text-2xl font-semibold text-white">Dashboard</h2>
-    <p class="mt-1 text-sm text-slate-400">Account <strong class="text-slate-200">{{ portal_account.name }}</strong> · role {{ portal_role }}</p>
+    <p class="mt-1 text-sm text-slate-400">Account <strong class="text-slate-200">{{ portal_account.name }}</strong>{% if portal_role %} · role {{ portal_role }}{% endif %}</p>
   </div>
-  <div class="grid gap-4 sm:grid-cols-3">
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
       <p class="text-xs uppercase text-slate-500">Tenants</p>
       <p class="mt-1 text-2xl font-semibold text-white">{{ tenant_count }}</p>
+      <a href="{% url 'portal:tenant_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">View</a>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Sender profiles</p>
+      <p class="mt-1 text-2xl font-semibold text-white">{{ sender_profile_count }}</p>
+      <a href="{% url 'portal:sender_profile_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">Manage</a>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Email templates</p>
+      <p class="mt-1 text-2xl font-semibold text-white">{{ template_count }}</p>
+      <a href="{% url 'portal:template_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">Manage</a>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Workflows</p>
+      <p class="mt-1 text-2xl font-semibold text-white">{{ workflow_count }}</p>
+      <a href="{% url 'portal:workflow_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">Manage</a>
     </div>
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
       <p class="text-xs uppercase text-slate-500">API keys (active)</p>
       <p class="mt-1 text-2xl font-semibold text-white">{{ total_api_keys }}</p>
+      <a href="{% url 'portal:api_keys' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">View</a>
     </div>
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
       <p class="text-xs uppercase text-slate-500">Messages (all time)</p>
       <p class="mt-1 text-2xl font-semibold text-white">{{ message_count }}</p>
+      <a href="{% url 'portal:messages_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">View</a>
     </div>
   </div>
   {% if tenant_count == 0 and portal_can_manage %}
     <div class="rounded-xl border border-blue-900/50 bg-blue-950/40 p-5">
       <p class="text-sm text-slate-200">Create your first app (tenant) to get API keys and send mail.</p>
       <a href="{% url 'portal:tenant_new' %}" class="mt-3 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Create first tenant</a>
+    </div>
+  {% endif %}
+  {% if recent_messages %}
+    <div>
+      <h3 class="text-sm font-semibold text-slate-400">Recent messages</h3>
+      <ul class="mt-3 divide-y divide-surface-700 rounded-xl border border-surface-600 bg-surface-850">
+        {% for m in recent_messages %}
+          <li class="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 text-sm">
+            <span class="text-slate-300">{{ m.to_email }}</span>
+            <span class="font-mono text-xs text-slate-500">{{ m.tenant.slug }}</span>
+            <span class="w-full text-xs text-slate-500 sm:w-auto">{{ m.created_at }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+      <a href="{% url 'portal:messages_list' %}" class="mt-2 inline-block text-xs text-blue-400 hover:underline">All messages</a>
     </div>
   {% endif %}
   {% if tenants %}

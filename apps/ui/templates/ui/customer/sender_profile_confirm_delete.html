@@ -1,0 +1,12 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-lg space-y-6">
+  <h2 class="text-xl font-semibold text-white">Delete sender profile</h2>
+  <p class="text-sm text-slate-400">Delete <strong class="text-slate-200">{{ profile.name }}</strong> for {{ profile.tenant.name }}? This cannot be undone.</p>
+  <form method="post" class="flex flex-wrap gap-3">
+    {% csrf_token %}
+    <button type="submit" class="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-600">Delete</button>
+    <a href="{% url 'portal:sender_profile_detail' profile.id %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Cancel</a>
+  </form>
+</div>
+{% endblock %}

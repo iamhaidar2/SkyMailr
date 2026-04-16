@@ -23,7 +23,13 @@ from apps.ui.services.portal_account import (
     get_portal_accounts_for_user,
     set_active_portal_account,
 )
-from apps.ui.services.portal_permissions import portal_membership_role, portal_user_can_manage_tenants
+from apps.ui.services.portal_permissions import (
+    portal_membership_role,
+    portal_user_can_approve_templates,
+    portal_user_can_edit_content,
+    portal_user_can_manage_tenants,
+    portal_user_is_viewer_only,
+)
 
 SESSION_PORTAL_NEW_API_KEY = "_portal_new_api_key_once"
 
@@ -32,12 +38,18 @@ def _portal_ctx(request, page_title: str, nav_active: str):
     account = get_active_portal_account(request)
     role = portal_membership_role(request.user, account) if account else None
     can_manage = portal_user_can_manage_tenants(request.user, account) if account else False
+    can_edit = portal_user_can_edit_content(request.user, account) if account else False
+    can_approve = portal_user_can_approve_templates(request.user, account) if account else False
+    is_viewer = portal_user_is_viewer_only(request.user, account) if account else False
     return {
         "page_title": page_title,
         "portal_nav_active": nav_active,
         "portal_account": account,
         "portal_role": role,
         "portal_can_manage": can_manage,
+        "portal_can_edit": can_edit,
+        "portal_can_approve": can_approve,
+        "portal_is_viewer": is_viewer,
         "portal_accounts": get_portal_accounts_for_user(request.user),
     }
 
@@ -114,16 +126,27 @@ class CustomerLogoutView(LogoutView):
 @customer_login_required
 @portal_account_required
 def dashboard(request):
+    from apps.email_templates.models import EmailTemplate
+    from apps.tenants.models import SenderProfile
+    from apps.workflows.models import Workflow
+
     account = get_active_portal_account(request)
     assert account is not None
     tenants = Tenant.objects.filter(account=account).annotate(
         api_key_count=Count("api_keys", filter=Q(api_keys__revoked_at__isnull=True)),
     )
-    tenant_ids = list(tenants.values_list("id", flat=True))
     total_keys = (
         TenantAPIKey.objects.filter(tenant__account=account, revoked_at__isnull=True).count()
     )
     msg_count = OutboundMessage.objects.filter(tenant__account=account).count()
+    sp_count = SenderProfile.objects.filter(tenant__account=account).count()
+    tpl_count = EmailTemplate.objects.filter(tenant__account=account).count()
+    wf_count = Workflow.objects.filter(tenant__account=account).count()
+    recent_messages = (
+        OutboundMessage.objects.filter(tenant__account=account)
+        .select_related("tenant")
+        .order_by("-created_at")[:8]
+    )
     ctx = _portal_ctx(request, "Dashboard", "dashboard")
     ctx.update(
         {
@@ -131,6 +154,10 @@ def dashboard(request):
             "tenant_count": tenants.count(),
             "total_api_keys": total_keys,
             "message_count": msg_count,
+            "sender_profile_count": sp_count,
+            "template_count": tpl_count,
+            "workflow_count": wf_count,
+            "recent_messages": recent_messages,
         }
     )
     return render(request, "ui/customer/dashboard.html", ctx)
@@ -256,22 +283,3 @@ def messages_list(request):
     ctx = _portal_ctx(request, "Messages", "messages")
     ctx.update({"messages": qs})
     return render(request, "ui/customer/messages_list.html", ctx)
-
-
-@customer_login_required
-@portal_account_required
-def placeholder(request, slug: str):
-    titles = {
-        "templates": "Templates",
-        "workflows": "Workflows",
-        "sender-profiles": "Sender profiles",
-    }
-    nav = {
-        "templates": "templates",
-        "workflows": "workflows",
-        "sender-profiles": "sender_profiles",
-    }
-    title = titles.get(slug, "Coming soon")
-    ctx = _portal_ctx(request, title, nav.get(slug, "dashboard"))
-    ctx.update({"feature_title": title})
-    return render(request, "ui/customer/placeholder.html", ctx)

@@ -6,6 +6,10 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import redirect
 
 from apps.ui.services.portal_account import get_active_portal_account
+from apps.ui.services.portal_permissions import (
+    portal_user_can_approve_templates,
+    portal_user_can_edit_content,
+)
 
 
 def operator_required(view_func):
@@ -56,6 +60,45 @@ def portal_account_required(view_func):
                 "You need an account membership to use the app. Create an account or ask to be invited.",
             )
             return redirect("portal:signup")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def portal_editor_required(view_func):
+    """Owner, admin, or editor — not viewer (templates, workflows, sender profiles)."""
+
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("portal:login")
+        account = get_active_portal_account(request)
+        if account is None:
+            if request.user.is_staff:
+                django_messages.info(request, "No portal memberships. Use the operator dashboard.")
+                return redirect("ui:dashboard")
+            return redirect("portal:signup")
+        if not portal_user_can_edit_content(request.user, account):
+            return HttpResponseForbidden("You do not have permission to edit.")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def portal_approve_required(view_func):
+    """Owner or admin — template approval."""
+
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect("portal:login")
+        account = get_active_portal_account(request)
+        if account is None:
+            if request.user.is_staff:
+                return redirect("ui:dashboard")
+            return redirect("portal:signup")
+        if not portal_user_can_approve_templates(request.user, account):
+            return HttpResponseForbidden("Only account owners or admins can approve templates.")
         return view_func(request, *args, **kwargs)
 
     return _wrapped

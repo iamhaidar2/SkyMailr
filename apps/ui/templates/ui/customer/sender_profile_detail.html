@@ -1,0 +1,39 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs text-slate-500">{{ profile.tenant.name }}</p>
+      <h2 class="text-2xl font-semibold text-white">{{ profile.name }}</h2>
+      <p class="mt-1 text-sm text-slate-400">{{ profile.get_category_display }}</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        {% if profile.is_default %}<span class="rounded bg-emerald-950 px-2 py-0.5 text-xs text-emerald-300">Default</span>{% endif %}
+        {% if profile.is_active %}<span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-300">Active</span>{% else %}<span class="rounded bg-surface-800 px-2 py-0.5 text-xs text-slate-500">Inactive</span>{% endif %}
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'portal:sender_profile_list' %}" class="text-sm text-slate-400 hover:text-white">← All profiles</a>
+      {% if can_edit %}
+        <a href="{% url 'portal:sender_profile_edit' profile.id %}" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-white hover:bg-surface-800">Edit</a>
+        <a href="{% url 'portal:sender_profile_delete' profile.id %}" class="rounded-md border border-red-900/50 px-3 py-1.5 text-sm text-red-300 hover:bg-red-950/40">Delete</a>
+      {% endif %}
+    </div>
+  </div>
+  {% if sending_domain_missing %}
+    <div class="rounded-lg border border-amber-800 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
+      This tenant has no <strong>sending domain</strong> configured. Set it on the tenant so you can enforce consistent From addresses.
+    </div>
+  {% endif %}
+  {% if domain_mismatch %}
+    <div class="rounded-lg border border-red-800 bg-red-950/30 px-4 py-3 text-sm text-red-200">
+      The From email domain does not match the tenant sending domain ({{ profile.tenant.sending_domain }}). Update the address or domain.
+    </div>
+  {% endif %}
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-300">
+    <dl class="space-y-2">
+      <div><span class="text-slate-500">From:</span> {{ profile.from_name }} &lt;{{ profile.from_email }}&gt;</div>
+      <div><span class="text-slate-500">Reply-to:</span> {{ profile.reply_to|default:"—" }}</div>
+    </dl>
+  </div>
+</div>
+{% endblock %}

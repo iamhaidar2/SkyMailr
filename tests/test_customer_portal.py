@@ -12,13 +12,6 @@ User = get_user_model()
 
 
 @pytest.fixture
-def staff_client(db, client):
-    u = User.objects.create_user("staffop", password="pass12345", is_staff=True)
-    client.login(username="staffop", password="pass12345")
-    return client
-
-
-@pytest.fixture
 def customer_user(db):
     return User.objects.create_user(
         "cust@example.com",

@@ -12,12 +12,155 @@ from django.db.models import Q
 from django.utils.text import slugify
 
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
-from apps.tenants.models import Tenant
+from apps.email_templates.models import TemplateCategory
+from apps.tenants.models import SenderProfile, Tenant
 from apps.ui.forms import TenantForm
+from apps.ui.tenant_validators import from_email_allowed_for_tenant
+from apps.workflows.models import WorkflowStepType
 
 User = get_user_model()
 
 _inp = "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white"
+_chk = "h-4 w-4 rounded border-surface-600 text-accent"
+
+
+class PortalSenderProfileForm(forms.ModelForm):
+    """Create/edit sender profile; tenant must belong to portal account."""
+
+    class Meta:
+        model = SenderProfile
+        fields = [
+            "tenant",
+            "name",
+            "category",
+            "from_name",
+            "from_email",
+            "reply_to",
+            "is_default",
+            "is_active",
+        ]
+        widgets = {
+            "tenant": forms.Select(attrs={"class": _inp}),
+            "name": forms.TextInput(attrs={"class": _inp}),
+            "category": forms.Select(attrs={"class": _inp}),
+            "from_name": forms.TextInput(attrs={"class": _inp}),
+            "from_email": forms.EmailInput(attrs={"class": _inp}),
+            "reply_to": forms.EmailInput(attrs={"class": _inp}),
+            "is_default": forms.CheckboxInput(attrs={"class": _chk}),
+            "is_active": forms.CheckboxInput(attrs={"class": _chk}),
+        }
+
+    def __init__(self, *args, account: Account, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._account = account
+        self.fields["tenant"].queryset = Tenant.objects.filter(account=account).order_by("name")
+        self.fields["tenant"].label = "App / tenant"
+        self.fields["reply_to"].required = False
+        if self.instance.pk:
+            self.fields["tenant"].disabled = True
+            self.fields["tenant"].help_text = "Tenant cannot be changed after creation."
+
+    def clean_tenant(self):
+        tenant = self.cleaned_data.get("tenant")
+        if tenant and tenant.account_id != self._account.id:
+            raise forms.ValidationError("Invalid tenant for this account.")
+        return tenant
+
+    def clean(self):
+        data = super().clean()
+        email = (data.get("from_email") or "").strip()
+        tenant = data.get("tenant") or getattr(self.instance, "tenant", None)
+        if tenant and email:
+            sd = (tenant.sending_domain or "").strip()
+            if sd and not from_email_allowed_for_tenant(email, sd):
+                self.add_error(
+                    "from_email",
+                    f"From address must be on the tenant sending domain ({sd}).",
+                )
+        return data
+
+
+class PortalNewEmailTemplateForm(forms.Form):
+    tenant = forms.ModelChoiceField(
+        queryset=Tenant.objects.none(),
+        label="App / tenant",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    key = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))
+    name = forms.CharField(widget=forms.TextInput(attrs={"class": _inp}))
+    category = forms.ChoiceField(
+        choices=TemplateCategory.choices,
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    description = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 2, "class": _inp}),
+    )
+
+    def __init__(self, *args, account: Account, **kwargs):
+        self._account = account
+        super().__init__(*args, **kwargs)
+        self.fields["tenant"].queryset = Tenant.objects.filter(account=account).order_by("name")
+
+    def clean_tenant(self):
+        t = self.cleaned_data.get("tenant")
+        if t and t.account_id != self._account.id:
+            raise forms.ValidationError("Invalid tenant.")
+        return t
+
+
+class PortalTemplateVersionForm(forms.Form):
+    subject_template = forms.CharField(
+        label="Subject line (template)",
+        widget=forms.TextInput(attrs={"class": _inp}),
+    )
+    preview_text_template = forms.CharField(
+        required=False,
+        label="Preview text",
+        widget=forms.TextInput(attrs={"class": _inp}),
+    )
+    html_template = forms.CharField(
+        label="HTML body",
+        widget=forms.Textarea(attrs={"rows": 12, "class": _inp + " font-mono text-xs"}),
+    )
+    text_template = forms.CharField(
+        required=False,
+        label="Plain text",
+        widget=forms.Textarea(attrs={"rows": 6, "class": _inp + " font-mono text-xs"}),
+    )
+
+
+class PortalWorkflowStepForm(forms.Form):
+    order = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={"class": _inp}))
+    step_type = forms.ChoiceField(
+        choices=[
+            (WorkflowStepType.SEND_TEMPLATE, "Send template email"),
+            (WorkflowStepType.WAIT_DURATION, "Wait (duration)"),
+            (WorkflowStepType.END, "End workflow"),
+        ],
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    template_key = forms.SlugField(
+        required=False,
+        help_text="Required for send-template steps.",
+        widget=forms.TextInput(attrs={"class": _inp}),
+    )
+    wait_seconds = forms.IntegerField(
+        required=False,
+        min_value=0,
+        widget=forms.NumberInput(attrs={"class": _inp}),
+    )
+
+    def clean(self):
+        data = super().clean()
+        st = data.get("step_type")
+        tk = (data.get("template_key") or "").strip()
+        ws = data.get("wait_seconds")
+        if st == WorkflowStepType.SEND_TEMPLATE and not tk:
+            raise forms.ValidationError("Template key is required for send-template steps.")
+        if st == WorkflowStepType.WAIT_DURATION and ws is None:
+            raise forms.ValidationError("Wait seconds required for wait steps.")
+        return data
 
 
 class CustomerSignupForm(forms.Form):

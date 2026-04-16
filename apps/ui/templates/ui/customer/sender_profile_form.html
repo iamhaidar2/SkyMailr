@@ -1,0 +1,26 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-2xl">
+  <h2 class="text-xl font-semibold text-white">{{ page_title }}</h2>
+  <form method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="rounded border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-200">{{ form.non_field_errors.0 }}</div>
+    {% endif %}
+    {% for field in form %}
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">{{ submit_label }}</button>
+    {% if editing %}
+      <a href="{% url 'portal:sender_profile_detail' profile.id %}" class="ml-2 text-sm text-slate-400 hover:text-white">Cancel</a>
+    {% else %}
+      <a href="{% url 'portal:sender_profile_list' %}" class="ml-2 text-sm text-slate-400 hover:text-white">Cancel</a>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

@@ -8,12 +8,26 @@
     </div>
     <a href="{% url 'portal:tenant_list' %}" class="text-sm text-slate-400 hover:text-white">← All tenants</a>
   </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Automation for this tenant</h3>
+    <p class="mt-1 text-xs text-slate-500">Jump to lists filtered to this app.</p>
+    <ul class="mt-4 flex flex-wrap gap-3 text-sm">
+      <li><a class="text-blue-400 hover:underline" href="{% url 'portal:sender_profile_list' %}?tenant={{ tenant.id }}">Sender profiles ({{ tenant.sender_profiles.count }})</a></li>
+      <li><a class="text-blue-400 hover:underline" href="{% url 'portal:template_list' %}?tenant={{ tenant.id }}">Templates</a></li>
+      <li><a class="text-blue-400 hover:underline" href="{% url 'portal:workflow_list' %}?tenant={{ tenant.id }}">Workflows</a></li>
+    </ul>
+  </div>
+
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-300">
     <h3 class="text-sm font-semibold text-white">Sender defaults</h3>
     <dl class="mt-3 space-y-2">
       <div><span class="text-slate-500">Default sender:</span> {{ tenant.default_sender_name }} &lt;{{ tenant.default_sender_email|default:"" }}&gt;</div>
       <div><span class="text-slate-500">Reply-to:</span> {{ tenant.reply_to|default:"—" }}</div>
       <div><span class="text-slate-500">Sending domain:</span> {{ tenant.sending_domain|default:"—" }}</div>
+      {% if not tenant.sending_domain %}
+        <p class="text-amber-200/90">No sending domain is set on this tenant. Set one so sender profiles can be validated against your domain.</p>
+      {% endif %}
       <div><span class="text-slate-500">Timezone:</span> {{ tenant.timezone }}</div>
       <div><span class="text-slate-500">Rate limit/min:</span> {{ tenant.rate_limit_per_minute }}</div>
     </dl>
