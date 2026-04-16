@@ -60,17 +60,45 @@ class Tenant(models.Model):
         return self.name
 
 
+class DomainVerificationStatus(models.TextChoices):
+    UNVERIFIED = "unverified", "Unverified"
+    DNS_PENDING = "dns_pending", "DNS pending"
+    PARTIALLY_VERIFIED = "partially_verified", "Partially verified"
+    VERIFIED = "verified", "Verified"
+    FAILED_CHECK = "failed_check", "Check failed"
+
+
 class TenantDomain(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="domains")
-    domain = models.CharField(max_length=255, unique=True)
+    domain = models.CharField(
+        max_length=255,
+        help_text="Root domain or subdomain used for outbound mail (lowercase).",
+    )
     verified = models.BooleanField(default=False)
     is_primary = models.BooleanField(default=False)
+    verification_status = models.CharField(
+        max_length=32,
+        choices=DomainVerificationStatus.choices,
+        default=DomainVerificationStatus.UNVERIFIED,
+        db_index=True,
+    )
     dkim_status = models.CharField(max_length=64, blank=True)
+    spf_status = models.CharField(max_length=64, blank=True)
+    dmarc_status = models.CharField(max_length=64, blank=True)
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    verification_notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["tenant", "domain"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "domain"],
+                name="tenants_tenantdomain_tenant_domain_uniq",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.domain} ({self.tenant.slug})"

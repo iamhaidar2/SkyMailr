@@ -17,6 +17,7 @@ python-dotenv>=1.0
 gunicorn>=22.0
 whitenoise>=6.6
 cryptography>=42.0
+dnspython>=2.6
 
 # Dev / test
 pytest>=8.0

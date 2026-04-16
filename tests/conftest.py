@@ -4,6 +4,24 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
+def pytest_configure():
+    """Avoid RequestContext.copy() failures on Python 3.14+ when the test client stores rendered contexts."""
+    from copy import copy as copy_fn
+
+    import django.test.client as dj_client
+
+    def store_rendered_templates(store, signal, sender, template, context, **kwargs):
+        store.setdefault("templates", []).append(template)
+        if "context" not in store:
+            store["context"] = dj_client.ContextList()
+        try:
+            store["context"].append(copy_fn(context))
+        except Exception:
+            store["context"].append(context)
+
+    dj_client.store_rendered_templates = store_rendered_templates
+
+
 @pytest.fixture
 def staff_client(db, client):
     """Staff session for operator UI tests."""

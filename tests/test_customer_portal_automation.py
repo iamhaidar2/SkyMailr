@@ -18,6 +18,7 @@ from apps.email_templates.models import (
 )
 from apps.tenants.models import SenderCategory, SenderProfile, Tenant, TenantStatus
 from apps.workflows.models import Workflow
+from tests.portal_helpers import bind_portal_account_session
 
 User = get_user_model()
 
@@ -107,15 +108,37 @@ def other_account_tenant(db):
 
 
 @pytest.mark.django_db
+def test_portal_sender_profile_form_accepts_tenant_post_data(customer_account, portal_tenant):
+    from apps.ui.forms_customer import PortalSenderProfileForm
+
+    form = PortalSenderProfileForm(
+        {
+            "tenant": str(portal_tenant.id),
+            "name": "Main",
+            "category": "transactional",
+            "from_name": "App",
+            "from_email": "hi@example.com",
+            "reply_to": "",
+            "is_default": "on",
+            "is_active": "on",
+        },
+        account=customer_account,
+    )
+    assert form.instance._state.adding
+    assert not form.fields["tenant"].disabled
+    assert form.is_valid(), form.errors
+
+
+@pytest.mark.django_db
 def test_sender_profile_crud(client, customer_user, customer_account, portal_tenant):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     url_new = reverse("portal:sender_profile_new")
     r = client.post(
         url_new,
         {
             "tenant": str(portal_tenant.id),
             "name": "Main",
-            "category": SenderCategory.TRANSACTIONAL,
+            "category": "transactional",
             "from_name": "App",
             "from_email": "hi@example.com",
             "reply_to": "",
@@ -132,7 +155,7 @@ def test_sender_profile_crud(client, customer_user, customer_account, portal_ten
         {
             "tenant": str(portal_tenant.id),
             "name": "Main Renamed",
-            "category": SenderCategory.TRANSACTIONAL,
+            "category": "transactional",
             "from_name": "App",
             "from_email": "hi@example.com",
             "reply_to": "",
@@ -152,13 +175,13 @@ def test_sender_profile_crud(client, customer_user, customer_account, portal_ten
 def test_sender_profile_domain_validation(client, customer_user, customer_account, portal_tenant):
     portal_tenant.sending_domain = "allowed.example"
     portal_tenant.save(update_fields=["sending_domain"])
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:sender_profile_new"),
         {
             "tenant": str(portal_tenant.id),
             "name": "Bad",
-            "category": SenderCategory.TRANSACTIONAL,
+            "category": "transactional",
             "from_name": "X",
             "from_email": "x@wrong.com",
             "reply_to": "",
@@ -179,7 +202,7 @@ def test_cross_account_sender_profile_404(client, customer_user, customer_accoun
         from_name="O",
         from_email="o@other.com",
     )
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("portal:sender_profile_detail", kwargs={"profile_id": sp.id}))
     assert r.status_code == 404
 
@@ -193,7 +216,7 @@ def test_template_list_scoped(client, customer_user, customer_account, portal_te
         category=TemplateCategory.TRANSACTIONAL,
         status=TemplateStatus.DRAFT,
     )
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("portal:template_list"))
     assert r.status_code == 200
     assert b"t1" in r.content
@@ -203,7 +226,7 @@ def test_template_list_scoped(client, customer_user, customer_account, portal_te
 def test_template_create_and_approve(
     client, customer_user, customer_account, portal_tenant
 ):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:template_new"),
         {
@@ -255,7 +278,7 @@ def test_template_preview_scoped(client, customer_user, customer_account, portal
         text_template="{{ a }}",
         approval_status=ApprovalStatus.PENDING,
     )
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:template_preview", kwargs={"template_id": tpl.id}),
         {"context": json.dumps({"a": "1"})},
@@ -273,14 +296,14 @@ def test_cross_account_template_404(client, customer_user, customer_account, oth
         category=TemplateCategory.TRANSACTIONAL,
         status=TemplateStatus.DRAFT,
     )
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("portal:template_detail", kwargs={"template_id": tpl.id}))
     assert r.status_code == 404
 
 
 @pytest.mark.django_db
 def test_workflow_create_list_detail(client, customer_user, customer_account, portal_tenant):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:workflow_new"),
         {"tenant": str(portal_tenant.id), "name": "Onboarding", "slug": "onboarding"},
@@ -289,7 +312,7 @@ def test_workflow_create_list_detail(client, customer_user, customer_account, po
     wf = Workflow.objects.get(tenant=portal_tenant, slug="onboarding")
     r2 = client.get(reverse("portal:workflow_list"))
     assert r2.status_code == 200
-    assert b"onboarding" in r.content.lower()
+    assert b"onboarding" in r2.content.lower()
     r3 = client.get(reverse("portal:workflow_detail", kwargs={"workflow_id": wf.id}))
     assert r3.status_code == 200
 
@@ -306,7 +329,7 @@ def test_workflow_step_validates_template_key(
         status=TemplateStatus.DRAFT,
     )
     wf = Workflow.objects.create(tenant=portal_tenant, name="W", slug="w")
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:workflow_add_step", kwargs={"workflow_id": wf.id}),
         {
@@ -334,14 +357,14 @@ def test_workflow_step_validates_template_key(
 
 @pytest.mark.django_db
 def test_editor_cannot_create_tenant(client, editor_user, customer_account, editor_account_membership):
-    client.force_login(editor_user)
+    bind_portal_account_session(client, editor_user, customer_account)
     r = client.get(reverse("portal:tenant_new"))
     assert r.status_code == 403
 
 
 @pytest.mark.django_db
 def test_viewer_cannot_edit_sender_profile(client, viewer_user, customer_account, viewer_membership, portal_tenant):
-    client.force_login(viewer_user)
+    bind_portal_account_session(client, viewer_user, customer_account)
     r = client.get(reverse("portal:sender_profile_new"))
     assert r.status_code == 403
 
@@ -367,7 +390,7 @@ def test_editor_cannot_approve_template(
         text_template="x",
         approval_status=ApprovalStatus.PENDING,
     )
-    client.force_login(editor_user)
+    bind_portal_account_session(client, editor_user, customer_account)
     r = client.post(
         reverse("portal:template_approve", kwargs={"template_id": tpl.id}),
         {"note": ""},

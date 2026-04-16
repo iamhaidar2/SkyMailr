@@ -16,7 +16,31 @@
       <li><a class="text-blue-400 hover:underline" href="{% url 'portal:sender_profile_list' %}?tenant={{ tenant.id }}">Sender profiles ({{ tenant.sender_profiles.count }})</a></li>
       <li><a class="text-blue-400 hover:underline" href="{% url 'portal:template_list' %}?tenant={{ tenant.id }}">Templates</a></li>
       <li><a class="text-blue-400 hover:underline" href="{% url 'portal:workflow_list' %}?tenant={{ tenant.id }}">Workflows</a></li>
+      <li><a class="text-blue-400 hover:underline" href="{% url 'portal:tenant_domain_list' tenant.id %}">Sending domains</a></li>
     </ul>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <h3 class="text-sm font-semibold text-white">Sending readiness</h3>
+      <a href="{% url 'portal:tenant_domain_list' tenant.id %}" class="text-xs text-blue-400 hover:underline">Manage domains &amp; DNS</a>
+    </div>
+    <ul class="mt-3 space-y-1 text-sm text-slate-300">
+      <li><span class="text-slate-500">Sending domain field:</span> {% if readiness.has_sending_domain_field %}{{ tenant.sending_domain }}{% else %}<span class="text-amber-200">not set</span>{% endif %}</li>
+      <li><span class="text-slate-500">Verified sending domain:</span> {% if readiness.has_verified_domain %}<span class="text-emerald-300">yes</span>{% else %}<span class="text-amber-200">not yet</span>{% endif %}</li>
+      <li><span class="text-slate-500">Primary verified:</span> {% if readiness.primary_verified %}<span class="text-emerald-300">yes</span>{% elif readiness.has_primary %}<span class="text-amber-200">no</span>{% else %}<span class="text-slate-500">—</span>{% endif %}</li>
+      <li><span class="text-slate-500">Active sender profiles:</span> {{ readiness.sender_profile_count }}</li>
+      {% if tenant.default_sender_email %}
+        <li><span class="text-slate-500">Default sender vs verified:</span> {% if readiness.default_sender_matches_verified %}<span class="text-emerald-300">aligned</span>{% else %}<span class="text-amber-200">not aligned</span>{% endif %}</li>
+      {% endif %}
+      {% if readiness.dns_ref_domain %}
+        <li class="text-xs text-slate-500">DNS snapshot ({{ readiness.dns_ref_domain }}): SPF {{ readiness.spf_status }} · DKIM {{ readiness.dkim_status }} · DMARC {{ readiness.dmarc_status }}</li>
+      {% endif %}
+    </ul>
+    {% for issue in readiness.issues %}
+      <p class="mt-2 text-sm text-amber-100/90">{{ issue }}</p>
+    {% endfor %}
+    <p class="mt-3 text-xs text-slate-500">{{ readiness.warmup_note }}</p>
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-300">

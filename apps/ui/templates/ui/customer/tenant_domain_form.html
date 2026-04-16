@@ -1,0 +1,26 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-xl space-y-6">
+  <div>
+    <p class="text-xs text-slate-500"><a href="{% url 'portal:tenant_domain_list' tenant.id %}" class="text-slate-400 hover:text-white">Domains</a> · {{ tenant.name }}</p>
+    <h2 class="text-2xl font-semibold text-white">Add sending domain</h2>
+    <p class="mt-1 text-sm text-slate-400">Use the hostname only (e.g. <code class="text-slate-300">mail.example.com</code>). No <code class="text-slate-300">https://</code> or paths.</p>
+  </div>
+  <form method="post" class="space-y-4 rounded-xl border border-surface-600 bg-surface-850 p-5">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="text-sm text-red-300">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <div>
+      <label class="text-xs text-slate-500">{{ form.domain.label }}</label>
+      {{ form.domain }}
+      {% if form.domain.help_text %}<p class="mt-1 text-xs text-slate-500">{{ form.domain.help_text }}</p>{% endif %}
+      {% if form.domain.errors %}<p class="mt-1 text-sm text-red-300">{{ form.domain.errors }}</p>{% endif %}
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Save domain</button>
+      <a href="{% url 'portal:tenant_domain_list' tenant.id %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

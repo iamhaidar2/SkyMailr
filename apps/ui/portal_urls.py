@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.ui.views import portal_automation
+from apps.ui.views import portal_automation, portal_tenant_domains
 from apps.ui.views.customer_portal import (
     CustomerLoginView,
     CustomerLogoutView,
@@ -88,6 +88,36 @@ urlpatterns = [
         "account/tenants/<uuid:tenant_id>/api-keys/",
         tenant_create_api_key,
         name="tenant_create_api_key",
+    ),
+    path(
+        "account/tenants/<uuid:tenant_id>/domains/",
+        portal_tenant_domains.tenant_domain_list,
+        name="tenant_domain_list",
+    ),
+    path(
+        "account/tenants/<uuid:tenant_id>/domains/new/",
+        portal_tenant_domains.tenant_domain_new,
+        name="tenant_domain_new",
+    ),
+    path(
+        "account/tenants/<uuid:tenant_id>/domains/<uuid:domain_id>/",
+        portal_tenant_domains.tenant_domain_detail,
+        name="tenant_domain_detail",
+    ),
+    path(
+        "account/tenants/<uuid:tenant_id>/domains/<uuid:domain_id>/verify/",
+        portal_tenant_domains.tenant_domain_verify,
+        name="tenant_domain_verify",
+    ),
+    path(
+        "account/tenants/<uuid:tenant_id>/domains/<uuid:domain_id>/make-primary/",
+        portal_tenant_domains.tenant_domain_make_primary,
+        name="tenant_domain_make_primary",
+    ),
+    path(
+        "account/tenants/<uuid:tenant_id>/domains/<uuid:domain_id>/delete/",
+        portal_tenant_domains.tenant_domain_delete,
+        name="tenant_domain_delete",
     ),
     path("account/api-keys/", api_keys_hub, name="api_keys"),
     path("account/messages/", messages_list, name="messages_list"),

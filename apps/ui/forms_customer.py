@@ -13,7 +13,8 @@ from django.utils.text import slugify
 
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
 from apps.email_templates.models import TemplateCategory
-from apps.tenants.models import SenderProfile, Tenant
+from apps.tenants.models import SenderProfile, Tenant, TenantDomain
+from apps.tenants.services.domain_dns_instructions import normalize_fqdn
 from apps.ui.forms import TenantForm
 from apps.ui.tenant_validators import from_email_allowed_for_tenant
 from apps.workflows.models import WorkflowStepType
@@ -56,22 +57,21 @@ class PortalSenderProfileForm(forms.ModelForm):
         self.fields["tenant"].queryset = Tenant.objects.filter(account=account).order_by("name")
         self.fields["tenant"].label = "App / tenant"
         self.fields["reply_to"].required = False
-        if self.instance.pk:
+        # UUID pk is assigned on model __init__; only lock tenant after the row exists in the DB.
+        if not self.instance._state.adding:
             self.fields["tenant"].disabled = True
             self.fields["tenant"].help_text = "Tenant cannot be changed after creation."
 
-    def clean_tenant(self):
-        tenant = self.cleaned_data.get("tenant")
-        if tenant and tenant.account_id != self._account.id:
-            raise forms.ValidationError("Invalid tenant for this account.")
-        return tenant
-
     def clean(self):
+        # Validates tenant account + from_email vs tenant.sending_domain when set.
         data = super().clean()
+        tenant = data.get("tenant")
+        if tenant and tenant.account_id != self._account.id:
+            self.add_error("tenant", "Invalid tenant for this account.")
         email = (data.get("from_email") or "").strip()
-        tenant = data.get("tenant") or getattr(self.instance, "tenant", None)
-        if tenant and email:
-            sd = (tenant.sending_domain or "").strip()
+        tenant_for_email = tenant or getattr(self.instance, "tenant", None)
+        if tenant_for_email and email:
+            sd = (tenant_for_email.sending_domain or "").strip()
             if sd and not from_email_allowed_for_tenant(email, sd):
                 self.add_error(
                     "from_email",
@@ -328,3 +328,26 @@ class InviteSignupForm(forms.Form):
         if p1:
             validate_password(p1)
         return self.cleaned_data
+
+
+class PortalTenantDomainForm(forms.Form):
+    domain = forms.CharField(
+        label="Domain or subdomain",
+        help_text="Lowercase host only — e.g. mail.example.com (no https:// or paths).",
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "mail.example.com"}),
+    )
+
+    def __init__(self, *args, tenant: Tenant, **kwargs):
+        self._tenant = tenant
+        super().__init__(*args, **kwargs)
+
+    def clean_domain(self):
+        raw = self.cleaned_data.get("domain") or ""
+        d = normalize_fqdn(raw)
+        if not d or len(d) > 253:
+            raise forms.ValidationError("Enter a valid domain.")
+        if ".." in d or " " in d or "*" in d:
+            raise forms.ValidationError("Invalid domain format.")
+        if TenantDomain.objects.filter(tenant=self._tenant, domain=d).exists():
+            raise forms.ValidationError("This domain is already added for this tenant.")
+        return d

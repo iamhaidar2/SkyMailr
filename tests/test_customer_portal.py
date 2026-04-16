@@ -7,6 +7,7 @@ from django.urls import reverse
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
+from tests.portal_helpers import bind_portal_account_session
 
 User = get_user_model()
 
@@ -135,7 +136,7 @@ def test_customer_login(client, customer_user, customer_account):
 
 @pytest.mark.django_db
 def test_customer_cannot_access_operator_dashboard(client, customer_user, customer_account):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("ui:dashboard"))
     assert r.status_code == 403
 
@@ -148,7 +149,7 @@ def test_staff_still_reaches_operator_dashboard(staff_client):
 
 @pytest.mark.django_db
 def test_portal_dashboard_loads(client, customer_user, customer_account):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("portal:dashboard"))
     assert r.status_code == 200
     assert b"Cust Co" in r.content or b"cust-co" in r.content
@@ -156,7 +157,7 @@ def test_portal_dashboard_loads(client, customer_user, customer_account):
 
 @pytest.mark.django_db
 def test_customer_creates_tenant(client, customer_user, customer_account):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:tenant_new"),
         {
@@ -181,7 +182,7 @@ def test_customer_creates_tenant(client, customer_user, customer_account):
 def test_customer_cannot_access_other_account_tenant_detail(
     client, customer_user, customer_account, other_account_tenant
 ):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("portal:tenant_detail", kwargs={"tenant_id": other_account_tenant.id}))
     assert r.status_code == 404
 
@@ -195,7 +196,7 @@ def test_customer_api_key_only_own_tenant(client, customer_user, customer_accoun
         status=TenantStatus.ACTIVE,
         default_sender_email="a@mine.com",
     )
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
         reverse("portal:tenant_create_api_key", kwargs={"tenant_id": other_account_tenant.id}),
         {"name": "evil"},
@@ -235,7 +236,7 @@ def test_tenant_api_key_bearer_unchanged(api_key, approved_template):
 
 @pytest.mark.django_db
 def test_operator_login_redirects_authenticated_customer(client, customer_user, customer_account):
-    client.force_login(customer_user)
+    bind_portal_account_session(client, customer_user, customer_account)
     r = client.get(reverse("ui:login"))
     assert r.status_code == 302
     assert r["Location"].endswith(reverse("portal:dashboard")) or "/app/" in r["Location"]

@@ -21,7 +21,19 @@ class TenantAdmin(admin.ModelAdmin):
 
 @admin.register(TenantDomain)
 class TenantDomainAdmin(admin.ModelAdmin):
-    list_display = ("domain", "tenant", "verified", "is_primary")
+    list_display = (
+        "domain",
+        "tenant",
+        "verification_status",
+        "verified",
+        "is_primary",
+        "spf_status",
+        "dkim_status",
+        "dmarc_status",
+        "last_checked_at",
+    )
+    list_filter = ("verification_status", "verified", "is_primary")
+    search_fields = ("domain", "tenant__name", "tenant__slug")
 
 
 @admin.register(SenderProfile)

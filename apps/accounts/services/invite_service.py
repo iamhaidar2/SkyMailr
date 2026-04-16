@@ -17,6 +17,7 @@ from apps.accounts.models import (
     AccountInviteStatus,
     AccountMembership,
     AccountRole,
+    UserProfile,
 )
 
 logger = logging.getLogger("apps.accounts.audit")

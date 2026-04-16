@@ -1,0 +1,60 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-6">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs text-slate-500"><a href="{% url 'portal:tenant_detail' tenant.id %}" class="text-slate-400 hover:text-white">{{ tenant.name }}</a></p>
+      <h2 class="text-2xl font-semibold text-white">Sending domains</h2>
+      <p class="mt-1 text-sm text-slate-400">Add DNS records at your DNS host, then run a check here.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'portal:tenant_detail' tenant.id %}" class="text-sm text-slate-400 hover:text-white">← Tenant</a>
+      {% if can_manage %}
+        <a href="{% url 'portal:tenant_domain_new' tenant.id %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Add domain</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Sending readiness</h3>
+    <ul class="mt-3 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+      <li><span class="text-slate-500">Tenant sending domain field:</span> {% if readiness.has_sending_domain_field %}<span class="text-emerald-300">set</span>{% else %}<span class="text-amber-200">empty</span>{% endif %}</li>
+      <li><span class="text-slate-500">Verified domain:</span> {% if readiness.has_verified_domain %}<span class="text-emerald-300">yes</span>{% else %}<span class="text-amber-200">not yet</span>{% endif %}</li>
+      <li><span class="text-slate-500">Primary domain verified:</span> {% if readiness.primary_verified %}<span class="text-emerald-300">yes</span>{% elif readiness.has_primary %}<span class="text-amber-200">no</span>{% else %}<span class="text-slate-500">—</span>{% endif %}</li>
+      <li><span class="text-slate-500">Active sender profiles:</span> {{ readiness.sender_profile_count }}</li>
+    </ul>
+    {% if readiness.dns_ref_domain %}
+      <p class="mt-2 text-xs text-slate-500">Last DNS snapshot ({{ readiness.dns_ref_domain }}): SPF {{ readiness.spf_status }} · DKIM {{ readiness.dkim_status }} · DMARC {{ readiness.dmarc_status }}</p>
+    {% endif %}
+    {% for issue in readiness.issues %}
+      <p class="mt-2 text-sm text-amber-100/90">{{ issue }}</p>
+    {% endfor %}
+    <p class="mt-3 text-xs text-slate-500">{{ readiness.warmup_note }}</p>
+  </div>
+
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-4 py-2">Domain</th>
+          <th class="px-4 py-2">Status</th>
+          <th class="px-4 py-2">Primary</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for d in domains %}
+          <tr class="hover:bg-surface-800/80">
+            <td class="px-4 py-2">
+              <a href="{% url 'portal:tenant_domain_detail' tenant.id d.id %}" class="text-blue-400 hover:underline">{{ d.domain }}</a>
+            </td>
+            <td class="px-4 py-2 text-slate-300">{{ d.get_verification_status_display }}</td>
+            <td class="px-4 py-2">{% if d.is_primary %}<span class="text-emerald-300">Yes</span>{% else %}—{% endif %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3" class="px-4 py-6 text-center text-slate-500">No domains yet.{% if can_manage %} Add one to publish SPF, DKIM, and DMARC.{% endif %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

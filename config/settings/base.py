@@ -135,6 +135,11 @@ POSTAL_SERVER_API_KEY = os.environ.get("POSTAL_SERVER_API_KEY", "")
 POSTAL_TIMEOUT = float(os.environ.get("POSTAL_TIMEOUT", "30"))
 POSTAL_USE_TLS_VERIFY = os.environ.get("POSTAL_USE_TLS_VERIFY", "true").lower() in ("1", "true", "yes")
 
+# Customer domain onboarding — DNS instruction templates & automated checks (optional)
+SKYMAILR_SPF_INCLUDE_HINT = os.environ.get("SKYMAILR_SPF_INCLUDE_HINT", "").strip()
+SKYMAILR_DKIM_SELECTOR = os.environ.get("SKYMAILR_DKIM_SELECTOR", "postal").strip()
+SKYMAILR_RETURN_PATH_HOST = os.environ.get("SKYMAILR_RETURN_PATH_HOST", "").strip()
+
 # --- LLM (BrainList-compatible env names) ---
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "dummy").lower()
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")

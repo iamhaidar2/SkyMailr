@@ -26,6 +26,7 @@ from apps.accounts.services.invite_service import ensure_user_profile
 from apps.messages.models import OutboundMessage
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey
+from apps.tenants.services.sending_readiness import compute_sending_readiness
 from apps.ui.decorators import customer_login_required, portal_account_required, portal_manage_required
 from apps.ui.forms_customer import CustomerSignupForm, PortalApiKeyForm, PortalTenantForm
 from apps.ui.services.portal_account import (
@@ -262,13 +263,14 @@ def tenant_detail(request, tenant_id):
     account = get_active_portal_account(request)
     assert account is not None
     tenant = get_object_or_404(
-        Tenant.objects.prefetch_related("api_keys", "sender_profiles"),
+        Tenant.objects.prefetch_related("api_keys", "sender_profiles", "domains"),
         pk=tenant_id,
         account=account,
     )
     keys = tenant.api_keys.order_by("-created_at")[:50]
     new_key = request.session.pop(SESSION_PORTAL_NEW_API_KEY, None)
     can_manage = portal_user_can_manage_tenants(request.user, account)
+    readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, tenant.name, "tenants")
     ctx.update(
         {
@@ -277,6 +279,7 @@ def tenant_detail(request, tenant_id):
             "new_api_key": new_key,
             "api_key_form": PortalApiKeyForm(),
             "can_manage": can_manage,
+            "readiness": readiness,
         }
     )
     return render(request, "ui/customer/tenant_detail.html", ctx)

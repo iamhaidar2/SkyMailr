@@ -23,7 +23,8 @@ from apps.email_templates.services.llm_service import TemplateLLMService
 from apps.email_templates.services.render_service import TemplateRenderError, render_email_version
 from apps.email_templates.services.validation_service import TemplateValidationService
 from apps.email_templates.services.version_actions import approve_latest_version
-from apps.tenants.models import SenderProfile, Tenant
+from apps.tenants.models import DomainVerificationStatus, SenderProfile, Tenant
+from apps.tenants.services.domain_verification import email_domain_matches_verified_tenant_domain
 from apps.ui.decorators import (
     customer_login_required,
     portal_account_required,
@@ -105,13 +106,22 @@ def sender_profile_detail(request, profile_id):
         tenant__account=account,
     )
     sd = (profile.tenant.sending_domain or "").strip()
-    mismatch = bool(sd and profile.from_email and profile.from_email.split("@")[-1].lower() != sd.lower())
+    mismatch_sd = bool(
+        sd and profile.from_email and profile.from_email.split("@")[-1].lower() != sd.lower()
+    )
+    has_verified_domain = profile.tenant.domains.filter(
+        verified=True,
+        verification_status=DomainVerificationStatus.VERIFIED,
+    ).exists()
+    verified_from_ok = email_domain_matches_verified_tenant_domain(profile.tenant, profile.from_email)
     ctx = _portal_ctx(request, profile.name, "sender_profiles")
     ctx.update(
         {
             "profile": profile,
             "sending_domain_missing": not sd,
-            "domain_mismatch": mismatch,
+            "domain_mismatch_tenant_sending_domain": mismatch_sd,
+            "has_verified_domain": has_verified_domain,
+            "from_email_matches_verified_domain": verified_from_ok,
             "can_edit": portal_user_can_edit_content(request.user, account),
         }
     )
