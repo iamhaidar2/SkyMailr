@@ -1,0 +1,7 @@
+{% for item in portal_nav_items %}
+  <a
+    href="{{ item.url }}"
+    class="customer-nav-link {% if portal_nav_active == item.name %}customer-nav-link--active{% endif %}"
+    data-portal-nav-link
+  >{{ item.label }}</a>
+{% endfor %}

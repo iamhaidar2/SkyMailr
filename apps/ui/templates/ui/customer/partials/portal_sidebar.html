@@ -1,0 +1,9 @@
+<div class="flex h-full flex-col">
+  <div class="border-b px-4 py-4" style="border-color: var(--cs-sidebar-border);">
+    <a href="{% url 'portal:dashboard' %}" class="customer-brand text-lg font-semibold tracking-tight">SkyMailr</a>
+    <p class="customer-sidebar-tagline mt-1 text-xs">Customer app</p>
+  </div>
+  <nav class="flex-1 space-y-0.5 overflow-y-auto p-3 text-sm">
+    {% include "ui/customer/partials/portal_nav_links.html" %}
+  </nav>
+</div>

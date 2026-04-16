@@ -1,0 +1,32 @@
+<script>
+  (function () {
+    var key = "skymailr_portal_theme";
+    function setTheme(t) {
+      document.documentElement.setAttribute("data-theme", t);
+      try {
+        localStorage.setItem(key, t);
+      } catch (e) {}
+      var isDark = t !== "light";
+      var moon = document.getElementById("portal-theme-moon");
+      var sun = document.getElementById("portal-theme-sun");
+      if (moon && sun) {
+        moon.classList.toggle("hidden", isDark);
+        sun.classList.toggle("hidden", !isDark);
+      }
+    }
+    document.getElementById("portal-theme-toggle")?.addEventListener("click", function () {
+      var cur = document.documentElement.getAttribute("data-theme") || "dark";
+      setTheme(cur === "dark" ? "light" : "dark");
+    });
+    (function syncIcons() {
+      var cur = document.documentElement.getAttribute("data-theme") || "dark";
+      var isDark = cur !== "light";
+      var moon = document.getElementById("portal-theme-moon");
+      var sun = document.getElementById("portal-theme-sun");
+      if (moon && sun) {
+        moon.classList.toggle("hidden", isDark);
+        sun.classList.toggle("hidden", !isDark);
+      }
+    })();
+  })();
+</script>

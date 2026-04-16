@@ -1,0 +1,41 @@
+<script>
+  (function () {
+    var sidebar = document.getElementById("portal-sidebar");
+    var backdrop = document.getElementById("portal-nav-backdrop");
+    var openBtn = document.getElementById("portal-open-menu");
+    function closeNav() {
+      if (!sidebar || !backdrop) return;
+      sidebar.classList.add("-translate-x-full");
+      sidebar.classList.remove("translate-x-0");
+      backdrop.classList.add("hidden");
+      backdrop.setAttribute("aria-hidden", "true");
+      if (openBtn) openBtn.setAttribute("aria-expanded", "false");
+      document.body.style.overflow = "";
+    }
+    function openNav() {
+      if (!sidebar || !backdrop) return;
+      sidebar.classList.remove("-translate-x-full");
+      sidebar.classList.add("translate-x-0");
+      backdrop.classList.remove("hidden");
+      backdrop.setAttribute("aria-hidden", "false");
+      if (openBtn) openBtn.setAttribute("aria-expanded", "true");
+      document.body.style.overflow = "hidden";
+    }
+    openBtn?.addEventListener("click", function () {
+      if (sidebar?.classList.contains("translate-x-0")) {
+        closeNav();
+      } else {
+        openNav();
+      }
+    });
+    backdrop?.addEventListener("click", closeNav);
+    document.querySelectorAll("[data-portal-nav-link]").forEach(function (a) {
+      a.addEventListener("click", function () {
+        if (window.innerWidth < 1024) closeNav();
+      });
+    });
+    window.addEventListener("resize", function () {
+      if (window.innerWidth >= 1024) closeNav();
+    });
+  })();
+</script>

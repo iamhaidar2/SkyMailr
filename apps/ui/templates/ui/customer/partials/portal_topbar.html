@@ -1,0 +1,35 @@
+<header class="customer-topbar flex flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-6">
+  <div class="flex min-w-0 flex-1 items-center gap-3">
+    <button type="button" id="portal-open-menu" class="customer-mobile-menu-btn lg:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="portal-sidebar">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="min-w-0">
+      <h1 class="customer-page-title truncate text-base font-semibold lg:text-lg">{{ page_title|default:"SkyMailr" }}</h1>
+      {% if portal_account %}
+        <p class="customer-topbar-sub mt-0.5 truncate text-xs">
+          {{ portal_account.name }}{% if portal_plan_label %} · plan {{ portal_plan_label }}{% endif %}{% if portal_role %} · role {{ portal_role }}{% endif %}
+        </p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    {% if portal_accounts|length > 1 %}
+      <form method="post" action="{% url 'portal:switch_account' %}" class="inline">
+        {% csrf_token %}
+        <label class="sr-only" for="acct-switch">Account</label>
+        <select id="acct-switch" name="account_id" class="rounded-md px-2 py-1 text-xs" style="border:1px solid var(--cs-input-border);background:var(--cs-input-bg);color:var(--cs-text);" onchange="this.form.submit()">
+          {% for a in portal_accounts %}
+            <option value="{{ a.id }}" {% if portal_account and a.id == portal_account.id %}selected{% endif %}>{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    {% endif %}
+    {% include "ui/customer/partials/portal_theme_controls.html" %}
+    {% if user.is_staff %}
+      <a href="{% url 'ui:dashboard' %}" class="text-xs text-amber-400/90 hover:underline">Operator</a>
+    {% endif %}
+    <form method="post" action="{% url 'portal:logout' %}" class="inline">{% csrf_token %}
+      <button type="submit" class="rounded-md border px-3 py-1.5 text-xs" style="border-color:var(--cs-input-border);color:var(--cs-text-muted);background:transparent;">Log out</button>
+    </form>
+  </div>
+</header>

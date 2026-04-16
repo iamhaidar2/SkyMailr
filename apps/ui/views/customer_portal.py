@@ -59,6 +59,22 @@ SESSION_PORTAL_NEW_API_KEY = "_portal_new_api_key_once"
 logger = logging.getLogger("apps.accounts.audit")
 
 
+def portal_nav_items() -> list[dict[str, str]]:
+    """Sidebar nav for customer portal (label, url, name matches portal_nav_active)."""
+    return [
+        {"label": "Dashboard", "url": reverse("portal:dashboard"), "name": "dashboard"},
+        {"label": "Usage", "url": reverse("portal:account_usage"), "name": "usage"},
+        {"label": "Billing", "url": reverse("portal:account_billing"), "name": "billing"},
+        {"label": "Members", "url": reverse("portal:members_list"), "name": "members"},
+        {"label": "Tenants", "url": reverse("portal:tenant_list"), "name": "tenants"},
+        {"label": "API keys", "url": reverse("portal:api_keys"), "name": "api_keys"},
+        {"label": "Sender profiles", "url": reverse("portal:sender_profile_list"), "name": "sender_profiles"},
+        {"label": "Templates", "url": reverse("portal:template_list"), "name": "templates"},
+        {"label": "Workflows", "url": reverse("portal:workflow_list"), "name": "workflows"},
+        {"label": "Messages", "url": reverse("portal:messages_list"), "name": "messages"},
+    ]
+
+
 def _portal_ctx(request, page_title: str, nav_active: str):
     account = get_active_portal_account(request)
     role = portal_membership_role(request.user, account) if account else None
@@ -103,6 +119,7 @@ def _portal_ctx(request, page_title: str, nav_active: str):
         "portal_usage": usage,
         "portal_account_unhealthy": account_unhealthy,
         "portal_usage_alerts": usage_alerts,
+        "portal_nav_items": portal_nav_items(),
     }
 
 
