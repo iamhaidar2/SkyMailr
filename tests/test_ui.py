@@ -17,6 +17,12 @@ def test_login_page_loads(client):
     assert r.status_code == 200
 
 
+def test_marketing_home_public(client):
+    r = client.get(reverse("ui:home"))
+    assert r.status_code == 200
+    assert b"SkyMailr" in r.content
+
+
 def test_root_redirects_unauthenticated(client):
     r = client.get(reverse("ui:dashboard"))
     assert r.status_code == 302
@@ -53,7 +59,10 @@ def test_setup_page_ok(staff_client):
 def test_service_meta_public(client):
     r = client.get(reverse("ui:service_meta"))
     assert r.status_code == 200
-    assert r.json()["service"] == "SkyMailr"
+    data = r.json()
+    assert data["service"] == "SkyMailr"
+    assert data["operator"] == "/operator/"
+    assert data["marketing"] == "/"
 
 
 def test_api_health_unchanged(client):

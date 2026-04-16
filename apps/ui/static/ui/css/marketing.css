@@ -1,0 +1,82 @@
+/* Marketing site — complements Tailwind-purged app.css */
+
+.mk-body {
+  font-family: "DM Sans", system-ui, sans-serif;
+  background: rgb(11 15 20);
+  color: rgb(226 232 240);
+}
+
+.mk-body pre,
+.mk-body code,
+.mk-body .font-mono {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.mk-wordmark {
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+/* Utilities not guaranteed in app.css bundle */
+.sticky {
+  position: sticky;
+}
+.top-0 {
+  top: 0;
+}
+.z-50 {
+  z-index: 50;
+}
+
+.mk-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.mk-hero-gradient {
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(56, 189, 248, 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(124, 58, 237, 0.08), transparent),
+    linear-gradient(180deg, rgb(15 20 28) 0%, rgb(11 15 20) 100%);
+}
+
+.mk-cta-gradient {
+  background: radial-gradient(ellipse 70% 50% at 50% 100%, rgba(56, 189, 248, 0.06), transparent),
+    rgb(11 15 20);
+}
+
+.mk-btn-primary {
+  background: linear-gradient(180deg, rgb(37 99 235), rgb(29 78 216));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset;
+}
+.mk-btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+.mk-card {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.mk-card:hover {
+  border-color: rgb(51 65 85 / 0.8);
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.45);
+}
+
+.mk-code-panel .mk-tab {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.mk-code-panel .mk-tab:hover {
+  color: rgb(226 232 240);
+  background: rgba(30, 41, 59, 0.5);
+}
+.mk-code-panel .mk-tab-active {
+  background: rgb(30 41 59);
+  color: rgb(255 255 255);
+}
+
+.mk-pricing-featured {
+  transform: scale(1.02);
+}
+@media (max-width: 1023px) {
+  .mk-pricing-featured {
+    transform: none;
+  }
+}

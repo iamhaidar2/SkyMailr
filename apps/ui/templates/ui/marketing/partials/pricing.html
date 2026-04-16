@@ -1,0 +1,43 @@
+{% load humanize %}
+<div class="border-t border-surface-700 bg-surface-900 py-20">
+  <div class="mx-auto max-w-7xl px-4 lg:px-6">
+    <h2 class="mb-4 text-center text-2xl font-semibold text-white md:text-3xl" id="pricing-heading">Pricing</h2>
+    <p class="mx-auto mb-12 max-w-xl text-center text-slate-400">Limits mirror live plan definitions in the product—no duplicated magic numbers in marketing copy.</p>
+    <div class="grid gap-6 lg:grid-cols-3">
+      <div class="rounded-xl border border-surface-700 bg-surface-850/80 p-8">
+        <p class="text-sm font-medium text-slate-500">{{ plans.free.label }}</p>
+        <p class="mt-2 text-3xl font-semibold text-white">$0</p>
+        <ul class="mt-6 space-y-2 text-sm text-slate-400">
+          <li>Up to {{ plans.free.max_tenants }} tenants</li>
+          <li>{{ plans.free.max_monthly_sends|intcomma }} sends / mo</li>
+          <li>{{ plans.free.max_templates }} templates · {{ plans.free.max_workflows }} workflows</li>
+          <li>{{ plans.free.max_active_api_keys }} API keys · {{ plans.free.max_members }} members</li>
+        </ul>
+        <a href="{% url 'portal:signup' %}" class="mt-8 block rounded-lg border border-surface-600 py-3 text-center text-sm font-medium text-slate-200 hover:bg-surface-800">Start free</a>
+      </div>
+      <div class="mk-pricing-featured relative rounded-xl border-2 border-sky-500/60 bg-surface-850 p-8 shadow-xl shadow-sky-950/40">
+        <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-sky-600 px-3 py-0.5 text-xs font-medium text-white">Popular</span>
+        <p class="text-sm font-medium text-sky-300">{{ plans.starter.label }}</p>
+        <p class="mt-2 text-3xl font-semibold text-white">Contact</p>
+        <ul class="mt-6 space-y-2 text-sm text-slate-300">
+          <li>Up to {{ plans.starter.max_tenants }} tenants</li>
+          <li>{{ plans.starter.max_monthly_sends|intcomma }} sends / mo</li>
+          <li>{{ plans.starter.max_templates }} templates · {{ plans.starter.max_workflows }} workflows</li>
+          <li>{{ plans.starter.max_active_api_keys }} API keys · {{ plans.starter.max_members }} members</li>
+        </ul>
+        <a href="{% url 'portal:signup' %}" class="mk-btn-primary mt-8 block rounded-lg py-3 text-center text-sm font-medium text-white">Start with Starter</a>
+      </div>
+      <div class="rounded-xl border border-surface-700 bg-surface-850/80 p-8">
+        <p class="text-sm font-medium text-slate-500">{{ plans.growth.label }}</p>
+        <p class="mt-2 text-3xl font-semibold text-white">Contact</p>
+        <ul class="mt-6 space-y-2 text-sm text-slate-400">
+          <li>Up to {{ plans.growth.max_tenants }} tenants</li>
+          <li>{{ plans.growth.max_monthly_sends|intcomma }} sends / mo</li>
+          <li>{{ plans.growth.max_templates }} templates · {{ plans.growth.max_workflows }} workflows</li>
+          <li>{{ plans.growth.max_active_api_keys }} API keys · {{ plans.growth.max_members }} members</li>
+        </ul>
+        <a href="#contact" class="mt-8 block rounded-lg border border-surface-600 py-3 text-center text-sm font-medium text-slate-200 hover:bg-surface-800">Talk to us</a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.ui.views import (
     dashboard,
+    marketing,
     messages_views,
     ops_views,
     root,
@@ -19,7 +20,8 @@ from apps.ui.views.auth_views import OperatorLoginView, OperatorLogoutView
 app_name = "ui"
 
 urlpatterns = [
-    path("", dashboard.dashboard, name="dashboard"),
+    path("", marketing.marketing_home, name="home"),
+    path("operator/", dashboard.dashboard, name="dashboard"),
     path("service/", root.service_meta, name="service_meta"),
     path("login/", OperatorLoginView.as_view(), name="login"),
     path("logout/", OperatorLogoutView.as_view(), name="logout"),
@@ -103,4 +105,7 @@ urlpatterns = [
     path("suppressions/", suppressions_views.suppressions_list, name="suppressions_list"),
     path("unsubscribes/", suppressions_views.unsubscribes_list, name="unsubscribes_list"),
     path("setup/", setup_view.setup, name="setup"),
+    path("legal/privacy/", marketing.LegalPrivacyView.as_view(), name="legal_privacy"),
+    path("legal/terms/", marketing.LegalTermsView.as_view(), name="legal_terms"),
+    path("contact/", marketing.ContactView.as_view(), name="contact"),
 ]

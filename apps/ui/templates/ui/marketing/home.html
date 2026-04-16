@@ -1,0 +1,67 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SkyMailr — multi-tenant transactional email with API, workflows, and operator tooling. Built for teams that need control and observability.">
+  <title>{{ page_title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'ui/css/marketing.css' %}">
+</head>
+<body class="mk-body min-h-screen">
+  {% include "ui/marketing/partials/announcement.html" %}
+  {% include "ui/marketing/partials/nav.html" %}
+
+  <main>
+    <section id="top" class="mk-hero-shell scroll-mt-8">
+      {% include "ui/marketing/partials/hero.html" %}
+      {% include "ui/marketing/partials/hero_mockup.html" %}
+    </section>
+
+    {% include "ui/marketing/partials/trust_bar.html" %}
+
+    <section id="product" class="scroll-mt-8">
+      {% include "ui/marketing/partials/pillars.html" %}
+    </section>
+
+    <section id="walkthrough" class="scroll-mt-8">
+      {% include "ui/marketing/partials/product_walkthrough.html" %}
+    </section>
+
+    <section id="developer-api" class="scroll-mt-8">
+      {% include "ui/marketing/partials/developer_api.html" %}
+    </section>
+
+    <section id="use-cases" class="scroll-mt-8">
+      {% include "ui/marketing/partials/use_cases.html" %}
+    </section>
+
+    <section id="comparison" class="scroll-mt-8">
+      {% include "ui/marketing/partials/comparison.html" %}
+    </section>
+
+    <section id="portals" class="scroll-mt-8">
+      {% include "ui/marketing/partials/portals_section.html" %}
+    </section>
+
+    <section id="deliverability" class="scroll-mt-8">
+      {% include "ui/marketing/partials/deliverability.html" %}
+    </section>
+
+    <section id="pricing" class="scroll-mt-8">
+      {% include "ui/marketing/partials/pricing.html" %}
+    </section>
+
+    <section id="contact" class="scroll-mt-8">
+      {% include "ui/marketing/partials/final_cta.html" %}
+    </section>
+  </main>
+
+  {% include "ui/marketing/partials/footer.html" %}
+  <script src="{% static 'ui/js/marketing_tabs.js' %}" defer></script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from django.urls import reverse
 
 
 def service_meta(request):
@@ -7,6 +8,7 @@ def service_meta(request):
             "service": "SkyMailr",
             "health": "/api/v1/health/",
             "admin": "/admin/",
-            "operator": "/",
+            "operator": reverse("ui:dashboard"),
+            "marketing": reverse("ui:home"),
         }
     )

@@ -1,0 +1,44 @@
+<div class="mx-auto max-w-5xl px-4 py-20 lg:px-6">
+  <h2 class="mb-3 text-center text-2xl font-semibold text-white md:text-3xl" id="api">Developer API</h2>
+  <p class="mx-auto mb-8 max-w-2xl text-center text-slate-400">Send templated messages with tenant-scoped keys. Below: <span class="font-mono text-slate-300">POST /api/v1/messages/send-template/</span> for <span class="font-mono text-sky-300">collaborator_invite</span> / <span class="font-mono text-sky-300">welcome_email</span>.</p>
+
+  <div class="mk-code-panel rounded-xl border border-surface-700 bg-surface-850 p-1 shadow-xl" data-tab-group="api-snippets">
+    <div class="flex flex-wrap gap-1 border-b border-surface-700 px-2 py-2">
+      <button type="button" class="mk-tab mk-tab-active rounded-md px-3 py-1.5 text-sm font-medium text-white" data-tab="py" aria-selected="true">Python</button>
+      <button type="button" class="mk-tab rounded-md px-3 py-1.5 text-sm font-medium text-slate-400" data-tab="js">JavaScript</button>
+      <button type="button" class="mk-tab rounded-md px-3 py-1.5 text-sm font-medium text-slate-400" data-tab="curl">cURL</button>
+    </div>
+    <div class="p-4">
+      <pre class="mk-tab-panel overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-300" data-panel="py" role="tabpanel">import requests
+
+resp = requests.post(
+    "https://api.example.com/api/v1/messages/send-template/",
+    headers={"Authorization": "Bearer YOUR_TENANT_API_KEY"},
+    json={
+        "to": "colleague@example.com",
+        "template": "collaborator_invite",
+        "variables": {"inviter": "Ada", "org": "Northwind"},
+    },
+    timeout=30,
+)
+print(resp.status_code, resp.json())</pre>
+      <pre class="mk-tab-panel hidden overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-300" data-panel="js" role="tabpanel" hidden>const r = await fetch("https://api.example.com/api/v1/messages/send-template/", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer YOUR_TENANT_API_KEY",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    to: "user@example.com",
+    template: "welcome_email",
+    variables: { plan: "starter" },
+  }),
+});
+console.log(r.status, await r.json());</pre>
+      <pre class="mk-tab-panel hidden overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-300" data-panel="curl" role="tabpanel" hidden>curl -sS -X POST "https://api.example.com/api/v1/messages/send-template/" \
+  -H "Authorization: Bearer YOUR_TENANT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"user@example.com","template":"welcome_email","variables":{"plan":"starter"}}'</pre>
+    </div>
+  </div>
+</div>
