@@ -1,38 +1,32 @@
-<div class="mx-auto max-w-6xl px-4 pb-16 lg:px-6">
-  <div class="mk-mockup-grid grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-    <div class="rounded-xl border border-surface-700 bg-surface-850/90 p-4 shadow-xl">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Tenants</p>
-      <ul class="space-y-2 text-sm text-slate-300">
-        <li class="flex justify-between rounded border border-surface-700 bg-surface-900/80 px-2 py-1.5"><span>acme-prod</span><span class="text-emerald-400">active</span></li>
-        <li class="flex justify-between rounded border border-surface-700/60 bg-surface-900/50 px-2 py-1.5"><span>acme-staging</span><span class="text-slate-500">paused</span></li>
+<div class="mk-card p-5 md:p-6">
+  <div class="grid gap-4 sm:grid-cols-2">
+    <div class="mk-panel-dark p-4">
+      <p class="mk-panel-dark-muted mb-3">Tenants</p>
+      <ul class="space-y-2 text-sm">
+        <li class="flex justify-between rounded bg-slate-800/80 px-2 py-1.5 text-slate-200"><span>acme-prod</span><span class="text-emerald-400">Active</span></li>
+        <li class="flex justify-between rounded bg-slate-800/40 px-2 py-1.5 text-slate-400"><span>acme-staging</span><span>Paused</span></li>
       </ul>
     </div>
-    <div class="rounded-xl border border-surface-700 bg-surface-850/90 p-4 shadow-xl lg:col-span-2">
-      <p class="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Domain · mail.acme.com</p>
-      <div class="mb-3 flex flex-wrap gap-2">
-        <span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300">DKIM</span>
-        <span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-2 py-0.5 text-xs text-emerald-300">SPF</span>
-        <span class="rounded-full border border-amber-800 bg-amber-950/40 px-2 py-0.5 text-xs text-amber-200">MX verify</span>
-      </div>
-      <div class="grid gap-2 sm:grid-cols-2">
-        <div class="rounded-lg border border-dashed border-surface-600 p-3">
-          <p class="mb-1 text-xs text-slate-500">Template</p>
-          <p class="font-mono text-sm text-sky-300">collaborator_invite</p>
-          <p class="mt-1 text-xs text-slate-500">pending approval</p>
-        </div>
-        <div class="rounded-lg border border-dashed border-surface-600 p-3">
-          <p class="mb-1 text-xs text-slate-500">Workflow</p>
-          <p class="font-mono text-sm text-violet-300">onboarding_drip</p>
-          <p class="mt-1 text-xs text-slate-500">3 steps · webhook exit</p>
-        </div>
+    <div class="mk-panel-dark p-4">
+      <p class="mk-panel-dark-muted mb-2">Domain</p>
+      <p class="font-mono text-sm text-slate-200">mail.acme.com</p>
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        <span class="rounded-md bg-emerald-950/60 px-2 py-0.5 text-[0.65rem] text-emerald-300">DKIM</span>
+        <span class="rounded-md bg-emerald-950/60 px-2 py-0.5 text-[0.65rem] text-emerald-300">SPF</span>
+        <span class="rounded-md bg-amber-950/50 px-2 py-0.5 text-[0.65rem] text-amber-200">Checking</span>
       </div>
     </div>
-    <div class="rounded-xl border border-blue-900/50 bg-blue-950/40 p-4 font-mono text-xs text-slate-300 shadow-xl md:col-span-2 lg:col-span-3">
-      <div class="mb-2 flex items-center justify-between text-slate-500">
-        <span>POST /api/v1/messages/send-template/</span>
-        <span class="text-emerald-400/90">202</span>
+    <div class="mk-panel-dark p-4 sm:col-span-2">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div>
+          <p class="mk-panel-dark-muted mb-1">Template</p>
+          <p class="font-mono text-sm text-sky-300">collaborator_invite</p>
+        </div>
+        <div>
+          <p class="mk-panel-dark-muted mb-1">Workflow</p>
+          <p class="font-mono text-sm text-violet-300">onboarding_drip</p>
+        </div>
       </div>
-      <pre class="overflow-x-auto whitespace-pre text-[11px] leading-relaxed text-slate-400">{ "tenant": "acme-prod", "to": "user@example.com", "template": "welcome_email" }</pre>
     </div>
   </div>
 </div>

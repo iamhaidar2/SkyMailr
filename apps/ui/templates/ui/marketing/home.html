@@ -1,58 +1,68 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="SkyMailr — multi-tenant transactional email with API, workflows, and operator tooling. Built for teams that need control and observability.">
+  <meta name="description" content="SkyMailr — application email automation for SaaS teams. Accounts, tenants, domains, templates, workflows, and message visibility in one platform.">
   <title>{{ page_title }}</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("skymailr_marketing_theme");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-mk-theme", t);
+        else document.documentElement.setAttribute("data-mk-theme", "light");
+      } catch (e) {
+        document.documentElement.setAttribute("data-mk-theme", "light");
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'ui/css/app.css' %}">
   <link rel="stylesheet" href="{% static 'ui/css/marketing.css' %}">
 </head>
-<body class="mk-body min-h-screen">
+<body class="mk-page min-h-screen">
   {% include "ui/marketing/partials/announcement.html" %}
   {% include "ui/marketing/partials/nav.html" %}
 
   <main>
-    <section id="top" class="mk-hero-shell scroll-mt-8">
+    <section id="top" class="scroll-mt-8">
       {% include "ui/marketing/partials/hero.html" %}
-      {% include "ui/marketing/partials/hero_mockup.html" %}
     </section>
 
     {% include "ui/marketing/partials/trust_bar.html" %}
 
-    <section id="product" class="scroll-mt-8">
+    <section id="product" class="mk-section scroll-mt-8" aria-labelledby="product-heading">
       {% include "ui/marketing/partials/pillars.html" %}
     </section>
 
-    <section id="walkthrough" class="scroll-mt-8">
+    <section id="walkthrough" class="mk-section mk-section--alt scroll-mt-8" aria-labelledby="walkthrough-heading">
       {% include "ui/marketing/partials/product_walkthrough.html" %}
     </section>
 
-    <section id="developer-api" class="scroll-mt-8">
+    <section id="developer-api" class="mk-section scroll-mt-8" aria-labelledby="api-heading">
       {% include "ui/marketing/partials/developer_api.html" %}
     </section>
 
-    <section id="use-cases" class="scroll-mt-8">
+    <section id="use-cases" class="mk-section scroll-mt-8 border-t border-[var(--mk-border)]" aria-labelledby="use-cases-heading">
       {% include "ui/marketing/partials/use_cases.html" %}
     </section>
 
-    <section id="comparison" class="scroll-mt-8">
+    <section id="comparison" class="mk-section scroll-mt-8" aria-labelledby="comparison-heading">
       {% include "ui/marketing/partials/comparison.html" %}
     </section>
 
-    <section id="portals" class="scroll-mt-8">
+    <section id="portals" class="mk-section mk-section--alt scroll-mt-8" aria-labelledby="portals-heading">
       {% include "ui/marketing/partials/portals_section.html" %}
     </section>
 
-    <section id="deliverability" class="scroll-mt-8">
+    <section id="deliverability" class="mk-section scroll-mt-8" aria-labelledby="deliverability-heading">
       {% include "ui/marketing/partials/deliverability.html" %}
     </section>
 
-    <section id="pricing" class="scroll-mt-8">
+    <section id="pricing" class="mk-section mk-border-t scroll-mt-8" aria-labelledby="pricing-heading">
       {% include "ui/marketing/partials/pricing.html" %}
     </section>
 
@@ -62,6 +72,7 @@
   </main>
 
   {% include "ui/marketing/partials/footer.html" %}
+  <script src="{% static 'ui/js/marketing_theme.js' %}" defer></script>
   <script src="{% static 'ui/js/marketing_tabs.js' %}" defer></script>
 </body>
 </html>

@@ -1,39 +1,23 @@
-<footer class="border-t border-surface-700 bg-surface-850/80 py-12">
-  <div class="mx-auto flex max-w-7xl flex-col gap-8 px-4 lg:flex-row lg:justify-between lg:px-6">
-    <div>
-      <p class="font-semibold text-white">SkyMailr</p>
-      <p class="mt-1 text-sm text-slate-500">Application email automation</p>
+<footer class="mk-footer py-14">
+  <div class="mk-container max-w-6xl px-4 lg:px-6">
+    <div class="flex flex-col gap-10 md:flex-row md:items-start md:justify-between">
+      <div>
+        <p class="font-semibold text-[var(--mk-text)]">SkyMailr</p>
+        <p class="mt-1 text-sm">Application email automation</p>
+      </div>
+      <nav class="flex flex-wrap gap-x-8 gap-y-3 text-sm" aria-label="Footer">
+        <a href="#product">Product</a>
+        <a href="#use-cases">Use cases</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#developer-api">Docs / API</a>
+        <a href="{% url 'portal:login' %}">Login</a>
+        <a href="{% url 'ui:legal_privacy' %}">Privacy</a>
+        <a href="{% url 'ui:legal_terms' %}">Terms</a>
+        <a href="{% url 'ui:contact' %}">Contact</a>
+      </nav>
     </div>
-    <div class="grid grid-cols-2 gap-8 text-sm sm:grid-cols-3">
-      <div>
-        <p class="mb-2 font-medium text-slate-300">Product</p>
-        <ul class="space-y-2 text-slate-500">
-          <li><a href="#product" class="hover:text-slate-300">Overview</a></li>
-          <li><a href="#walkthrough" class="hover:text-slate-300">Walkthrough</a></li>
-          <li><a href="#pricing" class="hover:text-slate-300">Pricing</a></li>
-        </ul>
-      </div>
-      <div>
-        <p class="mb-2 font-medium text-slate-300">Docs</p>
-        <ul class="space-y-2 text-slate-500">
-          <li><a href="#developer-api" class="hover:text-slate-300">API examples</a></li>
-          <li><a href="#deliverability" class="hover:text-slate-300">Deliverability</a></li>
-        </ul>
-      </div>
-      <div>
-        <p class="mb-2 font-medium text-slate-300">Access</p>
-        <ul class="space-y-2 text-slate-500">
-          <li><a href="{% url 'portal:login' %}" class="hover:text-slate-300">Customer login</a></li>
-          <li><a href="{% url 'ui:login' %}" class="hover:text-slate-300">Operator login</a></li>
-        </ul>
-      </div>
-    </div>
-  </div>
-  <div class="mx-auto mt-10 max-w-7xl border-t border-surface-700 px-4 pt-8 text-center text-xs text-slate-600 lg:px-6 lg:text-left">
-    <a href="{% url 'ui:legal_privacy' %}" class="hover:text-slate-400">Privacy</a>
-    <span class="mx-2">·</span>
-    <a href="{% url 'ui:legal_terms' %}" class="hover:text-slate-400">Terms</a>
-    <span class="mx-2">·</span>
-    <a href="{% url 'ui:contact' %}" class="hover:text-slate-400">Contact</a>
+    <p class="mt-10 border-t border-[var(--mk-border)] pt-8 text-center text-xs text-[var(--mk-text-subtle)] md:text-left">
+      <a href="{% url 'ui:login' %}" class="hover:text-[var(--mk-text-muted)]">Operator login</a>
+    </p>
   </div>
 </footer>

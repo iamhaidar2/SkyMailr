@@ -17,7 +17,7 @@ def marketing_home(request):
         request,
         "ui/marketing/home.html",
         {
-            "page_title": "SkyMailr — Application email automation",
+            "page_title": "SkyMailr — Application email for SaaS teams",
             "plans": {
                 "free": free,
                 "starter": starter,

@@ -1,22 +1,23 @@
-<div class="mx-auto max-w-5xl px-4 py-20 lg:px-6">
-  <h2 class="mb-10 text-center text-2xl font-semibold text-white md:text-3xl">Old way vs SkyMailr</h2>
-  <div class="grid gap-6 md:grid-cols-2">
-    <div class="rounded-xl border border-red-900/50 bg-red-950/20 p-6">
-      <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-red-300">Old way</h3>
-      <ul class="space-y-3 text-sm text-slate-400">
-        <li>Ad-hoc SMTP credentials in every service</li>
-        <li>No shared view of what shipped to which tenant</li>
-        <li>Template changes bypass review or live-edit in production</li>
-        <li>Support cannot tie a complaint to a message ID</li>
+<div class="mk-container max-w-5xl px-4 lg:px-6">
+  <h2 id="comparison-heading" class="mk-section-title mb-3 text-center">Old way vs SkyMailr</h2>
+  <p class="mk-section-lead mx-auto mb-10 max-w-lg text-center">Move from ad-hoc plumbing to a single place for application email operations.</p>
+  <div class="grid gap-6 md:grid-cols-2 md:items-start">
+    <div class="mk-compare-old">
+      <h3 class="mb-4 text-xs font-semibold uppercase tracking-wide text-red-700">Old way</h3>
+      <ul class="space-y-3 text-sm leading-relaxed text-[var(--mk-text-muted)]">
+        <li>SMTP credentials scattered across services and repos</li>
+        <li>Template changes shipped with application code</li>
+        <li>Little shared visibility into sends, failures, or per-tenant volume</li>
+        <li>Domain and sender setup easy to get wrong under pressure</li>
       </ul>
     </div>
-    <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-6">
-      <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-emerald-300">SkyMailr</h3>
-      <ul class="space-y-3 text-sm text-slate-300">
-        <li>Tenant-scoped API keys and explicit domain readiness</li>
-        <li>One operator surface for tenants, templates, and pipelines</li>
-        <li>Approvals and revisions before production traffic uses a template</li>
-        <li>Events and IDs flow back to your apps and logs</li>
+    <div class="mk-compare-new">
+      <h3 class="mb-4 text-xs font-semibold uppercase tracking-wide text-emerald-800">SkyMailr</h3>
+      <ul class="space-y-3 text-sm leading-relaxed text-[var(--mk-text)]">
+        <li>Tenant-scoped API keys and explicit sending identities</li>
+        <li>Managed templates with approvals before production use</li>
+        <li>Domain and sender readiness surfaced in one place</li>
+        <li>Message events visible to product teams and operators alike</li>
       </ul>
     </div>
   </div>

@@ -1,33 +1,33 @@
-<div class="border-t border-surface-700 bg-surface-850/30 py-20">
-  <div class="mx-auto max-w-7xl px-4 lg:px-6">
-    <h2 class="mb-4 text-center text-2xl font-semibold text-white md:text-3xl">Two portals</h2>
-    <p class="mx-auto mb-12 max-w-2xl text-center text-slate-400">Customers stay inside their account; operators see across tenants without sharing admin credentials.</p>
-    <div class="grid gap-8 lg:grid-cols-2">
-      <div class="rounded-xl border border-surface-700 bg-surface-900/80 p-8">
-        <h3 class="mb-2 text-lg font-semibold text-white">Customer portal</h3>
-        <p class="mb-4 text-sm text-slate-500">Hosted under <span class="font-mono text-slate-400">/app/</span></p>
-        <ul class="space-y-2 text-sm text-slate-400">
-          <li>Sign up, members, and API keys per tenant</li>
-          <li>Domain and sender configuration with visible checks</li>
-          <li>Message history scoped to the signed-in account</li>
-        </ul>
-        <div class="mt-6 flex flex-wrap gap-2">
-          <a href="{% url 'portal:signup' %}" class="mk-btn-primary inline-block rounded-md px-4 py-2 text-sm font-medium text-white">Start free</a>
-          <a href="{% url 'portal:login' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Login</a>
-        </div>
+<div class="mk-container max-w-6xl px-4 lg:px-6">
+  <h2 id="portals-heading" class="mk-section-title mb-3 text-center">Customer portal &amp; operator portal</h2>
+  <p class="mk-section-lead mx-auto mb-12 max-w-2xl text-center">Two interfaces on the same platform: self-service for customer accounts and oversight for your team.</p>
+  <div class="grid gap-8 lg:grid-cols-2 lg:items-stretch">
+    <article class="mk-card mk-card-pad flex flex-col">
+      <h3 class="mb-1 text-lg font-semibold text-[var(--mk-text)]">Customer portal</h3>
+      <p class="mb-5 text-xs text-[var(--mk-text-subtle)]">Web app under <span class="font-mono text-[var(--mk-text-muted)]">/app/</span></p>
+      <ul class="mb-8 flex-1 space-y-2.5 text-sm text-[var(--mk-text-muted)]">
+        <li>Accounts, members, and tenants</li>
+        <li>Sender and domain setup</li>
+        <li>Templates and workflows for your apps</li>
+        <li>Message history scoped to the signed-in account</li>
+      </ul>
+      <div class="mt-auto flex flex-wrap gap-2">
+        <a href="{% url 'portal:signup' %}" class="mk-btn-primary px-4 py-2 text-sm">Start free</a>
+        <a href="{% url 'portal:login' %}" class="mk-btn-secondary px-4 py-2 text-sm">Login</a>
       </div>
-      <div class="rounded-xl border border-surface-700 bg-surface-900/80 p-8">
-        <h3 class="mb-2 text-lg font-semibold text-white">Operator portal</h3>
-        <p class="mb-4 text-sm text-slate-500">Staff-only UI for cross-tenant operations</p>
-        <ul class="space-y-2 text-sm text-slate-400">
-          <li>Tenant lifecycle, suppressions, and incident response</li>
-          <li>Template studio and workflow oversight</li>
-          <li>Provider health and webhook intake</li>
-        </ul>
-        <div class="mt-6">
-          <a href="{% url 'ui:login' %}" class="rounded-md border border-sky-900/60 bg-sky-950/30 px-4 py-2 text-sm font-medium text-sky-300 hover:bg-sky-950/50">Operator login</a>
-        </div>
+    </article>
+    <article class="mk-card mk-card-subtle mk-card-pad flex flex-col">
+      <h3 class="mb-1 text-lg font-semibold text-[var(--mk-text)]">Operator portal</h3>
+      <p class="mb-5 text-xs text-[var(--mk-text-subtle)]">Staff access · cross-account</p>
+      <ul class="mb-8 flex-1 space-y-2.5 text-sm text-[var(--mk-text-muted)]">
+        <li>Cross-tenant operations and support</li>
+        <li>Suppressions and incident visibility</li>
+        <li>Oversight for templates and workflows</li>
+        <li>Provider health and webhook intake</li>
+      </ul>
+      <div class="mt-auto">
+        <a href="{% url 'ui:login' %}" class="mk-btn-secondary px-4 py-2 text-sm">Operator login</a>
       </div>
-    </div>
+    </article>
   </div>
 </div>
