@@ -27,6 +27,8 @@ class TenantDomainAdmin(admin.ModelAdmin):
         "verification_status",
         "verified",
         "is_primary",
+        "postal_provision_status",
+        "postal_provision_last_attempt_at",
         "dns_source",
         "dns_last_synced_at",
         "spf_status",
@@ -34,7 +36,7 @@ class TenantDomainAdmin(admin.ModelAdmin):
         "dmarc_status",
         "last_checked_at",
     )
-    list_filter = ("verification_status", "verified", "is_primary", "dns_source")
+    list_filter = ("verification_status", "verified", "is_primary", "dns_source", "postal_provision_status")
     search_fields = ("domain", "tenant__name", "tenant__slug")
     readonly_fields = ("id", "created_at", "updated_at")
     fieldsets = (
@@ -53,6 +55,10 @@ class TenantDomainAdmin(admin.ModelAdmin):
                     "dmarc_status",
                     "last_checked_at",
                     "verification_notes",
+                    "postal_provision_status",
+                    "postal_provision_error",
+                    "postal_provision_last_attempt_at",
+                    "postal_provider_domain_id",
                 )
             },
         ),

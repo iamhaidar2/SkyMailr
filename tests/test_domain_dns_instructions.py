@@ -27,18 +27,6 @@ def test_host_label_apex_and_subdomain():
 
 
 @pytest.mark.django_db
-def test_partial_setup_still_returns_rows_and_gap_notice():
-    """Without SPF/DKIM we still show DMARC (and any other derivable rows), not an empty table."""
-    td = TenantDomain(domain="partial.example.com")
-    inst = build_dns_instructions_for_domain(td)
-    assert inst.is_customer_ready is False
-    assert inst.setup_gap_notice
-    kinds = {r.kind for r in inst.rows}
-    assert "dmarc" in kinds
-    assert "spf" not in kinds and "dkim" not in kinds
-
-
-@pytest.mark.django_db
 def test_is_customer_ready_requires_dkim_key_material():
     td = TenantDomain(domain="a.com")
     td.spf_txt_expected = "v=spf1 include:x ~all"
@@ -101,7 +89,7 @@ def test_verification_notes_plain_language_no_env_names():
 
 @pytest.mark.django_db
 @override_settings(SKYMAILR_SPF_INCLUDE_HINT="spf.sky.test")
-@patch("apps.ui.views.portal_tenant_domains.sync_domain_dns_metadata", return_value=False)
+@patch("apps.ui.views.portal_tenant_domains.process_postal_for_tenant_domain", return_value=[])
 def test_domain_detail_page_has_no_placeholder_tokens(
     sync_mock, client, django_user_model
 ):

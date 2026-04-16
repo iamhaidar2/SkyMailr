@@ -11,10 +11,10 @@ from django.views.decorators.http import require_POST
 
 from apps.accounts.policy import PolicyError
 from apps.accounts.services.enforcement import assert_tenant_operational
-from apps.tenants.models import DomainVerificationStatus, Tenant, TenantDomain
+from apps.tenants.models import DomainVerificationStatus, PostalProvisionStatus, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import build_dns_instructions_for_domain
-from apps.tenants.services.domain_dns_sync import sync_domain_dns_metadata
 from apps.tenants.services.domain_verification import check_tenant_domain_dns
+from apps.tenants.services.postal_tenant_domain import process_postal_for_tenant_domain
 from apps.tenants.services.sending_readiness import compute_sending_readiness
 from apps.ui.decorators import customer_login_required, portal_account_required, portal_manage_required
 from apps.ui.forms_customer import PortalTenantDomainForm
@@ -84,26 +84,15 @@ def tenant_domain_new(request, tenant_id):
                     domain=d,
                     verification_status=DomainVerificationStatus.UNVERIFIED,
                 )
-                if sync_domain_dns_metadata(td, timeout=5.0):
-                    td.save(
-                        update_fields=[
-                            "spf_txt_expected",
-                            "dkim_selector",
-                            "dkim_txt_value",
-                            "return_path_cname_name",
-                            "return_path_cname_target",
-                            "dmarc_txt_expected",
-                            "dns_source",
-                            "dns_last_synced_at",
-                            "updated_at",
-                        ]
-                    )
                 if is_first and not (tenant.sending_domain or "").strip():
                     tenant.sending_domain = d
                     tenant.save(update_fields=["sending_domain", "updated_at"])
                 if is_first:
                     td.is_primary = True
                     td.save(update_fields=["is_primary", "updated_at"])
+            postal_fields = process_postal_for_tenant_domain(td, force_provision=True)
+            if postal_fields:
+                td.save(update_fields=list(dict.fromkeys(postal_fields + ["updated_at"])))
             logger.info(
                 "tenant_domain_created tenant_id=%s domain=%s user_id=%s",
                 tenant.id,
@@ -125,23 +114,11 @@ def tenant_domain_detail(request, tenant_id, domain_id):
     tenant, td = _tenant_and_domain(request, tenant_id, domain_id)
     account = get_active_portal_account(request)
     assert account is not None
-    if sync_domain_dns_metadata(td, timeout=4.0):
-        td.save(
-            update_fields=[
-                "spf_txt_expected",
-                "dkim_selector",
-                "dkim_txt_value",
-                "return_path_cname_name",
-                "return_path_cname_target",
-                "dmarc_txt_expected",
-                "dns_source",
-                "dns_last_synced_at",
-                "updated_at",
-            ]
-        )
+    postal_fields = process_postal_for_tenant_domain(td, force_provision=False)
+    if postal_fields:
+        td.save(update_fields=list(dict.fromkeys(postal_fields + ["updated_at"])))
     dns_instruction_set = build_dns_instructions_for_domain(td)
-    # Always show rows we can derive (at least DMARC); gap notice explains missing SPF/DKIM.
-    dns_rows = dns_instruction_set.rows
+    dns_rows = dns_instruction_set.rows if dns_instruction_set.is_customer_ready else ()
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, td.domain, "tenants")
     ctx.update(
@@ -153,9 +130,25 @@ def tenant_domain_detail(request, tenant_id, domain_id):
             "readiness": readiness,
             "can_manage": portal_user_can_manage_tenants(request.user, account),
             "DomainVerificationStatus": DomainVerificationStatus,
+            "PostalProvisionStatus": PostalProvisionStatus,
         }
     )
     return render(request, "ui/customer/tenant_domain_detail.html", ctx)
+
+
+@customer_login_required
+@portal_manage_required
+@require_POST
+def tenant_domain_retry_postal(request, tenant_id, domain_id):
+    tenant, td = _tenant_and_domain(request, tenant_id, domain_id)
+    denied = _redirect_if_tenant_suspended(request, tenant)
+    if denied is not None:
+        return denied
+    postal_fields = process_postal_for_tenant_domain(td, force_provision=True)
+    if postal_fields:
+        td.save(update_fields=list(dict.fromkeys(postal_fields + ["updated_at"])))
+    django_messages.info(request, "Refreshed connection to the mail server for this domain.")
+    return redirect("portal:tenant_domain_detail", tenant_id=tenant.id, domain_id=td.id)
 
 
 @customer_login_required

@@ -77,6 +77,15 @@ class DnsMetadataSource(models.TextChoices):
     ADMIN = "admin", "Admin"
 
 
+class PostalProvisionStatus(models.TextChoices):
+    """Whether the domain exists in Postal / could be provisioned automatically."""
+
+    PENDING = "pending", "Pending"
+    CREATED = "created", "Created in mail server"
+    EXISTS = "exists", "Already in mail server"
+    FAILED = "failed", "Provisioning failed"
+
+
 class TenantDomain(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="domains")
@@ -133,6 +142,18 @@ class TenantDomain(models.Model):
         db_index=True,
     )
     dns_last_synced_at = models.DateTimeField(null=True, blank=True)
+    postal_provision_status = models.CharField(
+        max_length=32,
+        choices=PostalProvisionStatus.choices,
+        default=PostalProvisionStatus.PENDING,
+        db_index=True,
+    )
+    postal_provision_error = models.TextField(
+        blank=True,
+        help_text="Last provisioning error detail (staff diagnostics; customer copy is templated).",
+    )
+    postal_provision_last_attempt_at = models.DateTimeField(null=True, blank=True)
+    postal_provider_domain_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

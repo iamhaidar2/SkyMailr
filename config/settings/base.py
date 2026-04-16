@@ -136,6 +136,12 @@ POSTAL_SERVER_API_KEY = os.environ.get("POSTAL_SERVER_API_KEY", "")
 POSTAL_TIMEOUT = float(os.environ.get("POSTAL_TIMEOUT", "30"))
 POSTAL_USE_TLS_VERIFY = os.environ.get("POSTAL_USE_TLS_VERIFY", "true").lower() in ("1", "true", "yes")
 
+# Optional HTTPS endpoint that creates/gets a Postal domain and returns DNS metadata JSON.
+# Stock Postal does not expose domain CRUD on the public server API; operators often deploy
+# a small bridge next to Postal. See apps.providers.postal_provisioning.
+POSTAL_PROVISIONING_URL = os.environ.get("POSTAL_PROVISIONING_URL", "").strip()
+POSTAL_PROVISIONING_SECRET = os.environ.get("POSTAL_PROVISIONING_SECRET", "").strip()
+
 # Customer domain onboarding — DNS instruction templates & automated checks (optional)
 SKYMAILR_SPF_INCLUDE_HINT = os.environ.get("SKYMAILR_SPF_INCLUDE_HINT", "").strip()
 SKYMAILR_DKIM_SELECTOR = os.environ.get("SKYMAILR_DKIM_SELECTOR", "postal").strip()

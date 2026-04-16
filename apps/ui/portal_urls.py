@@ -114,6 +114,11 @@ urlpatterns = [
         name="tenant_domain_verify",
     ),
     path(
+        "account/tenants/<uuid:tenant_id>/domains/<uuid:domain_id>/retry-postal/",
+        portal_tenant_domains.tenant_domain_retry_postal,
+        name="tenant_domain_retry_postal",
+    ),
+    path(
         "account/tenants/<uuid:tenant_id>/domains/<uuid:domain_id>/make-primary/",
         portal_tenant_domains.tenant_domain_make_primary,
         name="tenant_domain_make_primary",
