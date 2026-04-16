@@ -140,7 +140,8 @@ def tenant_domain_detail(request, tenant_id, domain_id):
             ]
         )
     dns_instruction_set = build_dns_instructions_for_domain(td)
-    dns_rows = dns_instruction_set.rows if dns_instruction_set.is_customer_ready else ()
+    # Always show rows we can derive (at least DMARC); gap notice explains missing SPF/DKIM.
+    dns_rows = dns_instruction_set.rows
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, td.domain, "tenants")
     ctx.update(

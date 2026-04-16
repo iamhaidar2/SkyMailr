@@ -27,8 +27,14 @@ class DnsInstructionRow:
 class DnsInstructionSet:
     rows: tuple[DnsInstructionRow, ...]
     is_customer_ready: bool
-    incomplete_message: str | None
+    # Explains missing SPF/DKIM when the full set is not available yet (shown above the table).
+    setup_gap_notice: str | None
     domain_fqdn: str
+
+    @property
+    def incomplete_message(self) -> str | None:
+        """Alias for tests and older call sites."""
+        return self.setup_gap_notice
 
 
 def normalize_fqdn(domain: str) -> str:
@@ -209,17 +215,28 @@ def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
     )
 
     ready = bool(spf_txt and dkim_sel and dkim_txt)
-    msg = None
+    notice: str | None = None
     if not ready:
-        msg = (
-            "We’re still preparing the exact DNS values for this domain. "
-            "Please try again later or contact support if this persists."
+        parts: list[str] = []
+        if not spf_txt:
+            parts.append(
+                "SPF is not available yet: the deployment needs a provider SPF include "
+                "(environment configuration) or a full SPF value stored for this domain."
+            )
+        if not (dkim_sel and dkim_txt):
+            parts.append(
+                "DKIM needs the exact TXT value from your mail server (for example Postal). "
+                "It appears here after a successful sync from the provider or when an operator adds it."
+            )
+        notice = (
+            " ".join(parts)
+            + " You can still publish every record listed below; add SPF and/or DKIM when your operator provides them."
         )
 
     return DnsInstructionSet(
         rows=tuple(rows),
         is_customer_ready=ready,
-        incomplete_message=msg,
+        setup_gap_notice=notice,
         domain_fqdn=d,
     )
 
