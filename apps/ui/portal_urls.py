@@ -4,6 +4,8 @@ from apps.ui.views import portal_automation, portal_tenant_domains
 from apps.ui.views.customer_portal import (
     CustomerLoginView,
     CustomerLogoutView,
+    account_billing,
+    account_usage,
     api_keys_hub,
     dashboard,
     messages_list,
@@ -40,6 +42,8 @@ urlpatterns = [
     path("login/", CustomerLoginView.as_view(), name="login"),
     path("logout/", CustomerLogoutView.as_view(), name="logout"),
     path("switch-account/", switch_account, name="switch_account"),
+    path("account/usage/", account_usage, name="account_usage"),
+    path("account/billing/", account_billing, name="account_billing"),
     # Password reset
     path("password-reset/", PortalPasswordResetView.as_view(), name="password_reset"),
     path(

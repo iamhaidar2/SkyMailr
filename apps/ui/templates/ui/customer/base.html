@@ -17,6 +17,8 @@
       </div>
       <nav class="space-y-1 p-3 text-sm">
         <a href="{% url 'portal:dashboard' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'dashboard' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Dashboard</a>
+        <a href="{% url 'portal:account_usage' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'usage' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Usage</a>
+        <a href="{% url 'portal:account_billing' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'billing' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Billing</a>
         <a href="{% url 'portal:members_list' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'members' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Members</a>
         <a href="{% url 'portal:tenant_list' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'tenants' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">Tenants</a>
         <a href="{% url 'portal:api_keys' %}" class="block rounded-md px-3 py-2 {% if portal_nav_active == 'api_keys' %}bg-surface-700 text-white{% else %}text-slate-400 hover:bg-surface-800{% endif %}">API keys</a>

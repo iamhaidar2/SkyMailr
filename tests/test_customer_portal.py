@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
+from apps.accounts.plans import DEFAULT_PLAN_CODE
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
 from tests.portal_helpers import bind_portal_account_session
@@ -68,6 +69,7 @@ def test_signup_creates_user_account_owner_membership(client):
     acc = Account.objects.get(slug="new-co")
     m = AccountMembership.objects.get(user=u, account=acc)
     assert m.role == AccountRole.OWNER
+    assert acc.plan_code == DEFAULT_PLAN_CODE
 
 
 @pytest.mark.django_db

@@ -10,6 +10,12 @@ from django.db.models import Count, Max, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.policy import PolicyError
+from apps.accounts.services.enforcement import (
+    assert_can_create_template,
+    assert_can_create_workflow,
+    assert_tenant_operational,
+)
 from apps.email_templates.models import (
     ApprovalStatus,
     CreatedByType,
@@ -196,16 +202,22 @@ def template_new(request):
         form = PortalNewEmailTemplateForm(request.POST, account=account)
         if form.is_valid():
             d = form.cleaned_data
-            tpl = EmailTemplate.objects.create(
-                tenant=d["tenant"],
-                key=d["key"],
-                name=d["name"],
-                category=d["category"],
-                description=d.get("description") or "",
-                status=TemplateStatus.DRAFT,
-            )
-            django_messages.success(request, "Template created. Add a version next.")
-            return redirect("portal:template_detail", template_id=tpl.id)
+            try:
+                assert_can_create_template(account)
+                assert_tenant_operational(d["tenant"])
+            except PolicyError as e:
+                django_messages.error(request, e.detail)
+            else:
+                tpl = EmailTemplate.objects.create(
+                    tenant=d["tenant"],
+                    key=d["key"],
+                    name=d["name"],
+                    category=d["category"],
+                    description=d.get("description") or "",
+                    status=TemplateStatus.DRAFT,
+                )
+                django_messages.success(request, "Template created. Add a version next.")
+                return redirect("portal:template_detail", template_id=tpl.id)
     else:
         form = PortalNewEmailTemplateForm(account=account)
     ctx = _portal_ctx(request, "New template", "templates")
@@ -434,16 +446,23 @@ def workflow_new(request):
         tenant = get_object_or_404(Tenant, pk=tenant_id, account=account)
         if form.is_valid():
             d = form.cleaned_data
-            wf, created = Workflow.objects.get_or_create(
-                tenant=tenant,
-                slug=d["slug"],
-                defaults={"name": d["name"]},
-            )
-            if not created:
+            existing = Workflow.objects.filter(tenant=tenant, slug=d["slug"]).first()
+            if existing is not None:
                 django_messages.info(request, "Workflow already exists — opening it.")
+                return redirect("portal:workflow_detail", workflow_id=existing.id)
+            try:
+                assert_can_create_workflow(account)
+                assert_tenant_operational(tenant)
+            except PolicyError as e:
+                django_messages.error(request, e.detail)
             else:
+                wf = Workflow.objects.create(
+                    tenant=tenant,
+                    slug=d["slug"],
+                    name=d["name"],
+                )
                 django_messages.success(request, "Workflow created.")
-            return redirect("portal:workflow_detail", workflow_id=wf.id)
+                return redirect("portal:workflow_detail", workflow_id=wf.id)
         django_messages.error(request, "Invalid workflow.")
     else:
         form = WorkflowCreateForm()

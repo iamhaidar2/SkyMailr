@@ -6,6 +6,7 @@ from django.db import IntegrityError
 
 from apps.accounts.defaults import INTERNAL_ACCOUNT_SLUG, get_or_create_internal_account
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
+from apps.accounts.plans import PLAN_INTERNAL
 from apps.accounts.services.account_access import (
     get_user_accounts,
     user_has_account_access,
@@ -64,6 +65,7 @@ def test_all_tenants_have_account_after_migrations(default_account):
 def test_internal_account_and_slug():
     a = get_or_create_internal_account()
     assert a.slug == INTERNAL_ACCOUNT_SLUG
+    assert a.plan_code == PLAN_INTERNAL
     b = get_or_create_internal_account()
     assert a.pk == b.pk
 

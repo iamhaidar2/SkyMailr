@@ -1,0 +1,43 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-8">
+  <div>
+    <h2 class="text-2xl font-semibold text-white">Usage &amp; plan</h2>
+    <p class="mt-1 text-sm text-slate-400">Plan <strong class="text-slate-200">{{ portal_plan_label }}</strong> · billing email on the <a href="{% url 'portal:account_billing' %}" class="text-blue-400 hover:underline">Billing</a> page.</p>
+  </div>
+  {% if portal_effective_limits and portal_usage %}
+  <div class="space-y-4">
+    {% with u=portal_usage lim=portal_effective_limits %}
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Monthly sends (this month)</p>
+      <p class="mt-1 text-lg text-white">{{ u.monthly_send_count }} / {{ lim.max_monthly_sends }}</p>
+      <div class="mt-2 h-2 overflow-hidden rounded bg-surface-700">
+        <div class="h-full bg-accent" style="width: {% widthratio u.monthly_send_count lim.max_monthly_sends 100 %}%"></div>
+      </div>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Tenants</p>
+      <p class="mt-1 text-lg text-white">{{ u.tenant_count }} / {{ lim.max_tenants }}</p>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Active API keys</p>
+      <p class="mt-1 text-lg text-white">{{ u.active_api_key_count }} / {{ lim.max_active_api_keys }}</p>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Templates</p>
+      <p class="mt-1 text-lg text-white">{{ u.template_count }} / {{ lim.max_templates }}</p>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Workflows</p>
+      <p class="mt-1 text-lg text-white">{{ u.workflow_count }} / {{ lim.max_workflows }}</p>
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+      <p class="text-xs uppercase text-slate-500">Members (active)</p>
+      <p class="mt-1 text-lg text-white">{{ u.active_member_count }} / {{ lim.max_members }}</p>
+    </div>
+    <p class="text-xs text-slate-500">Usage period: {{ u.period_start|date:"M j, Y" }} — {{ u.period_end|date:"M j, Y" }} (site timezone).</p>
+    {% endwith %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -9,6 +9,8 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from apps.accounts.policy import PolicyError
+from apps.accounts.services.enforcement import assert_tenant_operational
 from apps.tenants.models import DomainVerificationStatus, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import build_dns_instructions
 from apps.tenants.services.domain_verification import check_tenant_domain_dns
@@ -32,6 +34,15 @@ def _tenant_and_domain(request, tenant_id, domain_id):
     tenant = _tenant(request, tenant_id)
     td = get_object_or_404(TenantDomain.objects.select_related("tenant"), pk=domain_id, tenant=tenant)
     return tenant, td
+
+
+def _redirect_if_tenant_suspended(request, tenant):
+    try:
+        assert_tenant_operational(tenant)
+    except PolicyError as e:
+        django_messages.error(request, e.detail)
+        return redirect("portal:tenant_detail", tenant_id=tenant.id)
+    return None
 
 
 @customer_login_required
@@ -59,6 +70,9 @@ def tenant_domain_list(request, tenant_id):
 def tenant_domain_new(request, tenant_id):
     tenant = _tenant(request, tenant_id)
     if request.method == "POST":
+        denied = _redirect_if_tenant_suspended(request, tenant)
+        if denied is not None:
+            return denied
         form = PortalTenantDomainForm(request.POST, tenant=tenant)
         if form.is_valid():
             d = form.cleaned_data["domain"]
@@ -117,6 +131,9 @@ def tenant_domain_detail(request, tenant_id, domain_id):
 @require_POST
 def tenant_domain_verify(request, tenant_id, domain_id):
     tenant, td = _tenant_and_domain(request, tenant_id, domain_id)
+    denied = _redirect_if_tenant_suspended(request, tenant)
+    if denied is not None:
+        return denied
     check_tenant_domain_dns(td)
     td.save(
         update_fields=[
@@ -146,6 +163,9 @@ def tenant_domain_verify(request, tenant_id, domain_id):
 @require_POST
 def tenant_domain_make_primary(request, tenant_id, domain_id):
     tenant, td = _tenant_and_domain(request, tenant_id, domain_id)
+    denied = _redirect_if_tenant_suspended(request, tenant)
+    if denied is not None:
+        return denied
     if td.verification_status != DomainVerificationStatus.VERIFIED or not td.verified:
         django_messages.error(request, "Only verified domains can be set as primary.")
         return redirect("portal:tenant_domain_detail", tenant_id=tenant.id, domain_id=td.id)
@@ -170,6 +190,9 @@ def tenant_domain_make_primary(request, tenant_id, domain_id):
 @require_POST
 def tenant_domain_delete(request, tenant_id, domain_id):
     tenant, td = _tenant_and_domain(request, tenant_id, domain_id)
+    denied = _redirect_if_tenant_suspended(request, tenant)
+    if denied is not None:
+        return denied
     dom = td.domain
     with transaction.atomic():
         tid = tenant.id

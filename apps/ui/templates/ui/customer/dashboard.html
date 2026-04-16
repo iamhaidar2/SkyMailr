@@ -3,8 +3,25 @@
 <div class="mx-auto max-w-4xl space-y-8">
   <div>
     <h2 class="text-2xl font-semibold text-white">Dashboard</h2>
-    <p class="mt-1 text-sm text-slate-400">Account <strong class="text-slate-200">{{ portal_account.name }}</strong>{% if portal_role %} · role {{ portal_role }}{% endif %}</p>
+    <p class="mt-1 text-sm text-slate-400">Account <strong class="text-slate-200">{{ portal_account.name }}</strong>{% if portal_plan_label %} · plan {{ portal_plan_label }}{% endif %}{% if portal_role %} · role {{ portal_role }}{% endif %}</p>
+    <p class="mt-2 text-xs text-slate-500"><a href="{% url 'portal:account_usage' %}" class="text-blue-400 hover:underline">Usage &amp; limits</a> · <a href="{% url 'portal:account_billing' %}" class="text-blue-400 hover:underline">Billing</a></p>
   </div>
+  {% if portal_account_unhealthy %}
+    <div class="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">
+      This account is not active (suspended or cancelled). Sending and changes are blocked. Contact support if this is unexpected.
+    </div>
+  {% endif %}
+  {% if portal_usage_alerts %}
+    <div class="rounded-lg border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      <p class="font-medium">Approaching plan limits</p>
+      <ul class="mt-2 list-inside list-disc space-y-1 text-amber-200/90">
+        {% for line in portal_usage_alerts %}
+          <li>{{ line }}</li>
+        {% endfor %}
+      </ul>
+      <a href="{% url 'portal:account_usage' %}" class="mt-2 inline-block text-xs text-blue-300 hover:underline">View usage</a>
+    </div>
+  {% endif %}
   <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-4">
       <p class="text-xs uppercase text-slate-500">Members</p>

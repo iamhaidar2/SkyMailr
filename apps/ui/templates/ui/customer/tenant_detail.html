@@ -9,6 +9,12 @@
     <a href="{% url 'portal:tenant_list' %}" class="text-sm text-slate-400 hover:text-white">← All tenants</a>
   </div>
 
+  {% if tenant_suspended %}
+    <div class="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">
+      This app (tenant) is suspended. Sending and changes that affect this tenant are blocked until support reactivates it.
+    </div>
+  {% endif %}
+
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Automation for this tenant</h3>
     <p class="mt-1 text-xs text-slate-500">Jump to lists filtered to this app.</p>

@@ -5,6 +5,12 @@ from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.policy import PolicyError
+from apps.accounts.services.enforcement import (
+    assert_can_create_api_key,
+    assert_can_create_template,
+    assert_can_create_workflow,
+)
 from apps.api.authentication import ApiTenantUser
 from apps.api.permissions import HasTenant
 from apps.email_templates.models import (
@@ -49,6 +55,10 @@ def _tenant(request):
     if isinstance(u, ApiTenantUser):
         return u.tenant
     return None
+
+
+def _policy_error_response(exc: PolicyError) -> Response:
+    return Response({"code": exc.code, "detail": exc.detail}, status=exc.status_code)
 
 
 class HealthView(APIView):
@@ -105,6 +115,8 @@ class SendTemplateView(APIView):
                 idempotency_key=raw_idem or None,
                 scheduled_for=data.get("scheduled_for"),
             )
+        except PolicyError as e:
+            return _policy_error_response(e)
         except ValueError as e:
             return Response({"detail": str(e)}, status=400)
         if raw_idem:
@@ -140,18 +152,21 @@ class SendRawView(APIView):
                     OutboundMessageSerializer(existing.message).data,
                     status=200,
                 )
-        msg = create_raw_message(
-            tenant=tenant,
-            source_app=d["source_app"],
-            message_type=d["message_type"],
-            to_email=d["to_email"],
-            to_name=d.get("to_name") or "",
-            subject=d["subject"],
-            html_body=d["html_body"],
-            text_body=d.get("text_body") or "",
-            metadata=d.get("metadata"),
-            idempotency_key=raw_idem or None,
-        )
+        try:
+            msg = create_raw_message(
+                tenant=tenant,
+                source_app=d["source_app"],
+                message_type=d["message_type"],
+                to_email=d["to_email"],
+                to_name=d.get("to_name") or "",
+                subject=d["subject"],
+                html_body=d["html_body"],
+                text_body=d.get("text_body") or "",
+                metadata=d.get("metadata"),
+                idempotency_key=raw_idem or None,
+            )
+        except PolicyError as e:
+            return _policy_error_response(e)
         if raw_idem:
             IdempotencyKeyRecord.objects.get_or_create(
                 tenant=tenant,
@@ -213,6 +228,14 @@ class TemplateGenerateView(APIView):
         ser.is_valid(raise_exception=True)
         d = ser.validated_data
         tenant = _tenant(request)
+        will_create = not EmailTemplate.objects.filter(
+            tenant=tenant, key=d["template_key"]
+        ).exists()
+        if will_create:
+            try:
+                assert_can_create_template(tenant.account)
+            except PolicyError as e:
+                return _policy_error_response(e)
         tpl, _ = EmailTemplate.objects.get_or_create(
             tenant=tenant,
             key=d["template_key"],
@@ -311,6 +334,12 @@ class WorkflowCreateView(APIView):
         slug = request.data.get("slug")
         if not slug:
             return Response({"detail": "slug required"}, status=400)
+        exists = Workflow.objects.filter(tenant=tenant, slug=slug).exists()
+        if not exists:
+            try:
+                assert_can_create_workflow(tenant.account)
+            except PolicyError as e:
+                return _policy_error_response(e)
         wf, _ = Workflow.objects.get_or_create(
             tenant=tenant, slug=slug, defaults={"name": name}
         )
@@ -380,6 +409,10 @@ class CreateApiKeyView(APIView):
         if not slug:
             return Response({"detail": "tenant_slug required"}, status=400)
         tenant = get_object_or_404(Tenant, slug=slug)
+        try:
+            assert_can_create_api_key(tenant.account)
+        except PolicyError as e:
+            return _policy_error_response(e)
         raw = generate_api_key()
         TenantAPIKey.objects.create(
             tenant=tenant,

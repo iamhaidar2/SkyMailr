@@ -21,11 +21,19 @@ from apps.accounts.models import (
     AccountRole,
     AccountStatus,
 )
+from apps.accounts.plans import DEFAULT_PLAN_CODE, get_effective_limits, plan_display_name
+from apps.accounts.policy import PolicyError
+from apps.accounts.services.enforcement import (
+    assert_can_create_api_key,
+    assert_can_create_tenant,
+    assert_tenant_operational,
+)
+from apps.accounts.services.usage import usage_snapshot
 from apps.accounts.services.email_verification import create_verification_token
 from apps.accounts.services.invite_service import ensure_user_profile
 from apps.messages.models import OutboundMessage
 from apps.tenants.crypto import generate_api_key, hash_api_key
-from apps.tenants.models import Tenant, TenantAPIKey
+from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
 from apps.tenants.services.sending_readiness import compute_sending_readiness
 from apps.ui.decorators import customer_login_required, portal_account_required, portal_manage_required
 from apps.ui.forms_customer import CustomerSignupForm, PortalApiKeyForm, PortalTenantForm
@@ -59,6 +67,26 @@ def _portal_ctx(request, page_title: str, nav_active: str):
     can_edit = portal_user_can_edit_content(request.user, account) if account else False
     can_approve = portal_user_can_approve_templates(request.user, account) if account else False
     is_viewer = portal_user_is_viewer_only(request.user, account) if account else False
+    plan_label = plan_display_name(account) if account else None
+    effective_limits = get_effective_limits(account) if account else None
+    usage = usage_snapshot(account) if account else None
+    account_unhealthy = bool(account and account.status != AccountStatus.ACTIVE)
+    usage_alerts: list[str] = []
+    if account and effective_limits and usage and account.status == AccountStatus.ACTIVE:
+        def _warn(label: str, current: int, limit: int) -> None:
+            if limit <= 0:
+                return
+            if current >= limit:
+                usage_alerts.append(f"{label} is at your plan limit ({current}/{limit}).")
+            elif current >= max(1, int(limit * 0.8)):
+                usage_alerts.append(f"{label} is approaching your plan limit ({current}/{limit}).")
+
+        _warn("Monthly sends", usage.monthly_send_count, effective_limits.max_monthly_sends)
+        _warn("Tenants", usage.tenant_count, effective_limits.max_tenants)
+        _warn("API keys", usage.active_api_key_count, effective_limits.max_active_api_keys)
+        _warn("Templates", usage.template_count, effective_limits.max_templates)
+        _warn("Workflows", usage.workflow_count, effective_limits.max_workflows)
+        _warn("Members", usage.active_member_count, effective_limits.max_members)
     return {
         "page_title": page_title,
         "portal_nav_active": nav_active,
@@ -70,6 +98,11 @@ def _portal_ctx(request, page_title: str, nav_active: str):
         "portal_can_approve": can_approve,
         "portal_is_viewer": is_viewer,
         "portal_accounts": get_portal_accounts_for_user(request.user),
+        "portal_plan_label": plan_label,
+        "portal_effective_limits": effective_limits,
+        "portal_usage": usage,
+        "portal_account_unhealthy": account_unhealthy,
+        "portal_usage_alerts": usage_alerts,
     }
 
 
@@ -107,6 +140,7 @@ def signup(request):
                         slug=data["account_slug"],
                         status=AccountStatus.ACTIVE,
                         billing_email=data["email"],
+                        plan_code=DEFAULT_PLAN_CODE,
                     )
                     AccountMembership.objects.create(
                         account=account,
@@ -245,11 +279,16 @@ def tenant_new(request):
     if request.method == "POST":
         form = PortalTenantForm(request.POST)
         if form.is_valid():
-            tenant = form.save(commit=False)
-            tenant.account = account
-            tenant.save()
-            django_messages.success(request, f"Created “{tenant.name}”.")
-            return redirect("portal:tenant_detail", tenant_id=tenant.id)
+            try:
+                assert_can_create_tenant(account)
+            except PolicyError as e:
+                django_messages.error(request, e.detail)
+            else:
+                tenant = form.save(commit=False)
+                tenant.account = account
+                tenant.save()
+                django_messages.success(request, f"Created “{tenant.name}”.")
+                return redirect("portal:tenant_detail", tenant_id=tenant.id)
     else:
         form = PortalTenantForm()
     ctx = _portal_ctx(request, "New app / tenant", "tenants")
@@ -280,6 +319,7 @@ def tenant_detail(request, tenant_id):
             "api_key_form": PortalApiKeyForm(),
             "can_manage": can_manage,
             "readiness": readiness,
+            "tenant_suspended": tenant.status != TenantStatus.ACTIVE,
         }
     )
     return render(request, "ui/customer/tenant_detail.html", ctx)
@@ -292,6 +332,12 @@ def tenant_create_api_key(request, tenant_id):
     account = get_active_portal_account(request)
     assert account is not None
     tenant = get_object_or_404(Tenant, pk=tenant_id, account=account)
+    try:
+        assert_can_create_api_key(account)
+        assert_tenant_operational(tenant)
+    except PolicyError as e:
+        django_messages.error(request, e.detail)
+        return redirect("portal:tenant_detail", tenant_id=tenant.id)
     form = PortalApiKeyForm(request.POST)
     if not form.is_valid():
         django_messages.error(request, "Invalid label.")
@@ -333,3 +379,22 @@ def messages_list(request):
     ctx = _portal_ctx(request, "Messages", "messages")
     ctx.update({"messages": qs})
     return render(request, "ui/customer/messages_list.html", ctx)
+
+
+@customer_login_required
+@portal_account_required
+def account_usage(request):
+    account = get_active_portal_account(request)
+    assert account is not None
+    ctx = _portal_ctx(request, "Usage & plan", "usage")
+    return render(request, "ui/customer/account_usage.html", ctx)
+
+
+@customer_login_required
+@portal_account_required
+def account_billing(request):
+    account = get_active_portal_account(request)
+    assert account is not None
+    ctx = _portal_ctx(request, "Billing", "billing")
+    ctx.update({"billing_email": account.billing_email})
+    return render(request, "ui/customer/account_billing.html", ctx)

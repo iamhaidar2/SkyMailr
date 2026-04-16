@@ -1,0 +1,14 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-xl space-y-6">
+  <div>
+    <h2 class="text-2xl font-semibold text-white">Billing</h2>
+    <p class="mt-2 text-sm text-slate-400">Online billing and invoices are not connected yet. Plan changes are handled by your team or support for now.</p>
+  </div>
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <p class="text-xs uppercase text-slate-500">Billing contact email</p>
+    <p class="mt-1 text-slate-200">{% if billing_email %}{{ billing_email }}{% else %}<span class="text-slate-500">Not set</span>{% endif %}</p>
+  </div>
+  <p class="text-xs text-slate-500">Usage and limits: <a href="{% url 'portal:account_usage' %}" class="text-blue-400 hover:underline">Usage &amp; plan</a>.</p>
+</div>
+{% endblock %}

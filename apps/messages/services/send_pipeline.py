@@ -15,6 +15,7 @@ from apps.messages.models import (
     OutboundMessage,
     OutboundStatus,
 )
+from apps.accounts.services.enforcement import assert_send_allowed
 from apps.subscriptions.services.suppression import SuppressionService
 from apps.tenants.models import SenderProfile, Tenant
 
@@ -103,7 +104,14 @@ def create_templated_message(
     scheduled_for=None,
     sender_profile: SenderProfile | None = None,
     workflow_execution=None,
+    bypass_quota: bool = False,
+    bypass_suspension: bool = False,
 ) -> OutboundMessage:
+    assert_send_allowed(
+        tenant,
+        bypass_quota=bypass_quota,
+        bypass_suspension=bypass_suspension,
+    )
     suppressed, reason = should_suppress(tenant, to_email, message_type)
     status = OutboundStatus.SUPPRESSED if suppressed else OutboundStatus.QUEUED
     version = template.current_approved_version
@@ -201,9 +209,16 @@ def create_raw_message(
     idempotency_key: str | None,
     scheduled_for=None,
     sender_profile: SenderProfile | None = None,
+    bypass_quota: bool = False,
+    bypass_suspension: bool = False,
 ) -> OutboundMessage:
     from apps.email_templates.services.render_service import sanitize_html
 
+    assert_send_allowed(
+        tenant,
+        bypass_quota=bypass_quota,
+        bypass_suspension=bypass_suspension,
+    )
     suppressed, reason = should_suppress(tenant, to_email, message_type)
     status = OutboundStatus.SUPPRESSED if suppressed else OutboundStatus.QUEUED
     msg = OutboundMessage.objects.create(

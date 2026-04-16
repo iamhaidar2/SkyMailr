@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from apps.accounts.policy import PolicyError
 from apps.email_templates.models import EmailTemplate
 from apps.email_templates.services.render_service import TemplateRenderError, render_email_version, sanitize_html
 from apps.email_templates.services.validation_service import TemplateValidationService
@@ -88,19 +89,35 @@ def send_raw(request):
         if existing:
             django_messages.info(request, "Idempotent replay — existing message.")
             return redirect("ui:message_detail", message_id=existing.message_id)
-    msg = create_raw_message(
-        tenant=tenant,
-        source_app=d["source_app"],
-        message_type=d["message_type"],
-        to_email=d["to_email"],
-        to_name=d.get("to_name") or "",
-        subject=d["subject"],
-        html_body=d["html_body"],
-        text_body=d.get("text_body") or "",
-        metadata=d.get("metadata") or {},
-        idempotency_key=raw_idem or None,
-        sender_profile=sp,
-    )
+    try:
+        msg = create_raw_message(
+            tenant=tenant,
+            source_app=d["source_app"],
+            message_type=d["message_type"],
+            to_email=d["to_email"],
+            to_name=d.get("to_name") or "",
+            subject=d["subject"],
+            html_body=d["html_body"],
+            text_body=d.get("text_body") or "",
+            metadata=d.get("metadata") or {},
+            idempotency_key=raw_idem or None,
+            sender_profile=sp,
+            bypass_quota=request.user.is_staff,
+        )
+    except PolicyError as e:
+        django_messages.error(request, e.detail)
+        _, tpl_empty = send_forms_for_tenant(tenant)
+        ctx = operator_shell_context(request)
+        ctx.update(
+            {
+                "page_title": "Send email",
+                "nav_active": "send",
+                "active_tenant": tenant,
+                "raw_form": form,
+                "tpl_form": tpl_empty,
+            }
+        )
+        return render(request, "ui/pages/send_email.html", ctx, status=403)
     _idem_attach(tenant, raw_idem, msg)
     django_messages.success(
         request,
@@ -184,7 +201,22 @@ def send_template(request):
             idempotency_key=raw_idem or None,
             scheduled_for=d.get("scheduled_for"),
             sender_profile=sp,
+            bypass_quota=request.user.is_staff,
         )
+    except PolicyError as e:
+        form.add_error(None, e.detail)
+        raw_empty, _ = send_forms_for_tenant(tenant)
+        ctx = operator_shell_context(request)
+        ctx.update(
+            {
+                "page_title": "Send email",
+                "nav_active": "send",
+                "active_tenant": tenant,
+                "raw_form": raw_empty,
+                "tpl_form": form,
+            }
+        )
+        return render(request, "ui/pages/send_email.html", ctx, status=403)
     except ValueError as e:
         form.add_error(None, str(e))
         raw_empty, _ = send_forms_for_tenant(tenant)

@@ -19,6 +19,8 @@ from apps.accounts.models import (
     AccountRole,
     UserProfile,
 )
+from apps.accounts.policy import PolicyError
+from apps.accounts.services.enforcement import assert_can_invite_member
 
 logger = logging.getLogger("apps.accounts.audit")
 
@@ -70,6 +72,11 @@ def create_invite(
         status=AccountInviteStatus.PENDING,
     ).exists():
         raise ValueError("There is already a pending invite for this email.")
+
+    try:
+        assert_can_invite_member(account)
+    except PolicyError as e:
+        raise ValueError(e.detail) from e
 
     raw = secrets.token_urlsafe(32)
     inv = AccountInvite.objects.create(
@@ -153,6 +160,13 @@ def accept_invite(*, raw_token: str, user: User) -> AccountMembership:
 
     if active_membership_for_email(inv.account, inv.email):
         raise ValueError("You are already a member of this account.")
+
+    m_existing = AccountMembership.objects.filter(account=inv.account, user=user).first()
+    if m_existing is None or not m_existing.is_active:
+        try:
+            assert_can_invite_member(inv.account)
+        except PolicyError as e:
+            raise ValueError(e.detail) from e
 
     m, created = AccountMembership.objects.get_or_create(
         account=inv.account,
