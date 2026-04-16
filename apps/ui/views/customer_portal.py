@@ -219,44 +219,20 @@ class CustomerLogoutView(LogoutView):
 @customer_login_required
 @portal_account_required
 def dashboard(request):
-    from apps.email_templates.models import EmailTemplate
-    from apps.tenants.models import SenderProfile
-    from apps.workflows.models import Workflow
+    from apps.ui.services.portal_dashboard_data import build_portal_dashboard_context
 
     account = get_active_portal_account(request)
     assert account is not None
-    tenants = Tenant.objects.filter(account=account).annotate(
-        api_key_count=Count("api_keys", filter=Q(api_keys__revoked_at__isnull=True)),
-    )
-    total_keys = (
-        TenantAPIKey.objects.filter(tenant__account=account, revoked_at__isnull=True).count()
-    )
-    msg_count = OutboundMessage.objects.filter(tenant__account=account).count()
-    sp_count = SenderProfile.objects.filter(tenant__account=account).count()
-    tpl_count = EmailTemplate.objects.filter(tenant__account=account).count()
-    wf_count = Workflow.objects.filter(tenant__account=account).count()
-    recent_messages = (
-        OutboundMessage.objects.filter(tenant__account=account)
-        .select_related("tenant")
-        .order_by("-created_at")[:8]
-    )
-    member_count = AccountMembership.objects.filter(account=account, is_active=True).count()
+    tenant_count = Tenant.objects.filter(account=account).count()
     pending_invite_count = AccountInvite.objects.filter(
         account=account, status=AccountInviteStatus.PENDING
     ).count()
     ctx = _portal_ctx(request, "Dashboard", "dashboard")
+    ctx.update(build_portal_dashboard_context(account))
     ctx.update(
         {
-            "tenants": tenants,
-            "tenant_count": tenants.count(),
-            "total_api_keys": total_keys,
-            "message_count": msg_count,
-            "sender_profile_count": sp_count,
-            "template_count": tpl_count,
-            "workflow_count": wf_count,
-            "member_count": member_count,
+            "tenant_count": tenant_count,
             "pending_invite_count": pending_invite_count,
-            "recent_messages": recent_messages,
         }
     )
     return render(request, "ui/customer/dashboard.html", ctx)

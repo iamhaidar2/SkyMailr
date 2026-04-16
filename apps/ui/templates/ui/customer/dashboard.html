@@ -1,104 +1,169 @@
 {% extends "ui/customer/base.html" %}
 {% block content %}
-<div class="mx-auto max-w-4xl space-y-8">
-  <div>
-    <p class="text-sm customer-text-muted">
-      Quick links:
-      <a href="{% url 'portal:account_usage' %}" class="customer-dash-link">Usage &amp; limits</a>
-      ·
-      <a href="{% url 'portal:account_billing' %}" class="customer-dash-link">Billing</a>
-    </p>
-  </div>
+<div class="mx-auto max-w-6xl space-y-8">
   {% if portal_account_unhealthy %}
-    <div class="customer-alert-red">
+    <div class="rounded-xl border border-red-800 bg-red-950/40 px-4 py-3 text-sm text-red-100">
       This account is not active (suspended or cancelled). Sending and changes are blocked. Contact support if this is unexpected.
     </div>
   {% endif %}
   {% if portal_usage_alerts %}
-    <div class="customer-alert-amber">
-      <p class="font-medium">Approaching plan limits</p>
+    <div class="rounded-xl border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      <p class="font-medium text-amber-50">Approaching plan limits</p>
       <ul class="mt-2 list-inside list-disc space-y-1 opacity-95">
         {% for line in portal_usage_alerts %}
           <li>{{ line }}</li>
         {% endfor %}
       </ul>
-      <a href="{% url 'portal:account_usage' %}" class="customer-dash-link mt-2 inline-block text-xs">View usage</a>
+      <a href="{% url 'portal:account_usage' %}" class="mt-2 inline-block text-sm text-blue-400">View usage →</a>
     </div>
   {% endif %}
-  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">Members</p>
-      <p class="customer-metric-value">{{ member_count }}</p>
-      {% if pending_invite_count %}
-        <p class="mt-1 text-xs customer-text-muted">{{ pending_invite_count }} invite{{ pending_invite_count|pluralize }} pending</p>
-      {% endif %}
-      <a href="{% url 'portal:members_list' %}" class="customer-dash-link mt-2 inline-block text-xs">Manage</a>
+
+  {% if delivery.is_non_sending_mode %}
+  <div class="rounded-xl border border-amber-800 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+    <strong class="text-amber-50">No real email delivery:</strong>
+    EMAIL_PROVIDER is <code class="text-amber-200">{{ delivery.email_provider_setting }}</code>.
+    Messages are not sent to real inboxes. Your operator can configure Postal or another provider for production.
+  </div>
+  {% endif %}
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="rounded-xl border border-surface-600 bg-surface-800 p-4">
+      <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Last 24h</p>
+      <p class="mt-2 text-3xl font-semibold text-white">{{ stats_24h.total }}</p>
+      <p class="text-sm text-slate-500">messages</p>
     </div>
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">Tenants</p>
-      <p class="customer-metric-value">{{ tenant_count }}</p>
-      <a href="{% url 'portal:tenant_list' %}" class="customer-dash-link mt-2 inline-block text-xs">View</a>
+    <div class="rounded-xl border border-surface-600 bg-surface-800 p-4">
+      <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Queued</p>
+      <p class="mt-2 text-3xl font-semibold text-amber-300">{{ stats_24h.queued }}</p>
     </div>
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">Sender profiles</p>
-      <p class="customer-metric-value">{{ sender_profile_count }}</p>
-      <a href="{% url 'portal:sender_profile_list' %}" class="customer-dash-link mt-2 inline-block text-xs">Manage</a>
+    <div class="rounded-xl border border-surface-600 bg-surface-800 p-4">
+      <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Delivered</p>
+      <p class="mt-2 text-3xl font-semibold text-emerald-400">{{ stats_24h.delivered }}</p>
     </div>
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">Email templates</p>
-      <p class="customer-metric-value">{{ template_count }}</p>
-      <a href="{% url 'portal:template_list' %}" class="customer-dash-link mt-2 inline-block text-xs">Manage</a>
-    </div>
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">Workflows</p>
-      <p class="customer-metric-value">{{ workflow_count }}</p>
-      <a href="{% url 'portal:workflow_list' %}" class="customer-dash-link mt-2 inline-block text-xs">Manage</a>
-    </div>
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">API keys (active)</p>
-      <p class="customer-metric-value">{{ total_api_keys }}</p>
-      <a href="{% url 'portal:api_keys' %}" class="customer-dash-link mt-2 inline-block text-xs">View</a>
-    </div>
-    <div class="customer-metric-card">
-      <p class="customer-metric-label">Messages (all time)</p>
-      <p class="customer-metric-value">{{ message_count }}</p>
-      <a href="{% url 'portal:messages_list' %}" class="customer-dash-link mt-2 inline-block text-xs">View</a>
+    <div class="rounded-xl border border-surface-600 bg-surface-800 p-4">
+      <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Failed</p>
+      <p class="mt-2 text-3xl font-semibold text-red-400">{{ stats_24h.failed }}</p>
     </div>
   </div>
-  {% if tenant_count == 0 and portal_can_manage %}
-    <div class="customer-cta-banner">
-      <p class="text-sm customer-text">Create your first app (tenant) to get API keys and send mail.</p>
-      <a href="{% url 'portal:tenant_new' %}" class="mt-3 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Create first tenant</a>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h2 class="text-sm font-semibold text-white">Adapter health</h2>
+      <p class="mt-1 text-xs text-slate-500">Technical: can the provider class run its health check?</p>
+      <p class="mt-2 text-sm text-slate-400">{{ delivery.adapter_name }} — {% if delivery.adapter_ok %}<span class="text-emerald-400">OK</span>{% else %}<span class="text-red-400">Failing</span>{% endif %}</p>
+      <p class="mt-1 text-xs text-slate-500">{{ delivery.adapter_detail }}</p>
+      {% if user.is_staff %}
+        <a href="{% url 'ui:provider_health' %}" class="mt-3 inline-block text-sm text-blue-400">Details →</a>
+      {% else %}
+        <p class="mt-3 text-xs text-slate-500">Full provider diagnostics are available to operators.</p>
+      {% endif %}
     </div>
-  {% endif %}
-  {% if recent_messages %}
-    <div>
-      <h3 class="customer-section-title">Recent messages</h3>
-      <ul class="customer-list-panel mt-3">
-        {% for m in recent_messages %}
-          <li class="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3 text-sm">
-            <span class="customer-text">{{ m.to_email }}</span>
-            <span class="font-mono text-xs customer-text-muted">{{ m.tenant.slug }}</span>
-            <span class="w-full text-xs customer-text-muted sm:w-auto">{{ m.created_at }}</span>
-          </li>
-        {% endfor %}
-      </ul>
-      <a href="{% url 'portal:messages_list' %}" class="customer-dash-link mt-2 inline-block text-xs">All messages</a>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h2 class="text-sm font-semibold text-white">Outbound delivery</h2>
+      <p class="mt-1 text-xs text-slate-500">Will mail reach real recipients?</p>
+      <p class="mt-2 text-sm text-white">{{ delivery.delivery_readiness_label }}</p>
+      <p class="mt-1 text-xs text-slate-500">{{ delivery.delivery_readiness_hint }}</p>
     </div>
-  {% endif %}
-  {% if tenants %}
-    <div>
-      <h3 class="customer-section-title">Your tenants</h3>
-      <ul class="mt-2 space-y-2">
-        {% for t in tenants %}
-          <li>
-            <a href="{% url 'portal:tenant_detail' t.id %}" class="customer-dash-link">{{ t.name }}</a>
-            <span class="customer-text-muted"> · </span>
-            <span class="font-mono text-xs customer-text-muted">{{ t.slug }}</span>
-          </li>
-        {% endfor %}
-      </ul>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h2 class="text-sm font-semibold text-white">Quick actions</h2>
+    <div class="mt-3 flex flex-wrap gap-2">
+      <a href="{% url 'portal:template_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Templates</a>
+      <a href="{% url 'portal:api_keys' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">API keys</a>
+      <a href="{% url 'portal:workflow_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Workflows</a>
+      <a href="{% url 'portal:messages_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Messages</a>
+      <a href="{% url 'portal:tenant_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Tenants</a>
     </div>
-  {% endif %}
+    {% if tenant_count == 0 and portal_can_manage %}
+      <p class="mt-4 text-sm text-slate-400">Create your first app (tenant) to get API keys and send mail.</p>
+      <a href="{% url 'portal:tenant_new' %}" class="mt-2 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Create first tenant</a>
+    {% endif %}
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-white">Setup checklist</h2>
+      <a href="{% url 'portal:account_usage' %}" class="text-sm text-blue-400">Usage &amp; limits →</a>
+    </div>
+    <ul class="mt-4 grid gap-2 sm:grid-cols-2">
+      {% for row in portal_setup_checklist %}
+        <li class="flex items-start gap-2 text-sm">
+          {% if row.ok %}<span class="text-emerald-400">✓</span>{% else %}<span class="text-amber-400">○</span>{% endif %}
+          <span class="text-slate-300">{{ row.label }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h2 class="text-sm font-semibold text-white">Recent failures (7d)</h2>
+      {% if failures %}
+        <ul class="mt-3 space-y-2 text-sm">
+          {% for m in failures %}
+            <li class="flex justify-between gap-2 border-b border-surface-700 pb-2">
+              <span class="truncate text-slate-300">{{ m.to_email }}</span>
+              <span class="shrink-0 text-slate-500">{{ m.tenant.slug }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="mt-3 text-sm text-slate-500">No failures — nice.</p>
+      {% endif %}
+    </div>
+    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <h2 class="text-sm font-semibold text-white">Webhook activity</h2>
+      <p class="mt-3 text-sm text-slate-500">Provider webhooks are visible in the operator console. Delivery status for your tenants appears in Recent messages below.</p>
+      {% if user.is_staff %}
+        <a href="{% url 'ui:webhooks_list' %}" class="mt-3 inline-block text-sm text-blue-400">View all (operator) →</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 overflow-hidden">
+    <div class="border-b border-surface-600 px-5 py-3">
+      <h2 class="text-sm font-semibold text-white">Recent messages</h2>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-left text-sm">
+        <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+          <tr>
+            <th class="px-4 py-2">Time</th>
+            <th class="px-4 py-2">Tenant</th>
+            <th class="px-4 py-2">To</th>
+            <th class="px-4 py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-700">
+          {% for m in recent_messages %}
+            <tr class="hover:bg-surface-800/80">
+              <td class="px-4 py-2 text-slate-500">{{ m.created_at }}</td>
+              <td class="px-4 py-2 text-slate-300">{{ m.tenant.slug }}</td>
+              <td class="px-4 py-2 text-slate-300">{{ m.to_email }}</td>
+              <td class="px-4 py-2">
+                {% if m.status == "failed" %}
+                  <span class="rounded bg-red-950/60 px-2 py-0.5 text-xs text-red-100">{{ m.get_status_display }}</span>
+                {% elif m.status == "delivered" %}
+                  <span class="rounded bg-emerald-950/50 px-2 py-0.5 text-xs text-emerald-200">{{ m.get_status_display }}</span>
+                {% elif m.status == "queued" or m.status == "deferred" %}
+                  <span class="rounded bg-amber-950/50 px-2 py-0.5 text-xs text-amber-200">{{ m.get_status_display }}</span>
+                {% elif m.status == "sent" %}
+                  <span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-200">{{ m.get_status_display }}</span>
+                {% else %}
+                  <span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-300">{{ m.get_status_display }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">No messages yet. Use the API or workflows to send.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="border-t border-surface-600 px-5 py-3">
+      <a href="{% url 'portal:messages_list' %}" class="text-sm text-blue-400">All messages →</a>
+    </div>
+  </div>
 </div>
 {% endblock %}
