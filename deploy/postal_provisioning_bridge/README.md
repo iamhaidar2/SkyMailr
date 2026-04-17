@@ -61,3 +61,10 @@ Success: HTTP 200, JSON body with `ok`, `outcome`, `provider_domain_id`, `dns` (
 ### `dns` object keys
 
 In addition to SPF/DKIM/return-path fields, the bridge may include **`postal_verification_txt_expected`**: the full TXT value Postal expects at the domain apex for domain-control verification (e.g. `postal-verification <token>`). Omitted when the domain is already verified (e.g. `POSTAL_AUTO_VERIFY=true`).
+
+### Troubleshooting (SkyMailr UI missing verification row)
+
+- Ensure **`POSTAL_PROVISIONING_URL`** and **`POSTAL_PROVISIONING_SECRET`** are set in SkyMailr and match the bridge.
+- SkyMailr calls the bridge on each domain page load until it stores a verification string or records a successful bridge response (`postal_verification_bridge_at`). If the UI still shows only three DNS rows, check SkyMailr logs for `webhook merge after HTTP fetch` / `postal webhook merge after HTTP fetch skipped`.
+- If `postal_verification_bridge_at` was set but `postal_verification_txt_expected` is still empty and Postal still shows unverified, clear the marker so SkyMailr retries:  
+  `UPDATE tenants_tenantdomain SET postal_verification_bridge_at = NULL WHERE domain = 'your.domain.com';`

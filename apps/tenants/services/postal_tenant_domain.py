@@ -74,7 +74,9 @@ def process_postal_for_tenant_domain(td: TenantDomain, *, force_provision: bool 
         return list(dict.fromkeys(touched))
 
     now = timezone.now()
-    can_run = force_provision
+    # Always attempt provisioning when the bridge may still return postal_verification_txt_expected;
+    # otherwise the 45s cooldown blocks every page load after sync filled SPF/DKIM from HTTP.
+    can_run = force_provision or needs_bridge_verification_fetch
     if not can_run and td.postal_provision_last_attempt_at is None:
         can_run = True
     if not can_run and td.postal_provision_last_attempt_at is not None:

@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.test.utils import override_settings
+from django.utils import timezone
 from django.urls import reverse
 
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
@@ -126,6 +127,40 @@ def test_process_postal_fetches_verification_when_customer_ready_but_pv_missing(
     td.refresh_from_db()
     assert td.postal_verification_txt_expected == "postal-verification ZZ"
     assert td.postal_verification_bridge_at is not None
+
+
+@pytest.mark.django_db
+def test_process_postal_bypasses_cooldown_when_postal_verification_missing():
+    """SPF/DKIM from HTTP + recent provision attempt must not block bridge merge for PV."""
+    from datetime import timedelta
+
+    acc = Account.objects.create(name="A2", slug="a2-pv", status=AccountStatus.ACTIVE)
+    tenant = Tenant.objects.create(account=acc, name="T2", slug="t2", status=TenantStatus.ACTIVE)
+    td = TenantDomain.objects.create(
+        tenant=tenant,
+        domain="cooldown.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+        spf_txt_expected="v=spf1 include:x ~all",
+        dkim_txt_value="v=DKIM1; p=ABC",
+        dkim_selector="postal",
+        postal_provision_last_attempt_at=timezone.now() - timedelta(seconds=5),
+    )
+    with patch("apps.tenants.services.postal_tenant_domain.sync_domain_dns_metadata", return_value=False), patch(
+        "apps.tenants.services.postal_tenant_domain.ensure_postal_domain_exists"
+    ) as ens:
+        ens.return_value = ProvisionResult(
+            success=True,
+            outcome=ProvisionOutcome.ALREADY_EXISTS,
+            dns_patch={"postal_verification_txt_expected": "postal-verification CD"},
+            webhook_merged=True,
+        )
+        with override_settings(
+            POSTAL_PROVISIONING_URL="https://bridge.test/",
+            POSTAL_BASE_URL="https://postal.test",
+            POSTAL_SERVER_API_KEY="k",
+        ):
+            process_postal_for_tenant_domain(td, force_provision=False)
+    assert ens.called
 
 
 @pytest.mark.django_db
