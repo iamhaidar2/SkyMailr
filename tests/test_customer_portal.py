@@ -70,6 +70,9 @@ def test_signup_creates_user_account_owner_membership(client):
     m = AccountMembership.objects.get(user=u, account=acc)
     assert m.role == AccountRole.OWNER
     assert acc.plan_code == DEFAULT_PLAN_CODE
+    assert Tenant.objects.filter(account=acc).count() == 1
+    t = Tenant.objects.get(account=acc)
+    assert t.slug == "new-co"
 
 
 @pytest.mark.django_db
@@ -158,6 +161,16 @@ def test_portal_dashboard_loads(client, customer_user, customer_account):
 
 
 @pytest.mark.django_db
+def test_dashboard_creates_default_email_app_if_missing(client, customer_user, customer_account):
+    assert Tenant.objects.filter(account=customer_account).count() == 0
+    bind_portal_account_session(client, customer_user, customer_account)
+    client.get(reverse("portal:dashboard"))
+    assert Tenant.objects.filter(account=customer_account).count() == 1
+    t = Tenant.objects.get(account=customer_account)
+    assert t.slug == "cust-co"
+
+
+@pytest.mark.django_db
 def test_customer_creates_tenant(client, customer_user, customer_account):
     bind_portal_account_session(client, customer_user, customer_account)
     r = client.post(
@@ -165,14 +178,6 @@ def test_customer_creates_tenant(client, customer_user, customer_account):
         {
             "name": "App One",
             "slug": "app-one",
-            "status": TenantStatus.ACTIVE,
-            "default_sender_name": "App",
-            "default_sender_email": "noreply@app.example",
-            "reply_to": "",
-            "sending_domain": "",
-            "timezone": "UTC",
-            "rate_limit_per_minute": "120",
-            "webhook_secret": "",
         },
     )
     assert r.status_code == 302

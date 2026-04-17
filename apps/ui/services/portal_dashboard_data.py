@@ -58,7 +58,7 @@ def build_portal_dashboard_context(account) -> dict[str, Any]:
 
     checklist = [
         {"label": "Account active", "ok": account_active},
-        {"label": "At least one app (tenant)", "ok": tenants_exist},
+        {"label": "At least one email app", "ok": tenants_exist},
         {"label": "At least one active API key", "ok": api_keys_ok},
         {"label": "At least one approved template", "ok": approved_tpl},
         {"label": "Sender profiles configured", "ok": sender_profiles_ok},

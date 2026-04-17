@@ -36,13 +36,19 @@ from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
 from apps.tenants.services.sending_readiness import compute_sending_readiness
 from apps.ui.decorators import customer_login_required, portal_account_required, portal_manage_required
-from apps.ui.forms_customer import CustomerSignupForm, PortalApiKeyForm, PortalTenantForm
+from apps.ui.forms_customer import (
+    CustomerSignupForm,
+    PortalApiKeyForm,
+    PortalTenantCreateForm,
+    PortalTenantSettingsForm,
+)
 from apps.ui.services.portal_account import (
     clear_active_portal_account,
     get_active_portal_account,
     get_portal_accounts_for_user,
     set_active_portal_account,
 )
+from apps.ui.services.portal_default_tenant import ensure_default_tenant_for_account
 from apps.ui.services.portal_mail import send_email_verification_email
 from apps.ui.services.rate_limit import allow_request
 from apps.ui.services.portal_permissions import (
@@ -59,14 +65,22 @@ SESSION_PORTAL_NEW_API_KEY = "_portal_new_api_key_once"
 logger = logging.getLogger("apps.accounts.audit")
 
 
-def portal_nav_items() -> list[dict[str, str]]:
+def portal_nav_items(*, tenant_count: int, first_tenant_id: str | None) -> list[dict[str, str]]:
     """Sidebar nav for customer portal (label, url, name matches portal_nav_active)."""
+    if tenant_count == 1 and first_tenant_id:
+        tenant_link = {
+            "label": "Email app",
+            "url": reverse("portal:tenant_detail", kwargs={"tenant_id": first_tenant_id}),
+            "name": "tenants",
+        }
+    else:
+        tenant_link = {"label": "Email apps", "url": reverse("portal:tenant_list"), "name": "tenants"}
     return [
         {"label": "Dashboard", "url": reverse("portal:dashboard"), "name": "dashboard"},
         {"label": "Usage", "url": reverse("portal:account_usage"), "name": "usage"},
         {"label": "Billing", "url": reverse("portal:account_billing"), "name": "billing"},
         {"label": "Members", "url": reverse("portal:members_list"), "name": "members"},
-        {"label": "Tenants", "url": reverse("portal:tenant_list"), "name": "tenants"},
+        tenant_link,
         {"label": "API keys", "url": reverse("portal:api_keys"), "name": "api_keys"},
         {"label": "Sender profiles", "url": reverse("portal:sender_profile_list"), "name": "sender_profiles"},
         {"label": "Templates", "url": reverse("portal:template_list"), "name": "templates"},
@@ -87,6 +101,14 @@ def _portal_ctx(request, page_title: str, nav_active: str):
     effective_limits = get_effective_limits(account) if account else None
     usage = usage_snapshot(account) if account else None
     account_unhealthy = bool(account and account.status != AccountStatus.ACTIVE)
+    tenant_count = 0
+    first_tenant_id: str | None = None
+    if account:
+        ensure_default_tenant_for_account(account)
+        tqs = Tenant.objects.filter(account=account).order_by("created_at")
+        tenant_count = tqs.count()
+        ft = tqs.first()
+        first_tenant_id = str(ft.pk) if ft else None
     usage_alerts: list[str] = []
     if account and effective_limits and usage and account.status == AccountStatus.ACTIVE:
         def _warn(label: str, current: int, limit: int) -> None:
@@ -119,7 +141,11 @@ def _portal_ctx(request, page_title: str, nav_active: str):
         "portal_usage": usage,
         "portal_account_unhealthy": account_unhealthy,
         "portal_usage_alerts": usage_alerts,
-        "portal_nav_items": portal_nav_items(),
+        "portal_nav_items": portal_nav_items(
+            tenant_count=tenant_count, first_tenant_id=first_tenant_id
+        ),
+        "portal_tenant_count": tenant_count,
+        "portal_first_tenant_id": first_tenant_id,
     }
 
 
@@ -165,6 +191,7 @@ def signup(request):
                         role=AccountRole.OWNER,
                         is_active=True,
                     )
+                    ensure_default_tenant_for_account(account)
                 login(request, user)
                 set_active_portal_account(request.session, account)
                 try:
@@ -223,6 +250,7 @@ def dashboard(request):
 
     account = get_active_portal_account(request)
     assert account is not None
+    ensure_default_tenant_for_account(account)
     tenant_count = Tenant.objects.filter(account=account).count()
     pending_invite_count = AccountInvite.objects.filter(
         account=account, status=AccountInviteStatus.PENDING
@@ -270,7 +298,7 @@ def tenant_new(request):
     account = get_active_portal_account(request)
     assert account is not None
     if request.method == "POST":
-        form = PortalTenantForm(request.POST)
+        form = PortalTenantCreateForm(request.POST)
         if form.is_valid():
             try:
                 assert_can_create_tenant(account)
@@ -283,9 +311,9 @@ def tenant_new(request):
                 django_messages.success(request, f"Created “{tenant.name}”.")
                 return redirect("portal:tenant_detail", tenant_id=tenant.id)
     else:
-        form = PortalTenantForm()
-    ctx = _portal_ctx(request, "New app / tenant", "tenants")
-    ctx.update({"form": form, "submit_label": "Create tenant"})
+        form = PortalTenantCreateForm()
+    ctx = _portal_ctx(request, "New email app", "tenants")
+    ctx.update({"form": form, "submit_label": "Create email app"})
     return render(request, "ui/customer/tenant_form.html", ctx)
 
 
@@ -299,9 +327,20 @@ def tenant_detail(request, tenant_id):
         pk=tenant_id,
         account=account,
     )
+    can_manage = portal_user_can_manage_tenants(request.user, account)
+    settings_form = PortalTenantSettingsForm(instance=tenant)
+    if request.method == "POST" and request.POST.get("save_app_settings"):
+        if not can_manage:
+            django_messages.error(request, "You do not have permission to change app settings.")
+            return redirect("portal:tenant_detail", tenant_id=tenant.id)
+        settings_form = PortalTenantSettingsForm(request.POST, instance=tenant)
+        if settings_form.is_valid():
+            settings_form.save()
+            django_messages.success(request, "App settings saved.")
+            return redirect("portal:tenant_detail", tenant_id=tenant.id)
+        django_messages.error(request, "Fix the errors below and try again.")
     keys = tenant.api_keys.order_by("-created_at")[:50]
     new_key = request.session.pop(SESSION_PORTAL_NEW_API_KEY, None)
-    can_manage = portal_user_can_manage_tenants(request.user, account)
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, tenant.name, "tenants")
     ctx.update(
@@ -310,6 +349,7 @@ def tenant_detail(request, tenant_id):
             "api_keys": keys,
             "new_api_key": new_key,
             "api_key_form": PortalApiKeyForm(),
+            "settings_form": settings_form,
             "can_manage": can_manage,
             "readiness": readiness,
             "tenant_suspended": tenant.status != TenantStatus.ACTIVE,
@@ -350,6 +390,7 @@ def tenant_create_api_key(request, tenant_id):
 @portal_account_required
 def api_keys_hub(request):
     account = get_active_portal_account(request)
+    ensure_default_tenant_for_account(account)
     tenants = (
         Tenant.objects.filter(account=account)
         .annotate(active_key_count=Count("api_keys", filter=Q(api_keys__revoked_at__isnull=True)))

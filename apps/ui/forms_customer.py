@@ -51,16 +51,20 @@ class PortalSenderProfileForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": _chk}),
         }
 
-    def __init__(self, *args, account: Account, **kwargs):
+    def __init__(self, *args, account: Account, single_tenant: Tenant | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self._account = account
         self.fields["tenant"].queryset = Tenant.objects.filter(account=account).order_by("name")
-        self.fields["tenant"].label = "App / tenant"
+        self.fields["tenant"].label = "Email app"
         self.fields["reply_to"].required = False
+        if single_tenant is not None and self.instance._state.adding:
+            self.fields["tenant"].initial = single_tenant.pk
+            self.fields["tenant"].queryset = Tenant.objects.filter(pk=single_tenant.pk)
+            self.fields["tenant"].widget = forms.HiddenInput()
         # UUID pk is assigned on model __init__; only lock tenant after the row exists in the DB.
         if not self.instance._state.adding:
             self.fields["tenant"].disabled = True
-            self.fields["tenant"].help_text = "Tenant cannot be changed after creation."
+            self.fields["tenant"].help_text = "Email app cannot be changed after creation."
 
     def clean(self):
         # Validates tenant account + from_email vs tenant.sending_domain when set.
@@ -83,7 +87,7 @@ class PortalSenderProfileForm(forms.ModelForm):
 class PortalNewEmailTemplateForm(forms.Form):
     tenant = forms.ModelChoiceField(
         queryset=Tenant.objects.none(),
-        label="App / tenant",
+        label="Email app",
         widget=forms.Select(attrs={"class": _inp}),
     )
     key = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))
@@ -97,10 +101,14 @@ class PortalNewEmailTemplateForm(forms.Form):
         widget=forms.Textarea(attrs={"rows": 2, "class": _inp}),
     )
 
-    def __init__(self, *args, account: Account, **kwargs):
+    def __init__(self, *args, account: Account, single_tenant: Tenant | None = None, **kwargs):
         self._account = account
         super().__init__(*args, **kwargs)
         self.fields["tenant"].queryset = Tenant.objects.filter(account=account).order_by("name")
+        if single_tenant is not None:
+            self.fields["tenant"].initial = single_tenant.pk
+            self.fields["tenant"].queryset = Tenant.objects.filter(pk=single_tenant.pk)
+            self.fields["tenant"].widget = forms.HiddenInput()
 
     def clean_tenant(self):
         t = self.cleaned_data.get("tenant")
@@ -247,8 +255,15 @@ class CustomerSignupForm(forms.Form):
             n += 1
 
 
-class PortalTenantForm(TenantForm):
-    """Same as operator TenantForm; account is set in the view."""
+class PortalTenantCreateForm(TenantForm):
+    """Minimal create flow — name and slug only; other fields live under app settings."""
+
+    class Meta(TenantForm.Meta):
+        fields = ["name", "slug"]
+
+
+class PortalTenantSettingsForm(TenantForm):
+    """Full app settings on the portal (parity with operator tenant form)."""
 
     class Meta(TenantForm.Meta):
         pass

@@ -47,6 +47,7 @@ from apps.ui.forms_customer import (
 from apps.ui.forms import WorkflowCreateForm
 from apps.ui.views.customer_portal import _portal_ctx
 from apps.ui.services.portal_account import get_active_portal_account
+from apps.ui.services.portal_default_tenant import ensure_default_tenant_for_account
 from apps.ui.services.portal_permissions import (
     portal_user_can_approve_templates,
     portal_user_can_edit_content,
@@ -56,7 +57,10 @@ from apps.workflows.services.workflow_engine import enroll_workflow
 
 
 def _account(request):
-    return get_active_portal_account(request)
+    account = get_active_portal_account(request)
+    if account is not None:
+        ensure_default_tenant_for_account(account)
+    return account
 
 
 # --- Sender profiles ---
@@ -89,14 +93,18 @@ def sender_profile_list(request):
 def sender_profile_new(request):
     account = _account(request)
     assert account is not None
+    tenants = list(Tenant.objects.filter(account=account).order_by("name"))
+    single = tenants[0] if len(tenants) == 1 else None
     if request.method == "POST":
-        form = PortalSenderProfileForm(request.POST, account=account)
+        form = PortalSenderProfileForm(
+            request.POST, account=account, single_tenant=single
+        )
         if form.is_valid():
             form.save()
             django_messages.success(request, "Sender profile saved.")
             return redirect("portal:sender_profile_detail", profile_id=form.instance.id)
     else:
-        form = PortalSenderProfileForm(account=account)
+        form = PortalSenderProfileForm(account=account, single_tenant=single)
     ctx = _portal_ctx(request, "New sender profile", "sender_profiles")
     ctx.update({"form": form, "submit_label": "Create profile", "editing": False})
     return render(request, "ui/customer/sender_profile_form.html", ctx)
@@ -198,8 +206,12 @@ def template_list(request):
 @portal_editor_required
 def template_new(request):
     account = _account(request)
+    tenants = list(Tenant.objects.filter(account=account).order_by("name"))
+    single = tenants[0] if len(tenants) == 1 else None
     if request.method == "POST":
-        form = PortalNewEmailTemplateForm(request.POST, account=account)
+        form = PortalNewEmailTemplateForm(
+            request.POST, account=account, single_tenant=single
+        )
         if form.is_valid():
             d = form.cleaned_data
             try:
@@ -219,7 +231,7 @@ def template_new(request):
                 django_messages.success(request, "Template created. Add a version next.")
                 return redirect("portal:template_detail", template_id=tpl.id)
     else:
-        form = PortalNewEmailTemplateForm(account=account)
+        form = PortalNewEmailTemplateForm(account=account, single_tenant=single)
     ctx = _portal_ctx(request, "New template", "templates")
     ctx.update({"form": form, "submit_label": "Create template"})
     return render(request, "ui/customer/template_new.html", ctx)
@@ -439,10 +451,13 @@ def workflow_list(request):
 @portal_editor_required
 def workflow_new(request):
     account = _account(request)
-    tenants = Tenant.objects.filter(account=account).order_by("name")
+    tenants = list(Tenant.objects.filter(account=account).order_by("name"))
+    single_tenant = tenants[0] if len(tenants) == 1 else None
     if request.method == "POST":
         form = WorkflowCreateForm(request.POST)
         tenant_id = (request.POST.get("tenant") or "").strip()
+        if single_tenant is not None:
+            tenant_id = str(single_tenant.pk)
         tenant = get_object_or_404(Tenant, pk=tenant_id, account=account)
         if form.is_valid():
             d = form.cleaned_data
@@ -467,7 +482,14 @@ def workflow_new(request):
     else:
         form = WorkflowCreateForm()
     ctx = _portal_ctx(request, "New workflow", "workflows")
-    ctx.update({"form": form, "tenants": tenants})
+    ctx.update(
+        {
+            "form": form,
+            "tenants": tenants,
+            "single_email_app": single_tenant is not None,
+            "single_tenant": single_tenant,
+        }
+    )
     return render(request, "ui/customer/workflow_new.html", ctx)
 
 

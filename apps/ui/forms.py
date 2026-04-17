@@ -106,11 +106,16 @@ class TenantForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["webhook_secret"].required = False
-        self.fields["default_sender_email"].required = False
-        self.fields["reply_to"].required = False
-        self.fields["sending_domain"].required = False
-        self.fields["timezone"].initial = self.fields["timezone"].initial or "UTC"
+        if "webhook_secret" in self.fields:
+            self.fields["webhook_secret"].required = False
+        if "default_sender_email" in self.fields:
+            self.fields["default_sender_email"].required = False
+        if "reply_to" in self.fields:
+            self.fields["reply_to"].required = False
+        if "sending_domain" in self.fields:
+            self.fields["sending_domain"].required = False
+        if "timezone" in self.fields:
+            self.fields["timezone"].initial = self.fields["timezone"].initial or "UTC"
 
     def clean_slug(self):
         slug = (self.cleaned_data.get("slug") or "").strip()

@@ -73,11 +73,11 @@
       <a href="{% url 'portal:api_keys' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">API keys</a>
       <a href="{% url 'portal:workflow_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Workflows</a>
       <a href="{% url 'portal:messages_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Messages</a>
-      <a href="{% url 'portal:tenant_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Tenants</a>
+      <a href="{% url 'portal:tenant_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Email apps</a>
     </div>
-    {% if tenant_count == 0 and portal_can_manage %}
-      <p class="mt-4 text-sm text-slate-400">Create your first app (tenant) to get API keys and send mail.</p>
-      <a href="{% url 'portal:tenant_new' %}" class="mt-2 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Create first tenant</a>
+    {% if portal_tenant_count == 0 and portal_can_manage %}
+      <p class="mt-4 text-sm text-slate-400">Create an email app to get API keys and send mail.</p>
+      <a href="{% url 'portal:tenant_new' %}" class="mt-2 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Create email app</a>
     {% endif %}
   </div>
 
@@ -114,7 +114,7 @@
     </div>
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
       <h2 class="text-sm font-semibold text-white">Webhook activity</h2>
-      <p class="mt-3 text-sm text-slate-500">Provider webhooks are visible in the operator console. Delivery status for your tenants appears in Recent messages below.</p>
+      <p class="mt-3 text-sm text-slate-500">Provider webhooks are visible in the operator console. Delivery status for your apps appears in Recent messages below.</p>
       {% if user.is_staff %}
         <a href="{% url 'ui:webhooks_list' %}" class="mt-3 inline-block text-sm text-blue-400">View all (operator) →</a>
       {% endif %}
@@ -130,7 +130,7 @@
         <thead class="bg-surface-800 text-xs uppercase text-slate-500">
           <tr>
             <th class="px-4 py-2">Time</th>
-            <th class="px-4 py-2">Tenant</th>
+            <th class="px-4 py-2">App</th>
             <th class="px-4 py-2">To</th>
             <th class="px-4 py-2">Status</th>
           </tr>

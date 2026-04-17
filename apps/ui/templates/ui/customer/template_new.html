@@ -6,11 +6,15 @@
   <form method="post" class="mt-6 space-y-4">
     {% csrf_token %}
     {% for field in form %}
+      {% if field.is_hidden %}
+        {{ field }}
+      {% else %}
       <div>
-        <label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>
+        <label class="mb-1 block text-xs text-slate-500" for="{{ field.id_for_label }}">{{ field.label }}</label>
         {{ field }}
         {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
       </div>
+      {% endif %}
     {% endfor %}
     <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">{{ submit_label }}</button>
     <a href="{% url 'portal:template_list' %}" class="ml-2 text-sm text-slate-400 hover:text-white">Cancel</a>

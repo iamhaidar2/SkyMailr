@@ -9,7 +9,7 @@
   </div>
   <form method="get" class="flex flex-wrap items-end gap-3 text-sm">
     <div>
-      <label class="mb-1 block text-xs text-slate-500" for="tt">Tenant</label>
+      <label class="mb-1 block text-xs text-slate-500" for="tt">Email app</label>
       <select id="tt" name="tenant" class="rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-white" onchange="this.form.submit()">
         <option value="">All</option>
         {% for t in tenants %}
@@ -34,7 +34,7 @@
     <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
       <table class="min-w-full text-left text-sm">
         <thead class="bg-surface-800 text-xs uppercase text-slate-500">
-          <tr><th class="px-4 py-2">Key</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Tenant</th><th class="px-4 py-2">Status</th></tr>
+          <tr><th class="px-4 py-2">Key</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">App</th><th class="px-4 py-2">Status</th></tr>
         </thead>
         <tbody class="divide-y divide-surface-700">
           {% for t in templates %}

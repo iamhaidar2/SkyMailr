@@ -9,9 +9,9 @@
   </div>
   <form method="get" class="flex flex-wrap items-end gap-3 text-sm">
     <div>
-      <label class="mb-1 block text-xs text-slate-500" for="tenant-filter">Filter by tenant</label>
+      <label class="mb-1 block text-xs text-slate-500" for="tenant-filter">Filter by app</label>
       <select id="tenant-filter" name="tenant" class="w-full min-w-[12rem] rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-white" onchange="this.form.submit()">
-        <option value="">All tenants</option>
+        <option value="">All apps</option>
         {% for t in tenants %}
           <option value="{{ t.id }}" {% if filter_tenant_id == t.id|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>
         {% endfor %}
@@ -31,7 +31,7 @@
         <thead class="bg-surface-800 text-xs uppercase text-slate-500">
           <tr>
             <th class="px-4 py-2">Name</th>
-            <th class="px-4 py-2">Tenant</th>
+            <th class="px-4 py-2">App</th>
             <th class="px-4 py-2">From</th>
             <th class="px-4 py-2">Status</th>
           </tr>
