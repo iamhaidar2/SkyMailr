@@ -73,11 +73,15 @@
       <a href="{% url 'portal:api_keys' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">API keys</a>
       <a href="{% url 'portal:workflow_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Workflows</a>
       <a href="{% url 'portal:messages_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Messages</a>
-      <a href="{% url 'portal:tenant_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Email apps</a>
+      <a href="{% url 'portal:tenant_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Connected apps</a>
     </div>
     {% if portal_tenant_count == 0 and portal_can_manage %}
-      <p class="mt-4 text-sm text-slate-400">Create an email app to get API keys and send mail.</p>
-      <a href="{% url 'portal:tenant_new' %}" class="mt-2 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Create email app</a>
+      <p class="mt-4 text-sm text-slate-400">Create a connected app to get API keys and send mail.</p>
+      <a href="{% url 'portal:tenant_new' %}" class="mt-2 inline-block rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Create connected app</a>
+    {% endif %}
+    {% if portal_can_manage and portal_effective_limits and portal_usage and portal_usage.tenant_count >= portal_effective_limits.max_tenants %}
+      <p class="mt-4 text-sm text-slate-400">Connected app limit reached for your plan.
+        <a href="{% url 'portal:account_billing' %}" class="text-blue-400 hover:underline">Upgrade</a> to add more.</p>
     {% endif %}
   </div>
 
@@ -130,7 +134,7 @@
         <thead class="bg-surface-800 text-xs uppercase text-slate-500">
           <tr>
             <th class="px-4 py-2">Time</th>
-            <th class="px-4 py-2">App</th>
+            <th class="px-4 py-2">Connected app</th>
             <th class="px-4 py-2">To</th>
             <th class="px-4 py-2">Status</th>
           </tr>

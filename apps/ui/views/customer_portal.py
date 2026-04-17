@@ -65,16 +65,13 @@ SESSION_PORTAL_NEW_API_KEY = "_portal_new_api_key_once"
 logger = logging.getLogger("apps.accounts.audit")
 
 
-def portal_nav_items(*, tenant_count: int, first_tenant_id: str | None) -> list[dict[str, str]]:
+def portal_nav_items() -> list[dict[str, str]]:
     """Sidebar nav for customer portal (label, url, name matches portal_nav_active)."""
-    if tenant_count == 1 and first_tenant_id:
-        tenant_link = {
-            "label": "Email app",
-            "url": reverse("portal:tenant_detail", kwargs={"tenant_id": first_tenant_id}),
-            "name": "tenants",
-        }
-    else:
-        tenant_link = {"label": "Email apps", "url": reverse("portal:tenant_list"), "name": "tenants"}
+    tenant_link = {
+        "label": "Connected apps",
+        "url": reverse("portal:tenant_list"),
+        "name": "tenants",
+    }
     return [
         {"label": "Dashboard", "url": reverse("portal:dashboard"), "name": "dashboard"},
         {"label": "Usage", "url": reverse("portal:account_usage"), "name": "usage"},
@@ -102,13 +99,9 @@ def _portal_ctx(request, page_title: str, nav_active: str):
     usage = usage_snapshot(account) if account else None
     account_unhealthy = bool(account and account.status != AccountStatus.ACTIVE)
     tenant_count = 0
-    first_tenant_id: str | None = None
     if account:
         ensure_default_tenant_for_account(account)
-        tqs = Tenant.objects.filter(account=account).order_by("created_at")
-        tenant_count = tqs.count()
-        ft = tqs.first()
-        first_tenant_id = str(ft.pk) if ft else None
+        tenant_count = Tenant.objects.filter(account=account).count()
     usage_alerts: list[str] = []
     if account and effective_limits and usage and account.status == AccountStatus.ACTIVE:
         def _warn(label: str, current: int, limit: int) -> None:
@@ -120,7 +113,7 @@ def _portal_ctx(request, page_title: str, nav_active: str):
                 usage_alerts.append(f"{label} is approaching your plan limit ({current}/{limit}).")
 
         _warn("Monthly sends", usage.monthly_send_count, effective_limits.max_monthly_sends)
-        _warn("Tenants", usage.tenant_count, effective_limits.max_tenants)
+        _warn("Connected apps", usage.tenant_count, effective_limits.max_tenants)
         _warn("API keys", usage.active_api_key_count, effective_limits.max_active_api_keys)
         _warn("Templates", usage.template_count, effective_limits.max_templates)
         _warn("Workflows", usage.workflow_count, effective_limits.max_workflows)
@@ -141,11 +134,8 @@ def _portal_ctx(request, page_title: str, nav_active: str):
         "portal_usage": usage,
         "portal_account_unhealthy": account_unhealthy,
         "portal_usage_alerts": usage_alerts,
-        "portal_nav_items": portal_nav_items(
-            tenant_count=tenant_count, first_tenant_id=first_tenant_id
-        ),
+        "portal_nav_items": portal_nav_items(),
         "portal_tenant_count": tenant_count,
-        "portal_first_tenant_id": first_tenant_id,
     }
 
 
@@ -287,7 +277,7 @@ def tenant_list(request):
     account = get_active_portal_account(request)
     assert account is not None
     tenants = Tenant.objects.filter(account=account).order_by("name")
-    ctx = _portal_ctx(request, "Apps & tenants", "tenants")
+    ctx = _portal_ctx(request, "Connected apps", "tenants")
     ctx.update({"tenants": tenants})
     return render(request, "ui/customer/tenant_list.html", ctx)
 
@@ -297,6 +287,12 @@ def tenant_list(request):
 def tenant_new(request):
     account = get_active_portal_account(request)
     assert account is not None
+    if request.method == "GET":
+        try:
+            assert_can_create_tenant(account)
+        except PolicyError as e:
+            django_messages.error(request, e.detail)
+            return redirect("portal:tenant_list")
     if request.method == "POST":
         form = PortalTenantCreateForm(request.POST)
         if form.is_valid():
@@ -312,8 +308,8 @@ def tenant_new(request):
                 return redirect("portal:tenant_detail", tenant_id=tenant.id)
     else:
         form = PortalTenantCreateForm()
-    ctx = _portal_ctx(request, "New email app", "tenants")
-    ctx.update({"form": form, "submit_label": "Create email app"})
+    ctx = _portal_ctx(request, "New connected app", "tenants")
+    ctx.update({"form": form, "submit_label": "Create connected app"})
     return render(request, "ui/customer/tenant_form.html", ctx)
 
 
@@ -331,12 +327,12 @@ def tenant_detail(request, tenant_id):
     settings_form = PortalTenantSettingsForm(instance=tenant)
     if request.method == "POST" and request.POST.get("save_app_settings"):
         if not can_manage:
-            django_messages.error(request, "You do not have permission to change app settings.")
+            django_messages.error(request, "You do not have permission to change connected app settings.")
             return redirect("portal:tenant_detail", tenant_id=tenant.id)
         settings_form = PortalTenantSettingsForm(request.POST, instance=tenant)
         if settings_form.is_valid():
             settings_form.save()
-            django_messages.success(request, "App settings saved.")
+            django_messages.success(request, "Connected app settings saved.")
             return redirect("portal:tenant_detail", tenant_id=tenant.id)
         django_messages.error(request, "Fix the errors below and try again.")
     keys = tenant.api_keys.order_by("-created_at")[:50]

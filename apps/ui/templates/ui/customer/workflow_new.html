@@ -5,7 +5,7 @@
   {% if single_email_app %}
   <p class="mt-1 text-sm text-slate-400">Choose a name and slug for this workflow.</p>
   {% else %}
-  <p class="mt-1 text-sm text-slate-400">Choose the email app, then a name and slug for this workflow.</p>
+  <p class="mt-1 text-sm text-slate-400">Choose the connected app, then a name and slug for this workflow.</p>
   {% endif %}
   <form method="post" class="mt-6 space-y-4">
     {% csrf_token %}
@@ -13,7 +13,7 @@
       <input type="hidden" name="tenant" value="{{ single_tenant.id }}" />
     {% else %}
     <div>
-      <label class="mb-1 block text-xs text-slate-500" for="id_tenant_sel">Email app</label>
+      <label class="mb-1 block text-xs text-slate-500" for="id_tenant_sel">Connected app</label>
       <select name="tenant" id="id_tenant_sel" required class="w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white">
         <option value="">— Select —</option>
         {% for t in tenants %}

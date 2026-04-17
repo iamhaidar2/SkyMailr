@@ -161,7 +161,7 @@ def test_portal_dashboard_loads(client, customer_user, customer_account):
 
 
 @pytest.mark.django_db
-def test_dashboard_creates_default_email_app_if_missing(client, customer_user, customer_account):
+def test_dashboard_creates_default_connected_app_if_missing(client, customer_user, customer_account):
     assert Tenant.objects.filter(account=customer_account).count() == 0
     bind_portal_account_session(client, customer_user, customer_account)
     client.get(reverse("portal:dashboard"))
@@ -183,6 +183,20 @@ def test_customer_creates_tenant(client, customer_user, customer_account):
     assert r.status_code == 302
     t = Tenant.objects.get(slug="app-one")
     assert t.account_id == customer_account.id
+
+
+@pytest.mark.django_db
+def test_new_connected_app_redirects_when_at_plan_limit(client, customer_user, customer_account):
+    Tenant.objects.create(
+        account=customer_account,
+        name="Existing",
+        slug="existing-app",
+        status=TenantStatus.ACTIVE,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.get(reverse("portal:tenant_new"))
+    assert r.status_code == 302
+    assert r.url == reverse("portal:tenant_list")
 
 
 @pytest.mark.django_db

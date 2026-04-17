@@ -1,4 +1,4 @@
-"""Ensure every account has a primary email app (tenant) without extra user steps."""
+"""Ensure every account has a primary connected app (tenant) without extra user steps."""
 
 from __future__ import annotations
 

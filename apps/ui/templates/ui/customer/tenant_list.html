@@ -2,11 +2,17 @@
 {% block content %}
 <div class="mx-auto max-w-4xl space-y-6">
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <h2 class="text-2xl font-semibold text-white">Email apps</h2>
-    {% if portal_can_manage %}
-      <a href="{% url 'portal:tenant_new' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">New tenant</a>
+    <h2 class="text-2xl font-semibold text-white">Connected apps</h2>
+    {% if portal_can_manage and portal_effective_limits and portal_usage and portal_usage.tenant_count < portal_effective_limits.max_tenants %}
+      <a href="{% url 'portal:tenant_new' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Add connected app</a>
     {% endif %}
   </div>
+  {% if portal_can_manage and portal_effective_limits and portal_usage and portal_usage.tenant_count >= portal_effective_limits.max_tenants %}
+    <div class="rounded-lg border border-amber-800/80 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      You’ve reached your plan limit of {{ portal_effective_limits.max_tenants }} connected app{% if portal_effective_limits.max_tenants != 1 %}s{% endif %}.
+      <a href="{% url 'portal:account_billing' %}" class="font-medium text-blue-400 hover:underline">Upgrade your plan</a> to add more.
+    </div>
+  {% endif %}
   <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
     <table class="min-w-full text-left text-sm">
       <thead class="bg-surface-800 text-xs uppercase text-slate-500">
@@ -20,7 +26,7 @@
             <td class="px-4 py-2">{{ t.get_status_display }}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="3" class="px-4 py-6 text-center text-slate-500">No email apps yet.{% if portal_can_manage %} Create one to get started.{% endif %}</td></tr>
+          <tr><td colspan="3" class="px-4 py-6 text-center text-slate-500">No connected apps yet.{% if portal_can_manage %} Create one to get started.{% endif %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

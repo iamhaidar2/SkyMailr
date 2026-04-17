@@ -55,7 +55,7 @@ class PortalSenderProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self._account = account
         self.fields["tenant"].queryset = Tenant.objects.filter(account=account).order_by("name")
-        self.fields["tenant"].label = "Email app"
+        self.fields["tenant"].label = "Connected app"
         self.fields["reply_to"].required = False
         if single_tenant is not None and self.instance._state.adding:
             self.fields["tenant"].initial = single_tenant.pk
@@ -64,7 +64,7 @@ class PortalSenderProfileForm(forms.ModelForm):
         # UUID pk is assigned on model __init__; only lock tenant after the row exists in the DB.
         if not self.instance._state.adding:
             self.fields["tenant"].disabled = True
-            self.fields["tenant"].help_text = "Email app cannot be changed after creation."
+            self.fields["tenant"].help_text = "Connected app cannot be changed after creation."
 
     def clean(self):
         # Validates tenant account + from_email vs tenant.sending_domain when set.
@@ -87,7 +87,7 @@ class PortalSenderProfileForm(forms.ModelForm):
 class PortalNewEmailTemplateForm(forms.Form):
     tenant = forms.ModelChoiceField(
         queryset=Tenant.objects.none(),
-        label="Email app",
+        label="Connected app",
         widget=forms.Select(attrs={"class": _inp}),
     )
     key = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))

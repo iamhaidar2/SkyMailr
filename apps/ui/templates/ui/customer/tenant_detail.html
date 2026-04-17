@@ -6,12 +6,12 @@
       <h2 class="text-2xl font-semibold text-white">{{ tenant.name }}</h2>
       <p class="font-mono text-sm text-slate-400">{{ tenant.slug }}</p>
     </div>
-    <a href="{% url 'portal:tenant_list' %}" class="text-sm text-slate-400 hover:text-white">← All email apps</a>
+    <a href="{% url 'portal:tenant_list' %}" class="text-sm text-slate-400 hover:text-white">← All connected apps</a>
   </div>
 
   {% if tenant_suspended %}
     <div class="rounded-lg border border-red-800 bg-red-950/50 px-4 py-3 text-sm text-red-200">
-      This email app is suspended. Sending and changes that affect it are blocked until support reactivates it.
+      This connected app is suspended. Sending and changes that affect it are blocked until support reactivates it.
     </div>
   {% endif %}
 
@@ -51,7 +51,7 @@
 
   {% if can_manage %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">App settings</h3>
+    <h3 class="text-sm font-semibold text-white">Connected app settings</h3>
     <p class="mt-1 text-xs text-slate-500">Defaults, sending domain, timezone, rate limits, and webhook secret.</p>
     <form method="post" class="mt-4 space-y-4 text-sm">
       {% csrf_token %}
@@ -77,7 +77,7 @@
       <div><span class="text-slate-500">Reply-to:</span> {{ tenant.reply_to|default:"—" }}</div>
       <div><span class="text-slate-500">Sending domain:</span> {{ tenant.sending_domain|default:"—" }}</div>
       {% if not tenant.sending_domain %}
-        <p class="text-amber-200/90">No sending domain is set. An owner or admin can set one under app settings.</p>
+        <p class="text-amber-200/90">No sending domain is set. An owner or admin can set one under connected app settings.</p>
       {% endif %}
       <div><span class="text-slate-500">Timezone:</span> {{ tenant.timezone }}</div>
       <div><span class="text-slate-500">Rate limit/min:</span> {{ tenant.rate_limit_per_minute }}</div>

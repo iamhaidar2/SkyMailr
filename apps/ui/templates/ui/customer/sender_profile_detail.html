@@ -21,7 +21,7 @@
   </div>
   {% if sending_domain_missing %}
     <div class="rounded-lg border border-amber-800 bg-amber-950/30 px-4 py-3 text-sm text-amber-100">
-      This tenant has no <strong>sending domain</strong> field set. Configure <a href="{% url 'portal:tenant_detail' profile.tenant.id %}" class="text-amber-200 underline">tenant settings</a> and add a <a href="{% url 'portal:tenant_domain_list' profile.tenant.id %}" class="text-amber-200 underline">verified sending domain</a>.
+      This connected app has no <strong>sending domain</strong> field set. Configure <a href="{% url 'portal:tenant_detail' profile.tenant.id %}" class="text-amber-200 underline">connected app settings</a> and add a <a href="{% url 'portal:tenant_domain_list' profile.tenant.id %}" class="text-amber-200 underline">verified sending domain</a>.
     </div>
   {% endif %}
   {% if not has_verified_domain %}
@@ -36,7 +36,7 @@
   {% endif %}
   {% if domain_mismatch_tenant_sending_domain %}
     <div class="rounded-lg border border-amber-900 bg-amber-950/20 px-4 py-3 text-sm text-amber-100">
-      The From email domain does not match the tenant <strong>sending domain</strong> field ({{ profile.tenant.sending_domain }}). Align them or update the tenant default.
+      The From email domain does not match the connected app <strong>sending domain</strong> field ({{ profile.tenant.sending_domain }}). Align them or update the default under connected app settings.
     </div>
   {% endif %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-300">

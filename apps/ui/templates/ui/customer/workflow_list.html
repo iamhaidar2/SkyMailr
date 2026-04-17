@@ -9,7 +9,7 @@
   </div>
   <form method="get" class="flex flex-wrap items-end gap-3 text-sm">
     <div>
-      <label class="mb-1 block text-xs text-slate-500" for="wf-tenant">Email app</label>
+      <label class="mb-1 block text-xs text-slate-500" for="wf-tenant">Connected app</label>
       <select id="wf-tenant" name="tenant" class="rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-white" onchange="this.form.submit()">
         <option value="">All</option>
         {% for t in tenants %}
@@ -32,7 +32,7 @@
           <tr>
             <th class="px-4 py-2">Name</th>
             <th class="px-4 py-2">Slug</th>
-            <th class="px-4 py-2">App</th>
+            <th class="px-4 py-2">Connected app</th>
             <th class="px-4 py-2">Steps</th>
             <th class="px-4 py-2">Enrollments</th>
           </tr>

@@ -8,7 +8,7 @@
       <p class="mk-plan-price-line">$0</p>
       <p class="mk-plan-note">For evaluation and light use</p>
       <ul class="mt-6 flex-1 space-y-2 text-sm text-[var(--mk-text-muted)]">
-        <li>Up to {{ plans.free.max_tenants }} tenants</li>
+        <li>Up to {{ plans.free.max_tenants }} connected app{% if plans.free.max_tenants != 1 %}s{% endif %}</li>
         <li>{{ plans.free.max_monthly_sends|intcomma }} sends / mo</li>
         <li>{{ plans.free.max_templates }} templates · {{ plans.free.max_workflows }} workflows</li>
         <li>{{ plans.free.max_active_api_keys }} API keys · {{ plans.free.max_members }} members</li>
@@ -21,7 +21,7 @@
       <p class="mk-plan-price-line">Custom</p>
       <p class="mk-plan-note">Talk to us when you outgrow Free</p>
       <ul class="mt-6 flex-1 space-y-2 text-sm text-[var(--mk-text-muted)]">
-        <li>Up to {{ plans.starter.max_tenants }} tenants</li>
+        <li>Up to {{ plans.starter.max_tenants }} connected apps</li>
         <li>{{ plans.starter.max_monthly_sends|intcomma }} sends / mo</li>
         <li>{{ plans.starter.max_templates }} templates · {{ plans.starter.max_workflows }} workflows</li>
         <li>{{ plans.starter.max_active_api_keys }} API keys · {{ plans.starter.max_members }} members</li>
@@ -33,7 +33,7 @@
       <p class="mk-plan-price-line">Custom</p>
       <p class="mk-plan-note">Higher limits and rollout support</p>
       <ul class="mt-6 flex-1 space-y-2 text-sm text-[var(--mk-text-muted)]">
-        <li>Up to {{ plans.growth.max_tenants }} tenants</li>
+        <li>Up to {{ plans.growth.max_tenants }} connected apps</li>
         <li>{{ plans.growth.max_monthly_sends|intcomma }} sends / mo</li>
         <li>{{ plans.growth.max_templates }} templates · {{ plans.growth.max_workflows }} workflows</li>
         <li>{{ plans.growth.max_active_api_keys }} API keys · {{ plans.growth.max_members }} members</li>

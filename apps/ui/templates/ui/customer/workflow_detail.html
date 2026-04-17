@@ -11,7 +11,7 @@
   </div>
 
   {% if tenant_template_keys %}
-  <p class="text-xs text-slate-500">Template keys on this tenant: <span class="font-mono text-slate-400">{{ tenant_template_keys|join:", " }}</span></p>
+  <p class="text-xs text-slate-500">Template keys on this connected app: <span class="font-mono text-slate-400">{{ tenant_template_keys|join:", " }}</span></p>
   {% else %}
   <p class="text-sm text-amber-200/90">No email templates for this tenant yet. Create templates before adding SEND_TEMPLATE steps.</p>
   {% endif %}
@@ -40,7 +40,7 @@
   {% if can_edit %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Add step</h3>
-    <p class="mt-1 text-xs text-slate-500">Send template, wait, or end. Template key must exist on this tenant.</p>
+    <p class="mt-1 text-xs text-slate-500">Send template, wait, or end. Template key must exist on this connected app.</p>
     <form method="post" action="{% url 'portal:workflow_add_step' workflow.id %}" class="mt-4 space-y-3">
       {% csrf_token %}
       <div class="grid gap-3 sm:grid-cols-2">

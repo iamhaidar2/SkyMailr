@@ -29,7 +29,7 @@ class PlanLimits:
 
 PLAN_DEFINITIONS: dict[str, PlanLimits] = {
     PLAN_FREE: PlanLimits(
-        max_tenants=2,
+        max_tenants=1,
         max_active_api_keys=3,
         max_monthly_sends=500,
         max_templates=10,

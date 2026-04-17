@@ -93,7 +93,8 @@ def assert_can_create_tenant(account: Account) -> None:
         n,
         limits.max_tenants,
         "tenant_limit",
-        f"Tenant limit reached ({limits.max_tenants}) for your plan.",
+        f"Connected app limit reached ({limits.max_tenants}) for your plan. "
+        "Upgrade your plan to add more connected apps.",
     )
 
 
