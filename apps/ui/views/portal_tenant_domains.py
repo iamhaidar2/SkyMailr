@@ -13,6 +13,7 @@ from apps.accounts.policy import PolicyError
 from apps.accounts.services.enforcement import assert_tenant_operational
 from apps.tenants.models import DomainVerificationStatus, PostalProvisionStatus, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import build_dns_instructions_for_domain
+from apps.providers.postal_provisioning import delete_postal_domain
 from apps.tenants.services.domain_verification import check_tenant_domain_dns
 from apps.tenants.services.postal_tenant_domain import process_postal_for_tenant_domain
 from apps.tenants.services.sending_readiness import compute_sending_readiness
@@ -118,7 +119,10 @@ def tenant_domain_detail(request, tenant_id, domain_id):
     if postal_fields:
         td.save(update_fields=list(dict.fromkeys(postal_fields + ["updated_at"])))
     dns_instruction_set = build_dns_instructions_for_domain(td)
-    dns_rows = dns_instruction_set.rows if dns_instruction_set.is_customer_ready else ()
+    show_dns_table = dns_instruction_set.is_customer_ready or any(
+        r.kind == "postal_verification" for r in dns_instruction_set.rows
+    )
+    dns_rows = dns_instruction_set.rows if show_dns_table else ()
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, td.domain, "tenants")
     ctx.update(
@@ -219,6 +223,7 @@ def tenant_domain_delete(request, tenant_id, domain_id):
     if denied is not None:
         return denied
     dom = td.domain
+    postal_ok, postal_msg, postal_bridge = delete_postal_domain(dom)
     with transaction.atomic():
         tid = tenant.id
         td.delete()
@@ -242,5 +247,10 @@ def tenant_domain_delete(request, tenant_id, domain_id):
         dom,
         request.user.pk,
     )
-    django_messages.success(request, f"Removed {dom}.")
+    if postal_bridge and postal_ok:
+        django_messages.success(request, f"Removed {dom} from SkyMailr and from the mail server.")
+    elif postal_bridge and not postal_ok:
+        django_messages.warning(request, postal_msg or f"Removed {dom} from SkyMailr.")
+    else:
+        django_messages.success(request, f"Removed {dom} from SkyMailr.")
     return redirect("portal:tenant_domain_list", tenant_id=tenant.id)

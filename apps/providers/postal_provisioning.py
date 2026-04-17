@@ -147,6 +147,7 @@ def _try_provisioning_webhook(domain: str, r: ProvisionResult) -> bool:
             "return_path_cname_name",
             "return_path_cname_target",
             "dmarc_txt_expected",
+            "postal_verification_txt_expected",
         ):
             if dns.get(k):
                 r.dns_patch[str(k)] = dns[k]
@@ -249,6 +250,95 @@ def ensure_postal_domain_exists(domain_fqdn: str) -> ProvisionResult:
     return r
 
 
+def delete_postal_domain(domain_fqdn: str) -> tuple[bool, str | None, bool]:
+    """
+    Best-effort: remove the sending domain from Postal via the provisioning bridge
+    (POST /delete on POSTAL_PROVISIONING_URL base).
+
+    Returns (ok, optional_warning_message, bridge_configured).
+
+    If no bridge URL is set: (True, None, False).
+
+    If the bridge is configured and Postal confirms deletion or domain was absent:
+    (True, None, True).
+
+    If the bridge is configured but the delete call fails: (False, warning_message, True).
+    """
+    base = (getattr(settings, "POSTAL_PROVISIONING_URL", None) or "").strip()
+    if not base:
+        return True, None, False
+
+    d = _norm_domain(domain_fqdn)
+    if not d:
+        return True, None, False
+
+    secret = (getattr(settings, "POSTAL_PROVISIONING_SECRET", None) or "").strip()
+    _, _key, timeout, verify = _base_http()
+    t = min(timeout, 30.0)
+    url = urljoin(base.rstrip("/") + "/", "delete")
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if secret:
+        headers["Authorization"] = f"Bearer {secret}"
+        headers["X-Provisioning-Secret"] = secret
+
+    try:
+        resp = httpx.post(
+            url,
+            json={"domain": d},
+            headers=headers,
+            timeout=t,
+            verify=verify,
+        )
+    except Exception as exc:
+        logger.warning("postal delete transport error for %s: %s", d, exc)
+        return (
+            False,
+            "Removed from SkyMailr. The mail server could not be updated automatically — remove the domain in Postal if it is still listed.",
+            True,
+        )
+
+    try:
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    except Exception:
+        data = {}
+
+    if resp.status_code == 404:
+        logger.info("postal delete endpoint not found (bridge too old?): %s", url)
+        return (
+            False,
+            "Removed from SkyMailr. Update the provisioning bridge to remove domains from the mail server automatically, or delete the domain in Postal manually.",
+            True,
+        )
+
+    if resp.status_code >= 400:
+        detail = (data.get("error_detail") if isinstance(data, dict) else None) or resp.text[:500]
+        logger.warning("postal delete http=%s detail=%s", resp.status_code, detail)
+        return (
+            False,
+            "Removed from SkyMailr. The mail server did not confirm removal — delete the domain in Postal if it is still listed.",
+            True,
+        )
+
+    if not isinstance(data, dict):
+        return (
+            False,
+            "Removed from SkyMailr. The mail server did not confirm removal — delete the domain in Postal if it is still listed.",
+            True,
+        )
+
+    if not data.get("ok", True):
+        logger.warning("postal delete rejected: %s", data)
+        return (
+            False,
+            "Removed from SkyMailr. The mail server did not confirm removal — delete the domain in Postal if it is still listed.",
+            True,
+        )
+
+    oc = (data.get("outcome") or "").strip().lower()
+    logger.info("postal delete success domain=%s outcome=%s", d, oc)
+    return True, None, True
+
+
 def apply_dns_patch_to_tenant_domain(td: Any, patch: dict[str, Any]) -> bool:
     """Apply non-empty keys from patch onto TenantDomain. Returns True if any field changed."""
     from django.utils import timezone
@@ -263,6 +353,7 @@ def apply_dns_patch_to_tenant_domain(td: Any, patch: dict[str, Any]) -> bool:
         "return_path_cname_name",
         "return_path_cname_target",
         "dmarc_txt_expected",
+        "postal_verification_txt_expected",
     ):
         if k in patch and patch[k]:
             setattr(td, k, patch[k])

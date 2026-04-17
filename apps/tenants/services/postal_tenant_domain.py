@@ -27,6 +27,7 @@ _DNS_FIELDS = (
     "return_path_cname_name",
     "return_path_cname_target",
     "dmarc_txt_expected",
+    "postal_verification_txt_expected",
     "dns_source",
     "dns_last_synced_at",
 )

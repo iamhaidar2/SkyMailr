@@ -27,6 +27,36 @@ def test_host_label_apex_and_subdomain():
 
 
 @pytest.mark.django_db
+def test_postal_verification_row_prepended_at_apex():
+    td = TenantDomain(
+        domain="tx.kanassist.com",
+        postal_verification_txt_expected="postal-verification tok123",
+        spf_txt_expected="v=spf1 include:spf.example ~all",
+        dkim_txt_value="v=DKIM1; p=KEY",
+        dkim_selector="postal",
+    )
+    inst = build_dns_instructions_for_domain(td)
+    assert inst.is_customer_ready is True
+    assert inst.rows[0].kind == "postal_verification"
+    assert inst.rows[0].record_type == "TXT"
+    assert inst.rows[0].name == "tx.kanassist.com"
+    assert inst.rows[0].value == "postal-verification tok123"
+    spf_row = next(r for r in inst.rows if r.kind == "spf")
+    assert spf_row.name == "tx.kanassist.com"
+
+
+@pytest.mark.django_db
+def test_postal_verification_does_not_gate_customer_ready():
+    td = TenantDomain(
+        domain="early.example",
+        postal_verification_txt_expected="postal-verification x",
+    )
+    inst = build_dns_instructions_for_domain(td)
+    assert inst.is_customer_ready is False
+    assert inst.rows[0].kind == "postal_verification"
+
+
+@pytest.mark.django_db
 def test_is_customer_ready_requires_dkim_key_material():
     td = TenantDomain(domain="a.com")
     td.spf_txt_expected = "v=spf1 include:x ~all"
@@ -85,6 +115,35 @@ def test_verification_notes_plain_language_no_env_names():
 
     check_tenant_domain_dns(td, resolve_txt=fake_resolve)
     assert "SKYMAILR" not in (td.verification_notes or "").upper()
+
+
+@pytest.mark.django_db
+def test_check_dns_appends_postal_verification_note_when_expected():
+    acc = Account.objects.create(name="N2", slug="n2", status=AccountStatus.ACTIVE)
+    tenant = Tenant.objects.create(account=acc, name="T2", slug="t2", status=TenantStatus.ACTIVE)
+    td = TenantDomain.objects.create(
+        tenant=tenant,
+        domain="pv.example",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+        postal_verification_txt_expected="postal-verification ABC",
+        spf_txt_expected="v=spf1 include:z ~all",
+        dkim_txt_value="v=DKIM1; p=AAA",
+        dkim_selector="postal",
+    )
+
+    def fake_resolve(qname: str) -> list[str]:
+        q = qname.lower().rstrip(".")
+        if q == "pv.example":
+            return ["postal-verification ABC", "v=spf1 include:z ~all"]
+        if q == "postal._domainkey.pv.example":
+            return ["v=DKIM1; p=AAA"]
+        if q == "_dmarc.pv.example":
+            return ["v=DMARC1; p=none"]
+        return []
+
+    check_tenant_domain_dns(td, resolve_txt=fake_resolve)
+    assert "Mail server domain verification" in (td.verification_notes or "")
+    assert "detected in DNS" in (td.verification_notes or "")
 
 
 @pytest.mark.django_db

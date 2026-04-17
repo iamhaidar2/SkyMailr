@@ -135,6 +135,11 @@ class TenantDomain(models.Model):
         null=True,
         help_text="Full DMARC TXT for _dmarc.<domain>.",
     )
+    postal_verification_txt_expected = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Full Postal domain-control TXT (e.g. postal-verification <token>) at the domain apex, when required.",
+    )
     dns_source = models.CharField(
         max_length=32,
         choices=DnsMetadataSource.choices,

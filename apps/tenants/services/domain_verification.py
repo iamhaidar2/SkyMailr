@@ -64,6 +64,33 @@ def _spf_matches_expectation(live_joined: str, expected: str) -> bool:
     return False
 
 
+def _append_postal_verification_dns_note(
+    td: TenantDomain,
+    *,
+    apex_fqdn: str,
+    resolver: ResolveTxtFn,
+) -> None:
+    """When Postal expects a domain-control TXT at the apex, note whether DNS shows it."""
+    pv = (td.postal_verification_txt_expected or "").strip()
+    if not pv:
+        return
+    apex_txts = resolver(apex_fqdn)
+    joined = " ".join(apex_txts)
+    compact_live = joined.replace(" ", "").lower()
+    compact_exp = pv.replace(" ", "").lower()
+    ok = compact_exp in compact_live or pv in joined
+    extra = (
+        "Mail server domain verification (TXT at your domain name): detected in DNS."
+        if ok
+        else (
+            "Mail server domain verification (TXT at your domain name): not detected yet — "
+            "add the verification TXT value from the DNS table at the same host as SPF (@ or apex)."
+        )
+    )
+    base = (td.verification_notes or "").strip()
+    td.verification_notes = f"{base} {extra}".strip() if base else extra
+
+
 def _dmarc_matches(live_joined: str, expected: str) -> bool:
     lj = live_joined.lower()
     if "v=dmarc1" not in lj:
@@ -178,6 +205,7 @@ def check_tenant_domain_dns(
             "We could not confirm SPF or DKIM yet. If you already published records, DNS may still be updating."
         )
 
+    _append_postal_verification_dns_note(td, apex_fqdn=d, resolver=resolver)
     td.last_checked_at = timezone.now()
     return td
 

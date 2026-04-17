@@ -68,10 +68,20 @@
           {{ dns_instruction_set.incomplete_message }}
         {% endif %}
       </p>
-    {% else %}
+    {% endif %}
+    {% if dns_rows %}
       <p class="mt-2 text-xs text-slate-500">
-        Copy each value carefully. SPF authorizes sending; DKIM signs messages; DMARC sets policy; return-path (if listed) helps bounces align with your provider.
+        {% if dns_instruction_set.is_customer_ready %}
+          Copy each value carefully. SPF authorizes sending; DKIM signs messages; DMARC sets policy; return-path (if listed) helps bounces align with your provider.
+        {% else %}
+          Add each record below at your DNS host. You can publish multiple TXT records at the same hostname (for example, both mail-server verification and SPF at <span class="font-mono text-slate-400">@</span>).
+        {% endif %}
       </p>
+      {% if td.postal_verification_txt_expected %}
+        <p class="mt-2 text-xs text-slate-400">
+          If your DNS panel only has one TXT field for this host, use “add another TXT” (or equivalent) so verification and SPF are separate TXT records.
+        </p>
+      {% endif %}
       <div class="mt-3 flex items-center gap-2 text-xs text-slate-400">
         <label class="inline-flex cursor-pointer items-center gap-2">
           <input type="checkbox" id="dns-host-toggle" class="rounded border-surface-500 bg-surface-800" />
@@ -136,7 +146,7 @@
           <button type="submit" class="rounded-md border border-surface-500 px-4 py-2 text-sm text-white hover:bg-surface-800">Make primary</button>
         </form>
       {% endif %}
-      <form method="post" action="{% url 'portal:tenant_domain_delete' tenant.id td.id %}" onsubmit="return confirm('Remove this domain from SkyMailr? DNS at your host is unchanged.');">
+      <form method="post" action="{% url 'portal:tenant_domain_delete' tenant.id td.id %}" onsubmit="return confirm('Remove this domain from SkyMailr? If you use our mail-server bridge, we will also remove it there. DNS at your DNS host is unchanged.');">
         {% csrf_token %}
         <button type="submit" class="rounded-md border border-red-900/50 px-4 py-2 text-sm text-red-300 hover:bg-red-950/40">Remove domain</button>
       </form>

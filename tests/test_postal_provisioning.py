@@ -9,10 +9,43 @@ from django.test.utils import override_settings
 from django.urls import reverse
 
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
-from apps.providers.postal_provisioning import ProvisionOutcome, ProvisionResult, ensure_postal_domain_exists
+from apps.providers.postal_provisioning import (
+    ProvisionOutcome,
+    ProvisionResult,
+    delete_postal_domain,
+    ensure_postal_domain_exists,
+)
 from apps.tenants.models import DomainVerificationStatus, PostalProvisionStatus, Tenant, TenantDomain, TenantStatus
 from apps.tenants.services.postal_tenant_domain import process_postal_for_tenant_domain
 from tests.portal_helpers import bind_portal_account_session
+
+
+@pytest.mark.django_db
+def test_delete_postal_domain_skips_when_no_bridge():
+    with override_settings(POSTAL_PROVISIONING_URL=""):
+        ok, msg, bridge = delete_postal_domain("x.example.com")
+    assert ok is True and msg is None and bridge is False
+
+
+@pytest.mark.django_db
+def test_delete_postal_domain_success_via_bridge():
+    with patch("apps.providers.postal_provisioning.httpx.post") as post:
+        post.return_value = MagicMock(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            json=lambda: {"ok": True, "outcome": "deleted"},
+        )
+        with override_settings(
+            POSTAL_BASE_URL="https://postal.test",
+            POSTAL_SERVER_API_KEY="k",
+            POSTAL_PROVISIONING_URL="https://bridge.test/",
+            POSTAL_PROVISIONING_SECRET="secret",
+        ):
+            ok, msg, bridge = delete_postal_domain("gone.example.com")
+    post.assert_called_once()
+    call_kw = post.call_args
+    assert "/delete" in (call_kw[0][0] if call_kw[0] else "")
+    assert ok is True and msg is None and bridge is True
 
 
 @pytest.mark.django_db

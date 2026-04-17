@@ -1,5 +1,7 @@
 """Customer portal: tenant sending domains, DNS verification, primary domain, account isolation."""
 
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.test.utils import override_settings
@@ -94,6 +96,25 @@ def other_account_tenant(db):
         status=TenantStatus.ACTIVE,
         default_sender_email="a@b.com",
     )
+
+
+@pytest.mark.django_db
+@patch("apps.ui.views.portal_tenant_domains.delete_postal_domain", return_value=(True, None, True))
+def test_remove_domain_calls_postal_delete(mock_delete, client, customer_user, customer_account, portal_tenant):
+    td = TenantDomain.objects.create(
+        tenant=portal_tenant,
+        domain="remove.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+        is_primary=True,
+    )
+    portal_tenant.sending_domain = td.domain
+    portal_tenant.save()
+    bind_portal_account_session(client, customer_user, customer_account)
+    url = reverse("portal:tenant_domain_delete", kwargs={"tenant_id": portal_tenant.id, "domain_id": td.id})
+    r = client.post(url)
+    assert r.status_code == 302
+    assert not TenantDomain.objects.filter(pk=td.pk).exists()
+    mock_delete.assert_called_once_with("remove.example.com")
 
 
 @pytest.mark.django_db

@@ -11,7 +11,7 @@ from apps.tenants.models import TenantDomain
 
 @dataclass(frozen=True)
 class DnsInstructionRow:
-    kind: str  # spf | dkim | dmarc | return_path
+    kind: str  # spf | dkim | dmarc | return_path | postal_verification
     record_type: str
     name: str
     host_label: str
@@ -130,6 +130,25 @@ def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
     """
     d = normalize_fqdn(td.domain)
     rows: list[DnsInstructionRow] = []
+
+    pv = (td.postal_verification_txt_expected or "").strip()
+    if pv:
+        rows.append(
+            DnsInstructionRow(
+                kind="postal_verification",
+                record_type="TXT",
+                name=d,
+                host_label=host_label_for_record(d, d),
+                value=pv,
+                ttl=300,
+                title="Mail server domain verification",
+                purpose=(
+                    "Proves you control this domain name to our outbound mail server (Postal). "
+                    "This is separate from SPF and DKIM."
+                ),
+                staff_source="postal",
+            )
+        )
 
     spf_txt, spf_src = resolve_expected_spf_txt(td)
     dkim_sel, dkim_txt, dkim_src = resolve_dkim(td)
