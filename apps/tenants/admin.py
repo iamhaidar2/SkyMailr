@@ -73,6 +73,7 @@ class TenantDomainAdmin(admin.ModelAdmin):
                     "return_path_cname_target",
                     "dmarc_txt_expected",
                     "postal_verification_txt_expected",
+                    "postal_verification_bridge_at",
                     "dns_source",
                     "dns_last_synced_at",
                 ),

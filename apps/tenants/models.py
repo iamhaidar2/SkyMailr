@@ -140,6 +140,11 @@ class TenantDomain(models.Model):
         null=True,
         help_text="Full Postal domain-control TXT (e.g. postal-verification <token>) at the domain apex, when required.",
     )
+    postal_verification_bridge_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Set when the provisioning bridge returned DNS at least once (stops repeat fetch when Postal omits verification TXT).",
+    )
     dns_source = models.CharField(
         max_length=32,
         choices=DnsMetadataSource.choices,

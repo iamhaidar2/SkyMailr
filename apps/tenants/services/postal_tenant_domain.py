@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from django.conf import settings
 from django.utils import timezone
 
 from apps.providers.postal_provisioning import (
@@ -39,6 +40,8 @@ _PROVISION_FIELDS = (
     "postal_provider_domain_id",
 )
 
+_BRIDGE_MARKER_FIELDS = ("postal_verification_bridge_at",)
+
 
 def _touch_dns_from_sync(td: TenantDomain) -> list[str]:
     changed: list[str] = []
@@ -57,7 +60,13 @@ def process_postal_for_tenant_domain(td: TenantDomain, *, force_provision: bool 
     touched.extend(_touch_dns_from_sync(td))
 
     inst = build_dns_instructions_for_domain(td)
-    if inst.is_customer_ready:
+    bridge_url = (getattr(settings, "POSTAL_PROVISIONING_URL", None) or "").strip()
+    missing_pv = not (td.postal_verification_txt_expected or "").strip()
+    needs_bridge_verification_fetch = (
+        bool(bridge_url) and missing_pv and td.postal_verification_bridge_at is None
+    )
+
+    if inst.is_customer_ready and not needs_bridge_verification_fetch:
         if td.postal_provision_status != PostalProvisionStatus.EXISTS:
             td.postal_provision_status = PostalProvisionStatus.EXISTS
             td.postal_provision_error = ""
@@ -82,6 +91,10 @@ def process_postal_for_tenant_domain(td: TenantDomain, *, force_provision: bool 
     if res.dns_patch:
         if apply_dns_patch_to_tenant_domain(td, res.dns_patch):
             touched.extend(_DNS_FIELDS)
+
+    if res.webhook_merged:
+        td.postal_verification_bridge_at = now
+        touched.extend(_BRIDGE_MARKER_FIELDS)
 
     if res.success:
         td.postal_provision_error = ""

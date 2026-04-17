@@ -1,6 +1,6 @@
 # Postal provisioning bridge for SkyMailr
 
-SkyMailr calls this service when `POSTAL_PROVISIONING_URL` is set. This bridge runs **Rails inside your Postal deployment** to create the domain (same as the Postal UI “Add domain”).
+SkyMailr calls this service when `POSTAL_PROVISIONING_URL` is set. This bridge runs **Rails inside your Postal deployment** to create the domain (same as the Postal UI “Add domain”). SkyMailr may also call the bridge when Postal’s HTTP API already returned SPF/DKIM, so it can merge extra `dns` fields (such as Postal ownership verification TXT) that the API does not expose.
 
 ## 1. Postal: copy the runner script
 

@@ -62,6 +62,73 @@ def test_ensure_postal_treats_existing_metadata_as_already_exists():
 
 
 @pytest.mark.django_db
+def test_ensure_postal_merges_bridge_dns_after_http_metadata():
+    with patch("apps.providers.postal_provisioning.fetch_domain_dns_metadata") as m, patch(
+        "apps.providers.postal_provisioning.httpx.post"
+    ) as post:
+        m.return_value = {
+            "spf_txt_expected": "v=spf1 include:x ~all",
+            "dkim_txt_value": "v=DKIM1; p=ABC",
+            "dkim_selector": "postal",
+        }
+        post.return_value = MagicMock(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            json=lambda: {
+                "ok": True,
+                "outcome": "already_exists",
+                "dns": {"postal_verification_txt_expected": "postal-verification TOKEN123"},
+            },
+        )
+        with override_settings(
+            POSTAL_BASE_URL="https://postal.test",
+            POSTAL_SERVER_API_KEY="k",
+            POSTAL_PROVISIONING_URL="https://bridge.test/",
+            POSTAL_PROVISIONING_SECRET="s",
+        ):
+            r = ensure_postal_domain_exists("mail.example.com")
+    assert r.success is True
+    assert r.dns_patch.get("postal_verification_txt_expected") == "postal-verification TOKEN123"
+    assert r.webhook_merged is True
+    post.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_process_postal_fetches_verification_when_customer_ready_but_pv_missing():
+    acc = Account.objects.create(name="A", slug="a-pv", status=AccountStatus.ACTIVE)
+    tenant = Tenant.objects.create(account=acc, name="T", slug="t", status=TenantStatus.ACTIVE)
+    td = TenantDomain.objects.create(
+        tenant=tenant,
+        domain="pv.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+        spf_txt_expected="v=spf1 include:x ~all",
+        dkim_txt_value="v=DKIM1; p=ABC",
+        dkim_selector="postal",
+        postal_provision_last_attempt_at=None,
+    )
+    with patch("apps.tenants.services.postal_tenant_domain.sync_domain_dns_metadata", return_value=False), patch(
+        "apps.tenants.services.postal_tenant_domain.ensure_postal_domain_exists"
+    ) as ens:
+        ens.return_value = ProvisionResult(
+            success=True,
+            outcome=ProvisionOutcome.ALREADY_EXISTS,
+            dns_patch={"postal_verification_txt_expected": "postal-verification ZZ"},
+            webhook_merged=True,
+        )
+        with override_settings(
+            POSTAL_PROVISIONING_URL="https://bridge.test/",
+            POSTAL_BASE_URL="https://postal.test",
+            POSTAL_SERVER_API_KEY="k",
+        ):
+            fields = process_postal_for_tenant_domain(td, force_provision=True)
+    assert ens.called
+    td.save(update_fields=list(dict.fromkeys(fields + ["updated_at"])))
+    td.refresh_from_db()
+    assert td.postal_verification_txt_expected == "postal-verification ZZ"
+    assert td.postal_verification_bridge_at is not None
+
+
+@pytest.mark.django_db
 def test_ensure_postal_webhook_success_applies_dns_patch():
     with patch("apps.providers.postal_provisioning.fetch_domain_dns_metadata", return_value=None), patch(
         "apps.providers.postal_provisioning.httpx.post"

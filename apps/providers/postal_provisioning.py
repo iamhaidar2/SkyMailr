@@ -38,6 +38,17 @@ class ProvisionOutcome(str, Enum):
     FAILED = "failed"
 
 
+_DNS_PATCH_KEYS = (
+    "spf_txt_expected",
+    "dkim_selector",
+    "dkim_txt_value",
+    "return_path_cname_name",
+    "return_path_cname_target",
+    "dmarc_txt_expected",
+    "postal_verification_txt_expected",
+)
+
+
 @dataclass
 class ProvisionResult:
     success: bool
@@ -49,6 +60,8 @@ class ProvisionResult:
     dns_patch: dict[str, Any] = field(default_factory=dict)
     raw_response: dict[str, Any] | None = None
     log_lines: list[str] = field(default_factory=list)
+    """True if the provisioning bridge returned HTTP 200 with ok and merged dns (or no dns keys)."""
+    webhook_merged: bool = False
 
 
 def _norm_domain(domain_fqdn: str) -> str:
@@ -67,6 +80,65 @@ def _log(r: ProvisionResult, msg: str, *args: Any) -> None:
     line = msg % args if args else msg
     r.log_lines.append(line)
     logger.info("postal_provision: %s", line)
+
+
+def _merge_dns_from_webhook_dict(dns: dict[str, Any], dns_patch: dict[str, Any]) -> None:
+    for k in _DNS_PATCH_KEYS:
+        if dns.get(k):
+            dns_patch[str(k)] = dns[k]
+
+
+def _merge_webhook_dns_after_http_fetch(domain: str, r: ProvisionResult) -> None:
+    """
+    When Postal HTTP API already returned SPF/DKIM, still call the bridge once to merge
+    dns (e.g. postal_verification_txt_expected). Does not change r.success if the webhook fails.
+    """
+    url = (getattr(settings, "POSTAL_PROVISIONING_URL", None) or "").strip()
+    if not url:
+        return
+    secret = (getattr(settings, "POSTAL_PROVISIONING_SECRET", None) or "").strip()
+    _, _key, timeout, verify = _base_http()
+    t = min(timeout, 30.0)
+    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    if secret:
+        headers["Authorization"] = f"Bearer {secret}"
+        headers["X-Provisioning-Secret"] = secret
+    _log(r, "webhook merge after HTTP fetch url=%s domain=%s", url, domain)
+    try:
+        resp = httpx.post(
+            url,
+            json={"domain": domain},
+            headers=headers,
+            timeout=t,
+            verify=verify,
+        )
+    except Exception as exc:
+        logger.warning("postal webhook merge after HTTP fetch transport error: %s", exc)
+        return
+
+    try:
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    except Exception:
+        data = {}
+
+    if resp.status_code >= 400 or not isinstance(data, dict) or not data.get("ok", True):
+        logger.warning(
+            "postal webhook merge after HTTP fetch skipped http=%s ok=%s",
+            resp.status_code,
+            isinstance(data, dict) and data.get("ok"),
+        )
+        return
+
+    dns = data.get("dns") or data.get("dns_metadata")
+    if isinstance(dns, dict):
+        _merge_dns_from_webhook_dict(dns, r.dns_patch)
+
+    _pid = data.get("provider_domain_id") or data.get("domain_id")
+    if _pid is not None:
+        r.provider_domain_id = str(_pid)
+
+    r.webhook_merged = True
+    _log(r, "webhook merge after HTTP fetch ok dns_keys=%s", [k for k in _DNS_PATCH_KEYS if r.dns_patch.get(k)])
 
 
 def _try_provisioning_webhook(domain: str, r: ProvisionResult) -> bool:
@@ -140,18 +212,9 @@ def _try_provisioning_webhook(domain: str, r: ProvisionResult) -> bool:
     r.provider_domain_id = str(_pid) if _pid is not None else None
     dns = data.get("dns") or data.get("dns_metadata")
     if isinstance(dns, dict):
-        for k in (
-            "spf_txt_expected",
-            "dkim_selector",
-            "dkim_txt_value",
-            "return_path_cname_name",
-            "return_path_cname_target",
-            "dmarc_txt_expected",
-            "postal_verification_txt_expected",
-        ):
-            if dns.get(k):
-                r.dns_patch[str(k)] = dns[k]
+        _merge_dns_from_webhook_dict(dns, r.dns_patch)
 
+    r.webhook_merged = True
     _log(r, "webhook success outcome=%s dns_keys=%s", r.outcome.value, list(r.dns_patch.keys()))
     return True
 
@@ -224,6 +287,7 @@ def ensure_postal_domain_exists(domain_fqdn: str) -> ProvisionResult:
         r.outcome = ProvisionOutcome.ALREADY_EXISTS
         r.dns_patch.update({k: v for k, v in meta.items() if v})
         _log(r, "domain metadata already available from Postal fetch; treating as already_exists")
+        _merge_webhook_dns_after_http_fetch(d, r)
         return r
 
     # 2) Operator bridge (required for stock Postal without domain HTTP API)
