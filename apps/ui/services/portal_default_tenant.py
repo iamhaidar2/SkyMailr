@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from apps.accounts.models import Account
+from apps.email_templates.starter_pack import seed_customer_starter_templates
 from apps.tenants.models import Tenant, TenantStatus
 
 
@@ -27,9 +28,11 @@ def ensure_default_tenant_for_account(account: Account) -> Tenant | None:
     if existing is not None:
         return existing
     slug = _unique_tenant_slug_from_account(account)
-    return Tenant.objects.create(
+    tenant = Tenant.objects.create(
         account=account,
         name=account.name[:200] or slug,
         slug=slug,
         status=TenantStatus.ACTIVE,
     )
+    seed_customer_starter_templates(tenant)
+    return tenant

@@ -48,6 +48,7 @@ from apps.ui.services.portal_account import (
     get_portal_accounts_for_user,
     set_active_portal_account,
 )
+from apps.email_templates.starter_pack import seed_customer_starter_templates
 from apps.ui.services.portal_default_tenant import ensure_default_tenant_for_account
 from apps.ui.services.portal_mail import send_email_verification_email
 from apps.ui.services.rate_limit import allow_request
@@ -304,6 +305,7 @@ def tenant_new(request):
                 tenant = form.save(commit=False)
                 tenant.account = account
                 tenant.save()
+                seed_customer_starter_templates(tenant)
                 django_messages.success(request, f"Created “{tenant.name}”.")
                 return redirect("portal:tenant_detail", tenant_id=tenant.id)
     else:

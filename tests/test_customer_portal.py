@@ -7,6 +7,8 @@ from django.urls import reverse
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
 from apps.accounts.plans import DEFAULT_PLAN_CODE
 from apps.tenants.crypto import generate_api_key, hash_api_key
+from apps.email_templates.models import EmailTemplate
+from apps.email_templates.starter_pack import STARTER_TEMPLATE_KEYS
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
 from tests.portal_helpers import bind_portal_account_session
 
@@ -73,6 +75,10 @@ def test_signup_creates_user_account_owner_membership(client):
     assert Tenant.objects.filter(account=acc).count() == 1
     t = Tenant.objects.get(account=acc)
     assert t.slug == "new-co"
+    keys = set(EmailTemplate.objects.filter(tenant=t).values_list("key", flat=True))
+    assert keys == set(STARTER_TEMPLATE_KEYS)
+    for tpl in EmailTemplate.objects.filter(tenant=t):
+        assert tpl.versions.filter(is_current_approved=True).exists()
 
 
 @pytest.mark.django_db
