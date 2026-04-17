@@ -50,7 +50,9 @@ begin
     ok: true,
     outcome: created ? "created" : "already_exists",
     provider_domain_id: domain.uuid,
-    dns: dns
+    dns: dns,
+    # SkyMailr: when true, ownership TXT is omitted from dns on purpose (already verified in Postal).
+    postal_domain_verified: domain.verified?
   }
 
   puts out.to_json

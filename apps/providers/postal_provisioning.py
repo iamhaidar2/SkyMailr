@@ -18,8 +18,11 @@ management is through the web UI (session + CSRF). Therefore:
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from enum import Enum
 from typing import Any
 from urllib.parse import urljoin
@@ -30,6 +33,26 @@ from django.conf import settings
 from apps.providers.postal_domains import fetch_domain_dns_metadata
 
 logger = logging.getLogger(__name__)
+
+_AGENT_DEBUG_LOG = Path(__file__).resolve().parents[2] / "debug-ff7d05.log"
+
+
+def _agent_debug_log(hypothesis_id: str, location: str, message: str, data: dict[str, Any]) -> None:
+    # region agent log
+    try:
+        payload = {
+            "sessionId": "ff7d05",
+            "hypothesisId": hypothesis_id,
+            "location": location,
+            "message": message,
+            "data": data,
+            "timestamp": int(time.time() * 1000),
+        }
+        with _AGENT_DEBUG_LOG.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, default=str) + "\n")
+    except Exception:
+        pass
+    # endregion
 
 
 class ProvisionOutcome(str, Enum):
@@ -130,6 +153,26 @@ def _merge_webhook_dns_after_http_fetch(domain: str, r: ProvisionResult) -> None
         return
 
     dns = data.get("dns") or data.get("dns_metadata")
+    dns_keys = list(dns.keys()) if isinstance(dns, dict) else []
+    raw_pv = dns.get("postal_verification_txt_expected") if isinstance(dns, dict) else None
+    _agent_debug_log(
+        "H1",
+        "postal_provisioning._merge_webhook_dns_after_http_fetch",
+        "parsed bridge response before merge",
+        {
+            "domain": domain,
+            "http_status": resp.status_code,
+            "data_top_keys": list(data.keys()) if isinstance(data, dict) else [],
+            "dns_keys": dns_keys,
+            "has_postal_verification_key": "postal_verification_txt_expected" in dns if isinstance(dns, dict) else False,
+            "raw_pv_len": len(str(raw_pv)) if raw_pv else 0,
+        },
+    )
+    logger.info(
+        "agent_debug ff7d05 H1 dns_keys=%s has_pv_key=%s",
+        dns_keys,
+        "postal_verification_txt_expected" in dns if isinstance(dns, dict) else False,
+    )
     if isinstance(dns, dict):
         _merge_dns_from_webhook_dict(dns, r.dns_patch)
 
@@ -137,7 +180,19 @@ def _merge_webhook_dns_after_http_fetch(domain: str, r: ProvisionResult) -> None
     if _pid is not None:
         r.provider_domain_id = str(_pid)
 
-    r.webhook_merged = True
+    pv_after = bool(r.dns_patch.get("postal_verification_txt_expected"))
+    verified_flag = data.get("postal_domain_verified")
+    if isinstance(verified_flag, str):
+        verified_flag = verified_flag.lower() in ("true", "1", "yes")
+    # Do not mark "merged" unless we stored PV or bridge says Postal already verified the domain.
+    # Otherwise bridge_at blocks retries while postal_verification_txt_expected stays null (H1).
+    r.webhook_merged = pv_after or verified_flag is True
+    _agent_debug_log(
+        "H1",
+        "postal_provisioning._merge_webhook_dns_after_http_fetch",
+        "after merge into dns_patch",
+        {"domain": domain, "pv_in_dns_patch": pv_after, "webhook_merged": r.webhook_merged, "postal_domain_verified": verified_flag},
+    )
     _log(r, "webhook merge after HTTP fetch ok dns_keys=%s", [k for k in _DNS_PATCH_KEYS if r.dns_patch.get(k)])
 
 
@@ -214,8 +269,12 @@ def _try_provisioning_webhook(domain: str, r: ProvisionResult) -> bool:
     if isinstance(dns, dict):
         _merge_dns_from_webhook_dict(dns, r.dns_patch)
 
-    r.webhook_merged = True
-    _log(r, "webhook success outcome=%s dns_keys=%s", r.outcome.value, list(r.dns_patch.keys()))
+    pv_after = bool(r.dns_patch.get("postal_verification_txt_expected"))
+    verified_flag = data.get("postal_domain_verified")
+    if isinstance(verified_flag, str):
+        verified_flag = verified_flag.lower() in ("true", "1", "yes")
+    r.webhook_merged = pv_after or verified_flag is True
+    _log(r, "webhook success outcome=%s dns_keys=%s webhook_merged=%s", r.outcome.value, list(r.dns_patch.keys()), r.webhook_merged)
     return True
 
 
@@ -408,6 +467,23 @@ def apply_dns_patch_to_tenant_domain(td: Any, patch: dict[str, Any]) -> bool:
     from django.utils import timezone
 
     from apps.tenants.models import DnsMetadataSource
+
+    pv_in = patch.get("postal_verification_txt_expected")
+    _agent_debug_log(
+        "H3",
+        "postal_provisioning.apply_dns_patch_to_tenant_domain",
+        "incoming patch",
+        {
+            "patch_keys": list(patch.keys()),
+            "has_pv_key": "postal_verification_txt_expected" in patch,
+            "pv_truthy": bool(pv_in),
+        },
+    )
+    logger.info(
+        "agent_debug ff7d05 H3 patch_keys=%s pv_truthy=%s",
+        list(patch.keys()),
+        bool(pv_in),
+    )
 
     changed = False
     for k in (

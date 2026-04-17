@@ -62,6 +62,8 @@ Success: HTTP 200, JSON body with `ok`, `outcome`, `provider_domain_id`, `dns` (
 
 In addition to SPF/DKIM/return-path fields, the bridge may include **`postal_verification_txt_expected`**: the full TXT value Postal expects at the domain apex for domain-control verification (e.g. `postal-verification <token>`). Omitted when the domain is already verified (e.g. `POSTAL_AUTO_VERIFY=true`).
 
+The JSON body also includes **`postal_domain_verified`** (boolean). SkyMailr uses it together with `dns` so it does not “give up” while `postal_verification_txt_expected` is still null on an unverified domain. Deploy an updated `create_domain.rb` that prints this field (see repo `runner/create_domain.rb`).
+
 ### Troubleshooting (SkyMailr UI missing verification row)
 
 - Ensure **`POSTAL_PROVISIONING_URL`** and **`POSTAL_PROVISIONING_SECRET`** are set in SkyMailr and match the bridge.

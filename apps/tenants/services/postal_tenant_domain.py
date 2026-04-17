@@ -90,6 +90,37 @@ def process_postal_for_tenant_domain(td: TenantDomain, *, force_provision: bool 
     td.postal_provision_last_attempt_at = now
     touched.extend(_PROVISION_FIELDS)
 
+    # region agent log
+    try:
+        import json
+        import time
+        from pathlib import Path
+
+        _p = Path(__file__).resolve().parents[2] / "debug-ff7d05.log"
+        with _p.open("a", encoding="utf-8") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "sessionId": "ff7d05",
+                        "hypothesisId": "H4",
+                        "location": "postal_tenant_domain.process_postal_for_tenant_domain",
+                        "message": "after ensure_postal_domain_exists",
+                        "data": {
+                            "domain": td.domain,
+                            "webhook_merged": res.webhook_merged,
+                            "dns_patch_keys": list(res.dns_patch.keys()),
+                            "pv_in_patch": bool(res.dns_patch.get("postal_verification_txt_expected")),
+                        },
+                        "timestamp": int(time.time() * 1000),
+                    },
+                    default=str,
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # endregion
+
     if res.dns_patch:
         if apply_dns_patch_to_tenant_domain(td, res.dns_patch):
             touched.extend(_DNS_FIELDS)

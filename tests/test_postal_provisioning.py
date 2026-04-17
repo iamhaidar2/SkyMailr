@@ -95,6 +95,71 @@ def test_ensure_postal_merges_bridge_dns_after_http_metadata():
 
 
 @pytest.mark.django_db
+def test_merge_after_http_does_not_set_webhook_merged_when_pv_missing_and_not_verified():
+    with patch("apps.providers.postal_provisioning.fetch_domain_dns_metadata") as m, patch(
+        "apps.providers.postal_provisioning.httpx.post"
+    ) as post:
+        m.return_value = {
+            "spf_txt_expected": "v=spf1 include:x ~all",
+            "dkim_txt_value": "v=DKIM1; p=ABC",
+            "dkim_selector": "postal",
+        }
+        post.return_value = MagicMock(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            json=lambda: {
+                "ok": True,
+                "outcome": "already_exists",
+                "dns": {
+                    "spf_txt_expected": "v=spf1 include:x ~all",
+                    "dkim_txt_value": "v=DKIM1; p=ABC",
+                },
+            },
+        )
+        with override_settings(
+            POSTAL_BASE_URL="https://postal.test",
+            POSTAL_SERVER_API_KEY="k",
+            POSTAL_PROVISIONING_URL="https://bridge.test/",
+            POSTAL_PROVISIONING_SECRET="s",
+        ):
+            r = ensure_postal_domain_exists("nomailpv.example.com")
+    assert r.success is True
+    assert r.webhook_merged is False
+    assert not r.dns_patch.get("postal_verification_txt_expected")
+
+
+@pytest.mark.django_db
+def test_merge_after_http_sets_webhook_merged_when_postal_domain_verified_without_pv():
+    with patch("apps.providers.postal_provisioning.fetch_domain_dns_metadata") as m, patch(
+        "apps.providers.postal_provisioning.httpx.post"
+    ) as post:
+        m.return_value = {
+            "spf_txt_expected": "v=spf1 include:x ~all",
+            "dkim_txt_value": "v=DKIM1; p=ABC",
+            "dkim_selector": "postal",
+        }
+        post.return_value = MagicMock(
+            status_code=200,
+            headers={"content-type": "application/json"},
+            json=lambda: {
+                "ok": True,
+                "outcome": "already_exists",
+                "dns": {"spf_txt_expected": "v=spf1 include:x ~all"},
+                "postal_domain_verified": True,
+            },
+        )
+        with override_settings(
+            POSTAL_BASE_URL="https://postal.test",
+            POSTAL_SERVER_API_KEY="k",
+            POSTAL_PROVISIONING_URL="https://bridge.test/",
+            POSTAL_PROVISIONING_SECRET="s",
+        ):
+            r = ensure_postal_domain_exists("verified.example.com")
+    assert r.success is True
+    assert r.webhook_merged is True
+
+
+@pytest.mark.django_db
 def test_process_postal_fetches_verification_when_customer_ready_but_pv_missing():
     acc = Account.objects.create(name="A", slug="a-pv", status=AccountStatus.ACTIVE)
     tenant = Tenant.objects.create(account=acc, name="T", slug="t", status=TenantStatus.ACTIVE)
