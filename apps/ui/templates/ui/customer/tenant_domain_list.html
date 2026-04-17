@@ -9,11 +9,18 @@
     </div>
     <div class="flex flex-wrap gap-2">
       <a href="{% url 'portal:tenant_detail' tenant.id %}" class="text-sm text-slate-400 hover:text-white">← Connected app</a>
-      {% if can_manage %}
+      {% if can_manage and portal_effective_limits and domains|length < portal_effective_limits.max_sending_domains_per_tenant %}
         <a href="{% url 'portal:tenant_domain_new' tenant.id %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Add domain</a>
       {% endif %}
     </div>
   </div>
+
+  {% if can_manage and portal_effective_limits and domains|length >= portal_effective_limits.max_sending_domains_per_tenant %}
+    <div class="rounded-lg border border-amber-800/80 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+      You’ve reached your plan limit of {{ portal_effective_limits.max_sending_domains_per_tenant }} sending domain{% if portal_effective_limits.max_sending_domains_per_tenant != 1 %}s{% endif %} for this connected app.
+      <a href="{% url 'portal:account_billing' %}" class="font-medium text-blue-400 hover:underline">Upgrade your plan</a> to add more.
+    </div>
+  {% endif %}
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Sending readiness</h3>

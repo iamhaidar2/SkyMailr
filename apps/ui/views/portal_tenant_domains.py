@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from apps.accounts.policy import PolicyError
-from apps.accounts.services.enforcement import assert_tenant_operational
+from apps.accounts.services.enforcement import assert_can_add_sending_domain, assert_tenant_operational
 from apps.tenants.models import DomainVerificationStatus, PostalProvisionStatus, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import build_dns_instructions_for_domain
 from apps.providers.postal_provisioning import delete_postal_domain
@@ -71,12 +71,23 @@ def tenant_domain_list(request, tenant_id):
 @portal_manage_required
 def tenant_domain_new(request, tenant_id):
     tenant = _tenant(request, tenant_id)
+    if request.method == "GET":
+        try:
+            assert_can_add_sending_domain(tenant)
+        except PolicyError as e:
+            django_messages.error(request, e.detail)
+            return redirect("portal:tenant_domain_list", tenant_id=tenant.id)
     if request.method == "POST":
         denied = _redirect_if_tenant_suspended(request, tenant)
         if denied is not None:
             return denied
         form = PortalTenantDomainForm(request.POST, tenant=tenant)
         if form.is_valid():
+            try:
+                assert_can_add_sending_domain(tenant)
+            except PolicyError as e:
+                django_messages.error(request, e.detail)
+                return redirect("portal:tenant_domain_list", tenant_id=tenant.id)
             d = form.cleaned_data["domain"]
             with transaction.atomic():
                 is_first = not tenant.domains.exists()

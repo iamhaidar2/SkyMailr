@@ -42,10 +42,13 @@ def customer_account(db, customer_user):
 
 @pytest.mark.django_db
 def test_get_effective_limits_merges_metadata_override(default_account):
-    default_account.metadata = {"plan_limits_override": {"max_tenants": 42}}
+    default_account.metadata = {
+        "plan_limits_override": {"max_tenants": 42, "max_sending_domains_per_tenant": 99}
+    }
     default_account.save()
     lim = get_effective_limits(default_account)
     assert lim.max_tenants == 42
+    assert lim.max_sending_domains_per_tenant == 99
 
 
 @pytest.mark.django_db

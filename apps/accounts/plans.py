@@ -24,6 +24,7 @@ class PlanLimits:
     max_templates: int
     max_workflows: int
     max_members: int
+    max_sending_domains_per_tenant: int
     label: str
 
 
@@ -35,6 +36,7 @@ PLAN_DEFINITIONS: dict[str, PlanLimits] = {
         max_templates=10,
         max_workflows=5,
         max_members=5,
+        max_sending_domains_per_tenant=2,
         label="Free",
     ),
     PLAN_STARTER: PlanLimits(
@@ -44,6 +46,7 @@ PLAN_DEFINITIONS: dict[str, PlanLimits] = {
         max_templates=50,
         max_workflows=25,
         max_members=25,
+        max_sending_domains_per_tenant=25,
         label="Starter",
     ),
     PLAN_GROWTH: PlanLimits(
@@ -53,6 +56,7 @@ PLAN_DEFINITIONS: dict[str, PlanLimits] = {
         max_templates=500,
         max_workflows=200,
         max_members=100,
+        max_sending_domains_per_tenant=100,
         label="Growth",
     ),
     PLAN_INTERNAL: PlanLimits(
@@ -62,6 +66,7 @@ PLAN_DEFINITIONS: dict[str, PlanLimits] = {
         max_templates=50_000,
         max_workflows=50_000,
         max_members=10_000,
+        max_sending_domains_per_tenant=10_000,
         label="Internal",
     ),
 }
@@ -76,6 +81,9 @@ def _deep_merge_limits(base: PlanLimits, patch: dict[str, Any]) -> PlanLimits:
         "max_templates": patch.get("max_templates", base.max_templates),
         "max_workflows": patch.get("max_workflows", base.max_workflows),
         "max_members": patch.get("max_members", base.max_members),
+        "max_sending_domains_per_tenant": patch.get(
+            "max_sending_domains_per_tenant", base.max_sending_domains_per_tenant
+        ),
         "label": patch.get("label", base.label),
     }
     return replace(base, **data)

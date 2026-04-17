@@ -8,7 +8,7 @@ from apps.accounts.models import Account, AccountMembership, AccountStatus
 from apps.accounts.plans import get_effective_limits
 from apps.accounts.policy import PolicyError
 from apps.accounts.services.usage import usage_snapshot
-from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
+from apps.tenants.models import Tenant, TenantAPIKey, TenantDomain, TenantStatus
 
 logger = logging.getLogger("apps.accounts.audit")
 
@@ -82,6 +82,22 @@ def _check_cap(account: Account, current: int, limit: int, code: str, message: s
             limit,
         )
         raise PolicyError(code, message, status_code=403)
+
+
+def assert_can_add_sending_domain(tenant: Tenant) -> None:
+    """Enforce per-tenant sending domain (TenantDomain row) limit for the owning account's plan."""
+    account = tenant.account
+    assert_account_operational(account)
+    limits = get_effective_limits(account)
+    n = TenantDomain.objects.filter(tenant=tenant).count()
+    _check_cap(
+        account,
+        n,
+        limits.max_sending_domains_per_tenant,
+        "sending_domain_limit",
+        f"Sending domain limit reached ({limits.max_sending_domains_per_tenant}) for this connected app on your plan. "
+        "Upgrade your plan to add more sending domains.",
+    )
 
 
 def assert_can_create_tenant(account: Account) -> None:

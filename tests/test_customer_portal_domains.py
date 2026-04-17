@@ -314,6 +314,56 @@ def test_tenant_detail_includes_readiness(client, customer_user, customer_accoun
 
 
 @pytest.mark.django_db
+@patch("apps.ui.views.portal_tenant_domains.process_postal_for_tenant_domain", return_value=())
+def test_free_plan_redirects_when_sending_domain_limit_reached(
+    _mock_pp, client, customer_user, customer_account, portal_tenant
+):
+    TenantDomain.objects.create(
+        tenant=portal_tenant,
+        domain="one.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+    )
+    TenantDomain.objects.create(
+        tenant=portal_tenant,
+        domain="two.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    url = reverse("portal:tenant_domain_new", kwargs={"tenant_id": portal_tenant.id})
+    r_get = client.get(url)
+    assert r_get.status_code == 302
+    assert r_get.url == reverse("portal:tenant_domain_list", kwargs={"tenant_id": portal_tenant.id})
+    r_post = client.post(url, {"domain": "three.example.com"})
+    assert r_post.status_code == 302
+    assert r_post.url == reverse("portal:tenant_domain_list", kwargs={"tenant_id": portal_tenant.id})
+    assert not TenantDomain.objects.filter(tenant=portal_tenant, domain="three.example.com").exists()
+
+
+@pytest.mark.django_db
+@patch("apps.ui.views.portal_tenant_domains.process_postal_for_tenant_domain", return_value=())
+def test_plan_override_allows_third_sending_domain(
+    _mock_pp, client, customer_user, customer_account, portal_tenant
+):
+    customer_account.metadata = {"plan_limits_override": {"max_sending_domains_per_tenant": 5}}
+    customer_account.save()
+    TenantDomain.objects.create(
+        tenant=portal_tenant,
+        domain="one.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+    )
+    TenantDomain.objects.create(
+        tenant=portal_tenant,
+        domain="two.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    url = reverse("portal:tenant_domain_new", kwargs={"tenant_id": portal_tenant.id})
+    r = client.post(url, {"domain": "three.example.com"})
+    assert r.status_code == 302
+    assert TenantDomain.objects.filter(tenant=portal_tenant, domain="three.example.com").exists()
+
+
+@pytest.mark.django_db
 def test_staff_operator_dashboard_still_ok(staff_client):
     r = staff_client.get(reverse("ui:dashboard"))
     assert r.status_code == 200

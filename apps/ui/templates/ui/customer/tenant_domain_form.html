@@ -5,6 +5,9 @@
     <p class="text-xs text-slate-500"><a href="{% url 'portal:tenant_domain_list' tenant.id %}" class="text-slate-400 hover:text-white">Domains</a> · {{ tenant.name }}</p>
     <h2 class="text-2xl font-semibold text-white">Add sending domain</h2>
     <p class="mt-1 text-sm text-slate-400">Use the hostname only (e.g. <code class="text-slate-300">mail.example.com</code>). No <code class="text-slate-300">https://</code> or paths.</p>
+    {% if portal_effective_limits %}
+      <p class="mt-2 text-xs text-slate-500">Your plan allows up to {{ portal_effective_limits.max_sending_domains_per_tenant }} sending domain{% if portal_effective_limits.max_sending_domains_per_tenant != 1 %}s{% endif %} per connected app.</p>
+    {% endif %}
   </div>
   <form method="post" class="space-y-4 rounded-xl border border-surface-600 bg-surface-850 p-5">
     {% csrf_token %}
