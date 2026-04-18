@@ -252,6 +252,10 @@ class PortalWorkflowStepForm(forms.Form):
         cleaned_data = super().clean()
         st = cleaned_data.get("step_type")
 
+        # Wait / end steps never use a template; ignore any posted template (e.g. stale UI selection).
+        if st != WorkflowStepType.SEND_TEMPLATE:
+            cleaned_data["template_key"] = ""
+
         def nz(name: str) -> int:
             v = cleaned_data.get(name)
             if v is None:

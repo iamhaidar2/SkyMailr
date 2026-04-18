@@ -40,20 +40,20 @@
   {% if can_edit %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Add step</h3>
-    <p class="mt-1 text-xs text-slate-500">Send template, wait, or end. Template key must exist on this connected app.</p>
-    <form method="post" action="{% url 'portal:workflow_add_step' workflow.id %}" class="mt-4 space-y-3">
+    <p class="mt-1 text-xs text-slate-500">Pick a step type first: <strong>Send template</strong> needs a template; <strong>Wait</strong> uses only the time fields; <strong>End</strong> needs neither.</p>
+    <form method="post" action="{% url 'portal:workflow_add_step' workflow.id %}" class="mt-4 space-y-3" id="workflow-add-step-form">
       {% csrf_token %}
       <div class="grid gap-3 sm:grid-cols-2">
         <div><label class="text-xs text-slate-500">{{ step_form.order.label }}</label>{{ step_form.order }}</div>
         <div><label class="text-xs text-slate-500">{{ step_form.step_type.label }}</label>{{ step_form.step_type }}</div>
       </div>
-      <div>
+      <div id="workflow-add-step-template">
         <label class="text-xs text-slate-500" for="{{ step_form.template_key.id_for_label }}">{{ step_form.template_key.label }}</label>
         {{ step_form.template_key }}
         {% if step_form.template_key.errors %}<p class="mt-1 text-xs text-red-400">{{ step_form.template_key.errors.0 }}</p>{% endif %}
         {% if step_form.template_key.help_text %}<p class="mt-1 text-xs text-slate-500">{{ step_form.template_key.help_text }}</p>{% endif %}
       </div>
-      <div>
+      <div id="workflow-add-step-wait">
         <p class="text-xs text-slate-500">Wait time</p>
         <p class="mt-1 text-xs text-slate-500">For wait steps only; days, hours, minutes, and seconds combine into one delay.</p>
         <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -84,6 +84,27 @@
       {% endif %}
       <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Add step</button>
     </form>
+    <script>
+    (function () {
+      var stepSel = document.getElementById("id_step_type");
+      var templateWrap = document.getElementById("workflow-add-step-template");
+      var waitWrap = document.getElementById("workflow-add-step-wait");
+      if (!stepSel || !templateWrap || !waitWrap) return;
+      function sync() {
+        var v = stepSel.value;
+        var showTpl = v === "send_template";
+        var showWait = v === "wait_duration";
+        templateWrap.hidden = !showTpl;
+        waitWrap.hidden = !showWait;
+        var tplSelect = templateWrap.querySelector("select");
+        if (tplSelect && !showTpl) {
+          tplSelect.selectedIndex = 0;
+        }
+      }
+      stepSel.addEventListener("change", sync);
+      sync();
+    })();
+    </script>
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
