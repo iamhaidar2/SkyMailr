@@ -36,8 +36,8 @@
         {% csrf_token %}
         <div><label class="text-xs text-slate-500">{{ version_form.subject_template.label }}</label>{{ version_form.subject_template }}</div>
         <div><label class="text-xs text-slate-500">{{ version_form.preview_text_template.label }}</label>{{ version_form.preview_text_template }}</div>
-        <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
         <div><label class="text-xs text-slate-500">{{ version_form.text_template.label }}</label>{{ version_form.text_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
         <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save version</button>
       </form>
       <div class="space-y-2">

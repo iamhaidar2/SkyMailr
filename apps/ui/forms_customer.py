@@ -167,17 +167,6 @@ class PortalTemplateVersionForm(forms.Form):
             attrs={"class": _inp, "placeholder": "e.g. Your weekly summary inside", "autocomplete": "off"}
         ),
     )
-    html_template = forms.CharField(
-        label="HTML body",
-        widget=forms.Textarea(
-            attrs={
-                "rows": 12,
-                "class": _inp + " font-mono text-xs",
-                "placeholder": "<p>Hi {{ name }},</p><p>...</p>",
-                "autocomplete": "off",
-            }
-        ),
-    )
     text_template = forms.CharField(
         required=False,
         label="Plain text",
@@ -186,6 +175,17 @@ class PortalTemplateVersionForm(forms.Form):
                 "rows": 6,
                 "class": _inp + " font-mono text-xs",
                 "placeholder": "Hi {{ name }},\n\nPlain text version...",
+                "autocomplete": "off",
+            }
+        ),
+    )
+    html_template = forms.CharField(
+        label="HTML body",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 12,
+                "class": _inp + " font-mono text-xs",
+                "placeholder": "<p>Hi {{ name }},</p><p>...</p>",
                 "autocomplete": "off",
             }
         ),
