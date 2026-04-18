@@ -142,7 +142,7 @@ def template_detail(request, template_id):
             "preview_form": preview_form,
             "revise_form": revise_form,
             "approve_form": approve_form,
-            "default_preview_context_json": json.dumps(default_preview_ctx),
+            "default_preview_context": default_preview_ctx,
             "preview_draft_url": preview_draft_url,
         }
     )

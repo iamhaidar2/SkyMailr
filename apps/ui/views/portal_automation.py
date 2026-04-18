@@ -318,7 +318,7 @@ def template_detail(request, template_id):
             "approve_form": approve_form,
             "can_edit": can_edit,
             "can_approve": can_approve,
-            "default_preview_context_json": json.dumps(default_preview_ctx),
+            "default_preview_context": default_preview_ctx,
             "preview_draft_url": preview_draft_url,
         }
     )

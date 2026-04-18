@@ -146,10 +146,17 @@
     </div>
   </form>
 </div>
+{{ default_preview_context|json_script:"template-preview-default-context" }}
 <script>
 (function () {
   var url = "{{ preview_draft_url|escapejs }}";
-  var defaultCtx = {{ default_preview_context_json }};
+  var defaultCtx = {};
+  try {
+    var ctxEl = document.getElementById("template-preview-default-context");
+    if (ctxEl && ctxEl.textContent) {
+      defaultCtx = JSON.parse(ctxEl.textContent);
+    }
+  } catch (e) {}
   var form = document.getElementById("template-version-form");
   if (!form || !url) return;
   var subjectEl = document.getElementById("template-draft-preview-subject");
