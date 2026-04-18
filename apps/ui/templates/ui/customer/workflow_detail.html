@@ -75,15 +75,23 @@
     </form>
   </div>
 
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+  <div id="test-enrollment" class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Test enrollment</h3>
-    <p class="mt-1 text-xs text-slate-500">Enroll a recipient to run the workflow (starts execution).</p>
-    <form method="post" action="{% url 'portal:workflow_enroll' workflow.id %}" class="mt-4 space-y-3">
+    <p class="mt-1 text-xs text-slate-500">Enroll a recipient to run the workflow (starts execution). Metadata must supply <code class="text-slate-400">template_context</code> for every variable used in send steps. Sample values are filled in automatically — edit them if you want realistic data.</p>
+    {% if enrollment_template_var_keys %}
+    <p class="mt-2 text-xs text-slate-500">Variables detected from this workflow’s templates: <span class="font-mono text-slate-400">{{ enrollment_template_var_keys|join:", " }}</span></p>
+    {% endif %}
+    <form method="post" action="{% url 'portal:workflow_enroll' workflow.id %}#test-enrollment" class="mt-4 space-y-3">
       {% csrf_token %}
-      <div><label class="text-xs text-slate-500">{{ enroll_form.recipient_email.label }}</label>{{ enroll_form.recipient_email }}</div>
-      <div><label class="text-xs text-slate-500">{{ enroll_form.recipient_name.label }}</label>{{ enroll_form.recipient_name }}</div>
-      <div><label class="text-xs text-slate-500">{{ enroll_form.external_user_id.label }}</label>{{ enroll_form.external_user_id }}</div>
-      <div><label class="text-xs text-slate-500">{{ enroll_form.metadata.label }}</label>{{ enroll_form.metadata }}</div>
+      <div><label class="text-xs text-slate-500">{{ enroll_form.recipient_email.label }}</label>{{ enroll_form.recipient_email }}{% if enroll_form.recipient_email.errors %}<p class="mt-1 text-xs text-red-400">{{ enroll_form.recipient_email.errors.0 }}</p>{% endif %}</div>
+      <div><label class="text-xs text-slate-500">{{ enroll_form.recipient_name.label }}</label>{{ enroll_form.recipient_name }}{% if enroll_form.recipient_name.errors %}<p class="mt-1 text-xs text-red-400">{{ enroll_form.recipient_name.errors.0 }}</p>{% endif %}</div>
+      <div><label class="text-xs text-slate-500">{{ enroll_form.external_user_id.label }}</label>{{ enroll_form.external_user_id }}{% if enroll_form.external_user_id.errors %}<p class="mt-1 text-xs text-red-400">{{ enroll_form.external_user_id.errors.0 }}</p>{% endif %}</div>
+      <div>
+        <label class="text-xs text-slate-500">{{ enroll_form.metadata.label }}</label>
+        {{ enroll_form.metadata }}
+        {% if enroll_form.metadata.help_text %}<p class="mt-1 text-xs text-slate-500">{{ enroll_form.metadata.help_text }}</p>{% endif %}
+        {% if enroll_form.metadata.errors %}<p class="mt-1 text-xs text-red-400">{{ enroll_form.metadata.errors.0 }}</p>{% endif %}
+      </div>
       <button type="submit" class="rounded-md bg-surface-700 px-4 py-2 text-sm text-white">Enroll</button>
     </form>
   </div>

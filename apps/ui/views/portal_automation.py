@@ -44,11 +44,12 @@ from apps.ui.decorators import (
     portal_editor_required,
 )
 from apps.llm.schemas import TemplateGenerationBriefSchema
-from apps.ui.forms import TemplateApproveForm, TemplatePreviewForm, TemplateReviseForm, WorkflowEnrollForm
+from apps.ui.forms import TemplateApproveForm, TemplatePreviewForm, TemplateReviseForm
 from apps.ui.forms_customer import (
     PortalNewEmailTemplateForm,
     PortalSenderProfileForm,
     PortalTemplateVersionForm,
+    PortalWorkflowEnrollForm,
     PortalWorkflowStepForm,
     portal_workflow_step_initial_from_instance,
 )
@@ -62,6 +63,7 @@ from apps.ui.services.portal_permissions import (
 )
 from apps.workflows.models import Workflow, WorkflowEnrollment, WorkflowExecution, WorkflowStep, WorkflowStepType
 from apps.workflows.services.workflow_engine import enroll_workflow
+from apps.workflows.services.enrollment_context import required_template_context_keys
 from apps.workflows.services.workflow_steps import apply_step_order, delete_step_and_renumber
 
 
@@ -664,15 +666,8 @@ def workflow_new(request):
     return render(request, "ui/customer/workflow_new.html", ctx)
 
 
-@customer_login_required
-@portal_account_required
-def workflow_detail(request, workflow_id):
+def _workflow_detail_response(request, wf, *, enroll_form=None):
     account = _account(request)
-    wf = get_object_or_404(
-        Workflow.objects.select_related("tenant").prefetch_related("steps"),
-        pk=workflow_id,
-        tenant__account=account,
-    )
     steps = wf.steps.order_by("order")
     max_order = steps.aggregate(m=Max("order")).get("m") or 0
     enrollments = wf.enrollments.select_related("tenant").order_by("-created_at")[:50]
@@ -681,7 +676,8 @@ def workflow_detail(request, workflow_id):
         .select_related("enrollment")
         .order_by("-started_at")[:50]
     )
-    enroll_form = WorkflowEnrollForm()
+    if enroll_form is None:
+        enroll_form = PortalWorkflowEnrollForm(workflow=wf)
     tenant_tpl_keys = list(
         EmailTemplate.objects.filter(tenant=wf.tenant).values_list("key", flat=True)
     )
@@ -718,10 +714,23 @@ def workflow_detail(request, workflow_id):
             "edit_step": edit_step,
             "edit_step_form": edit_step_form,
             "tenant_template_keys": tenant_tpl_keys,
+            "enrollment_template_var_keys": required_template_context_keys(wf),
             "can_edit": can_edit,
         }
     )
     return render(request, "ui/customer/workflow_detail.html", ctx)
+
+
+@customer_login_required
+@portal_account_required
+def workflow_detail(request, workflow_id):
+    account = _account(request)
+    wf = get_object_or_404(
+        Workflow.objects.select_related("tenant").prefetch_related("steps"),
+        pk=workflow_id,
+        tenant__account=account,
+    )
+    return _workflow_detail_response(request, wf)
 
 
 @customer_login_required
@@ -730,10 +739,10 @@ def workflow_detail(request, workflow_id):
 def workflow_enroll(request, workflow_id):
     account = _account(request)
     wf = get_object_or_404(Workflow, pk=workflow_id, tenant__account=account)
-    form = WorkflowEnrollForm(request.POST)
+    form = PortalWorkflowEnrollForm(request.POST, workflow=wf)
     if not form.is_valid():
-        django_messages.error(request, "Invalid enrollment.")
-        return redirect("portal:workflow_detail", workflow_id=wf.id)
+        django_messages.error(request, "Fix the enrollment form (see metadata errors below).")
+        return _workflow_detail_response(request, wf, enroll_form=form)
     d = form.cleaned_data
     en = WorkflowEnrollment.objects.create(
         tenant=wf.tenant,

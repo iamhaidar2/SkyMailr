@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 
 from django import forms
@@ -15,9 +16,13 @@ from apps.accounts.models import Account, AccountMembership, AccountRole, Accoun
 from apps.email_templates.models import TemplateCategory
 from apps.tenants.models import SenderProfile, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import normalize_fqdn
-from apps.ui.forms import TenantForm
+from apps.ui.forms import TenantForm, WorkflowEnrollForm
 from apps.ui.tenant_validators import from_email_allowed_for_tenant
 from apps.workflows.models import WorkflowStep, WorkflowStepType
+from apps.workflows.services.enrollment_context import (
+    build_default_enrollment_metadata,
+    required_template_context_keys,
+)
 
 User = get_user_model()
 
@@ -320,6 +325,65 @@ def portal_workflow_step_initial_from_instance(step: WorkflowStep) -> dict:
     }
     init.update(wait_seconds_to_components(step.wait_seconds))
     return init
+
+
+class PortalWorkflowEnrollForm(WorkflowEnrollForm):
+    """Workflow test enrollment with pre-filled template_context and validation of required keys."""
+
+    def __init__(self, *args, workflow=None, **kwargs):
+        self.workflow = workflow
+        super().__init__(*args, **kwargs)
+        self.fields["metadata"].label = "Metadata (JSON)"
+        self.fields["metadata"].help_text = (
+            "Must include a template_context object whose keys cover all variables used in "
+            "this workflow’s send steps. Sample values are pre-filled — replace with real data for a realistic test."
+        )
+        if workflow is not None and not self.is_bound:
+            default_md = build_default_enrollment_metadata(workflow)
+            self.fields["metadata"].initial = json.dumps(default_md, indent=2)
+            nvars = len((default_md.get("template_context") or {}))
+            self.fields["metadata"].widget.attrs["rows"] = max(10, min(28, 8 + nvars * 2))
+
+    def clean(self):
+        cleaned_data = super().clean()
+        wf = self.workflow
+        if wf is None:
+            return cleaned_data
+        if self.errors.get("metadata"):
+            return cleaned_data
+        required = required_template_context_keys(wf)
+        if not required:
+            return cleaned_data
+        meta = cleaned_data.get("metadata") or {}
+        tc = meta.get("template_context") if isinstance(meta, dict) else None
+        if tc is None:
+            self.add_error(
+                "metadata",
+                'Include a "template_context" object with values for each variable required by this workflow.',
+            )
+            return cleaned_data
+        if not isinstance(tc, dict):
+            self.add_error("metadata", '"template_context" must be a JSON object.')
+            return cleaned_data
+        missing = [k for k in required if k not in tc]
+        if missing:
+            self.add_error(
+                "metadata",
+                "template_context is missing keys required by this workflow’s templates: "
+                + ", ".join(missing),
+            )
+            return cleaned_data
+        empty = [
+            k
+            for k in required
+            if tc[k] is None or (isinstance(tc[k], str) and not str(tc[k]).strip())
+        ]
+        if empty:
+            self.add_error(
+                "metadata",
+                "template_context values must not be empty for: " + ", ".join(empty),
+            )
+        return cleaned_data
 
 
 # Inline styles so the field stays hidden even if Tailwind utilities are missing or overridden.
