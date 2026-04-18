@@ -205,29 +205,71 @@ class PortalWorkflowStepForm(forms.Form):
         ],
         widget=forms.Select(attrs={"class": _inp}),
     )
-    template_key = forms.SlugField(
+    template_key = forms.ChoiceField(
         required=False,
+        choices=[],
+        label="Template",
         help_text="Required for send-template steps.",
-        widget=forms.TextInput(
-            attrs={"class": _inp, "placeholder": "e.g. welcome_email", "autocomplete": "off"}
-        ),
+        widget=forms.Select(attrs={"class": _inp}),
     )
-    wait_seconds = forms.IntegerField(
+    wait_days = forms.IntegerField(
         required=False,
         min_value=0,
-        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "e.g. 86400"}),
+        initial=0,
+        label="Days",
+        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+    )
+    wait_hours = forms.IntegerField(
+        required=False,
+        min_value=0,
+        initial=0,
+        label="Hours",
+        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+    )
+    wait_minutes = forms.IntegerField(
+        required=False,
+        min_value=0,
+        initial=0,
+        label="Minutes",
+        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+    )
+    wait_sec = forms.IntegerField(
+        required=False,
+        min_value=0,
+        initial=0,
+        label="Seconds",
+        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
     )
 
+    def __init__(self, *args, template_keys=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        keys = list(template_keys or [])
+        self.fields["template_key"].choices = [("", "— Select template —")] + [
+            (k, k) for k in sorted(keys)
+        ]
+
     def clean(self):
-        data = super().clean()
-        st = data.get("step_type")
-        tk = (data.get("template_key") or "").strip()
-        ws = data.get("wait_seconds")
+        cleaned_data = super().clean()
+        st = cleaned_data.get("step_type")
+
+        def nz(name: str) -> int:
+            v = cleaned_data.get(name)
+            if v is None:
+                return 0
+            return int(v)
+
+        total_wait = (
+            nz("wait_days") * 86400
+            + nz("wait_hours") * 3600
+            + nz("wait_minutes") * 60
+            + nz("wait_sec")
+        )
+        cleaned_data["wait_seconds"] = total_wait
+
+        tk = (cleaned_data.get("template_key") or "").strip()
         if st == WorkflowStepType.SEND_TEMPLATE and not tk:
             raise forms.ValidationError("Template key is required for send-template steps.")
-        if st == WorkflowStepType.WAIT_DURATION and ws is None:
-            raise forms.ValidationError("Wait seconds required for wait steps.")
-        return data
+        return cleaned_data
 
 
 # Inline styles so the field stays hidden even if Tailwind utilities are missing or overridden.

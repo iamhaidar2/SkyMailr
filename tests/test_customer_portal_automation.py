@@ -337,8 +337,11 @@ def test_workflow_step_validates_template_key(
         {
             "order": "0",
             "step_type": "send_template",
-            "template_key": "missing",
-            "wait_seconds": "",
+            "template_key": "",
+            "wait_days": "0",
+            "wait_hours": "0",
+            "wait_minutes": "0",
+            "wait_sec": "0",
         },
     )
     assert r.status_code == 302
@@ -350,7 +353,10 @@ def test_workflow_step_validates_template_key(
             "order": "0",
             "step_type": "send_template",
             "template_key": "step_tpl",
-            "wait_seconds": "",
+            "wait_days": "0",
+            "wait_hours": "0",
+            "wait_minutes": "0",
+            "wait_sec": "0",
         },
     )
     assert r2.status_code == 302

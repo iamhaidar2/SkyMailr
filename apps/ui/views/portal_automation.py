@@ -680,9 +680,12 @@ def workflow_detail(request, workflow_id):
         .order_by("-started_at")[:50]
     )
     enroll_form = WorkflowEnrollForm()
-    step_form = PortalWorkflowStepForm(initial={"order": max_order + 1})
     tenant_tpl_keys = list(
         EmailTemplate.objects.filter(tenant=wf.tenant).values_list("key", flat=True)
+    )
+    step_form = PortalWorkflowStepForm(
+        initial={"order": max_order + 1},
+        template_keys=tenant_tpl_keys,
     )
     can_edit = portal_user_can_edit_content(request.user, account)
     ctx = _portal_ctx(request, wf.name, "workflows")
@@ -734,7 +737,10 @@ def workflow_enroll(request, workflow_id):
 def workflow_add_step(request, workflow_id):
     account = _account(request)
     wf = get_object_or_404(Workflow, pk=workflow_id, tenant__account=account)
-    form = PortalWorkflowStepForm(request.POST)
+    tenant_tpl_keys = list(
+        EmailTemplate.objects.filter(tenant=wf.tenant).values_list("key", flat=True)
+    )
+    form = PortalWorkflowStepForm(request.POST, template_keys=tenant_tpl_keys)
     if not form.is_valid():
         django_messages.error(request, "Invalid step.")
         return redirect("portal:workflow_detail", workflow_id=wf.id)
