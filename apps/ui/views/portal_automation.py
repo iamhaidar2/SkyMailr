@@ -35,6 +35,7 @@ from apps.email_templates.services.validation_service import TemplateValidationS
 from apps.email_templates.services.version_actions import approve_latest_version
 from apps.tenants.models import DomainVerificationStatus, SenderProfile, Tenant
 from apps.tenants.services.domain_verification import email_domain_matches_verified_tenant_domain
+from apps.workflows.services.template_guard import workflow_steps_reference_template
 from apps.ui.decorators import (
     customer_login_required,
     portal_account_required,
@@ -353,6 +354,24 @@ def template_version_create(request, template_id):
 @customer_login_required
 @portal_editor_required
 @require_POST
+def template_delete(request, template_id):
+    account = _account(request)
+    tpl = get_object_or_404(EmailTemplate, pk=template_id, tenant__account=account)
+    if workflow_steps_reference_template(tpl):
+        django_messages.error(
+            request,
+            "This template is used by a workflow step; remove or update the workflow first.",
+        )
+        return redirect("portal:template_detail", template_id=tpl.id)
+    name = tpl.name
+    tpl.delete()
+    django_messages.success(request, f"Deleted template “{name}”.")
+    return redirect("portal:template_list")
+
+
+@customer_login_required
+@portal_editor_required
+@require_POST
 def template_preview_draft(request, template_id):
     """Render subject/HTML/text from unsaved form fields (JSON body)."""
     account = _account(request)
@@ -420,8 +439,13 @@ def template_setup(request, template_id):
                 tone="professional",
                 is_marketing=is_m,
             )
+            user_instr = (request.POST.get("llm_instructions") or "").strip()
             try:
-                TemplateLLMService().generate_draft_version(template=tpl, brief=brief)
+                TemplateLLMService().generate_draft_version(
+                    template=tpl,
+                    brief=brief,
+                    extra_user_instructions=user_instr,
+                )
             except Exception as e:
                 django_messages.error(request, str(e))
                 return redirect("portal:template_setup", template_id=tpl.id)

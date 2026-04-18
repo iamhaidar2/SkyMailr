@@ -8,14 +8,57 @@
       <p class="font-mono text-sm text-slate-400">{{ template.key }}</p>
       <p class="mt-2 text-sm text-slate-400">{{ template.description }}</p>
     </div>
-    <a href="{% url 'portal:template_list' %}" class="text-sm text-slate-400 hover:text-white">← All templates</a>
+    <div class="flex flex-wrap items-center gap-3">
+      <a href="{% url 'portal:template_list' %}" class="text-sm text-slate-400 hover:text-white">← All templates</a>
+      {% if can_edit %}
+      <form method="post" action="{% url 'portal:template_delete' template.id %}" class="inline" onsubmit="return confirm('Delete this template and all its versions? This cannot be undone.');">
+        {% csrf_token %}
+        <button type="submit" class="rounded-md border border-red-800/80 bg-red-950/40 px-3 py-1.5 text-sm text-red-200 hover:bg-red-950/70">Delete template</button>
+      </form>
+      {% endif %}
+    </div>
   </div>
 
+  {% if can_edit %}
+  <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-5">
+    <h3 class="text-sm font-semibold text-emerald-100">Edit content</h3>
+    <p class="mt-1 text-xs text-slate-500">Live sends use the <strong class="text-emerald-200">approved</strong> version. <strong>Save version</strong> creates a new pending draft; use <strong>Approve</strong> at the bottom when ready.</p>
+    {% if latest_version %}
+      {% if approved_version and approved_version.id == latest_version.id %}
+        <p class="mt-2 text-xs text-emerald-200/90">Sending uses <strong>v{{ approved_version.version_number }}</strong> (same as your latest draft).</p>
+      {% elif approved_version %}
+        <p class="mt-2 text-xs text-slate-400">Sending uses <strong class="text-white">v{{ approved_version.version_number }}</strong> (approved). Latest saved draft: <strong class="text-white">v{{ latest_version.version_number }}</strong> — approve when ready.</p>
+      {% else %}
+        <p class="mt-2 text-xs text-amber-200">No approved version yet. Latest draft: v{{ latest_version.version_number }}.</p>
+      {% endif %}
+    {% else %}
+      <p class="mt-2 text-xs text-amber-200">No versions yet — add subject and HTML below, then save.</p>
+    {% endif %}
+    <div class="mt-4 grid gap-6 lg:grid-cols-2">
+      <form id="template-version-form" method="post" action="{% url 'portal:template_version_create' template.id %}" class="space-y-3">
+        {% csrf_token %}
+        <div><label class="text-xs text-slate-500">{{ version_form.subject_template.label }}</label>{{ version_form.subject_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.preview_text_template.label }}</label>{{ version_form.preview_text_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.text_template.label }}</label>{{ version_form.text_template }}</div>
+        <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save version</button>
+      </form>
+      <div class="space-y-2">
+        <p class="text-xs font-medium uppercase text-slate-500">Live preview</p>
+        <p class="text-xs text-slate-500">Updates as you type (placeholder context for variables).</p>
+        <div id="template-draft-preview-status" class="text-xs text-slate-500"></div>
+        <div id="template-draft-preview-subject" class="text-sm font-medium text-white"></div>
+        <div class="max-h-72 overflow-auto rounded border border-surface-700 bg-white p-3 text-xs text-slate-900" id="template-draft-preview-html" data-empty="1">
+          <span class="text-slate-500">Preview will appear here.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
   <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-5">
     <h3 class="text-sm font-semibold text-emerald-100">Current approved version</h3>
     {% if approved_version %}
-      <p class="mt-1 text-xs text-slate-500">This is what SkyMailr uses when sending for this template key. You cannot edit this block directly.</p>
-      <p class="mt-2 text-xs text-amber-200/90">To change copy or HTML, scroll to <strong>Add new version</strong> below, save a new draft, then approve it.</p>
+      <p class="mt-1 text-xs text-slate-500">This is what SkyMailr uses when sending for this template key.</p>
       <div class="mt-4 space-y-4 text-sm">
         <div>
           <p class="text-xs font-medium uppercase text-slate-500">Subject line</p>
@@ -28,11 +71,11 @@
         </div>
         {% endif %}
         <div>
-          <p class="text-xs font-medium uppercase text-slate-500">HTML — rendered preview (read-only)</p>
+          <p class="text-xs font-medium uppercase text-slate-500">HTML — rendered preview</p>
           <div class="mt-2 max-h-56 overflow-auto rounded border border-surface-700 bg-white p-3 text-xs text-slate-900">{{ approved_version.html_template|safe }}</div>
         </div>
         <div>
-          <p class="text-xs font-medium uppercase text-slate-500">HTML source (read-only)</p>
+          <p class="text-xs font-medium uppercase text-slate-500">HTML source</p>
           <pre class="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-surface-700 bg-surface-900 p-3 text-xs text-slate-400">{{ approved_version.html_template }}</pre>
         </div>
         <div>
@@ -41,9 +84,10 @@
         </div>
       </div>
     {% else %}
-      <p class="mt-2 text-sm text-amber-200">No approved version yet. Add a version below and approve it — sends will fail until you do.</p>
+      <p class="mt-2 text-sm text-amber-200">No approved version yet.</p>
     {% endif %}
   </div>
+  {% endif %}
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Variables</h3>
@@ -104,32 +148,6 @@
       </div>
     </div>
   </details>
-  {% endif %}
-
-  {% if can_edit %}
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">Add new version</h3>
-    <p class="mt-1 text-xs text-slate-500">Creates a pending version from the fields below (pre-filled from the latest draft when available). Use <strong>Live preview</strong> to see rendered output; save when ready.</p>
-    <div class="mt-4 grid gap-6 lg:grid-cols-2">
-      <form id="template-version-form" method="post" action="{% url 'portal:template_version_create' template.id %}" class="space-y-3">
-        {% csrf_token %}
-        <div><label class="text-xs text-slate-500">{{ version_form.subject_template.label }}</label>{{ version_form.subject_template }}</div>
-        <div><label class="text-xs text-slate-500">{{ version_form.preview_text_template.label }}</label>{{ version_form.preview_text_template }}</div>
-        <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
-        <div><label class="text-xs text-slate-500">{{ version_form.text_template.label }}</label>{{ version_form.text_template }}</div>
-        <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save version</button>
-      </form>
-      <div class="space-y-2">
-        <p class="text-xs font-medium uppercase text-slate-500">Live preview</p>
-        <p class="text-xs text-slate-500">Updates automatically as you type (uses placeholder context for variables).</p>
-        <div id="template-draft-preview-status" class="text-xs text-slate-500"></div>
-        <div id="template-draft-preview-subject" class="text-sm font-medium text-white"></div>
-        <div class="max-h-72 overflow-auto rounded border border-surface-700 bg-white p-3 text-xs text-slate-900" id="template-draft-preview-html" data-empty="1">
-          <span class="text-slate-500">Preview will appear here.</span>
-        </div>
-      </div>
-    </div>
-  </div>
   {% endif %}
 
   <div class="grid gap-6 lg:grid-cols-2">

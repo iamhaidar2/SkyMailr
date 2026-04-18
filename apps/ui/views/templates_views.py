@@ -28,6 +28,7 @@ from apps.ui.forms import NewEmailTemplateForm, TemplateApproveForm, TemplatePre
 from apps.ui.forms_customer import PortalTemplateVersionForm
 from apps.ui.services.operator import get_active_tenant
 from apps.tenants.models import Tenant
+from apps.workflows.services.template_guard import workflow_steps_reference_template
 
 
 def _version_form_initial_from_latest(latest: EmailTemplateVersion | None) -> dict:
@@ -205,6 +206,22 @@ def template_version_create(request, template_id):
     )
     django_messages.success(request, f"Created version {max_v + 1}.")
     return redirect("ui:template_detail", template_id=tpl.id)
+
+
+@operator_required
+@require_POST
+def template_delete(request, template_id):
+    tpl = get_object_or_404(EmailTemplate, pk=template_id)
+    if workflow_steps_reference_template(tpl):
+        django_messages.error(
+            request,
+            "This template is used by a workflow step; remove or update the workflow first.",
+        )
+        return redirect("ui:template_detail", template_id=tpl.id)
+    name = tpl.name
+    tpl.delete()
+    django_messages.success(request, f"Deleted template “{name}”.")
+    return redirect("ui:templates_list")
 
 
 @operator_required

@@ -166,6 +166,11 @@ urlpatterns = [
         name="template_preview_draft",
     ),
     path(
+        "account/templates/<uuid:template_id>/delete/",
+        portal_automation.template_delete,
+        name="template_delete",
+    ),
+    path(
         "account/templates/<uuid:template_id>/",
         portal_automation.template_detail,
         name="template_detail",

@@ -11,9 +11,13 @@
   <div class="rounded-xl border border-violet-900/50 bg-violet-950/20 p-5">
     <h3 class="text-sm font-semibold text-violet-100">Create with AI</h3>
     <p class="mt-1 text-xs text-slate-500">Uses this template’s name, key, description, and category to generate a pending draft (you can edit and approve afterward).</p>
-    <form method="post" class="mt-4">
+    <form method="post" class="mt-4 space-y-3">
       {% csrf_token %}
       <input type="hidden" name="action" value="create_with_ai" />
+      <div>
+        <label for="id_llm_instructions" class="text-xs text-slate-500">Instructions for AI <span class="text-slate-600">(optional)</span></label>
+        <textarea id="id_llm_instructions" name="llm_instructions" rows="4" class="mt-1 w-full rounded-md border border-surface-600 bg-surface-900 px-3 py-2 text-sm text-white placeholder:text-slate-600" placeholder="Tone, must-haves, layout hints…"></textarea>
+      </div>
       <button type="submit" class="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">Create with AI</button>
     </form>
   </div>

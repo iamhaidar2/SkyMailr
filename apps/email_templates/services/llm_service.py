@@ -54,6 +54,7 @@ class TemplateLLMService:
         template: EmailTemplate,
         brief: TemplateGenerationBriefSchema,
         created_by_llm: bool = True,
+        extra_user_instructions: str = "",
     ) -> EmailTemplateVersion:
         tenant = template.tenant
         model = _default_model_for_tenant(tenant)
@@ -62,6 +63,9 @@ class TemplateLLMService:
         voice = (tenant.llm_defaults or {}).get("brand_voice_notes") or ""
         if voice:
             extra = f"Tenant brand voice notes: {voice}"
+        instr = (extra_user_instructions or "").strip()
+        if instr:
+            extra = (extra + "\n\n" if extra else "") + f"Additional instructions from the user:\n{instr}"
 
         system = build_template_generation_system()
         user = build_template_generation_user(tenant.name, brief, extra_context=extra)

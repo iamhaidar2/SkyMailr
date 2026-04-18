@@ -1,6 +1,7 @@
 """Customer portal: sender profiles, templates, workflows — account scoping and roles."""
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -17,7 +18,7 @@ from apps.email_templates.models import (
     VersionSourceType,
 )
 from apps.tenants.models import SenderCategory, SenderProfile, Tenant, TenantStatus
-from apps.workflows.models import Workflow
+from apps.workflows.models import Workflow, WorkflowStep, WorkflowStepType
 from tests.portal_helpers import bind_portal_account_session
 
 User = get_user_model()
@@ -459,3 +460,96 @@ def test_template_setup_redirects_when_version_exists(
 def test_operator_templates_list_still_works(staff_client):
     r = staff_client.get(reverse("ui:templates_list"))
     assert r.status_code == 200
+
+
+@pytest.mark.django_db
+def test_portal_template_delete_succeeds_when_no_workflow(
+    client, customer_user, customer_account, portal_tenant
+):
+    tpl = EmailTemplate.objects.create(
+        tenant=portal_tenant,
+        key="delok",
+        name="Del",
+        category=TemplateCategory.TRANSACTIONAL,
+        status=TemplateStatus.DRAFT,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.post(reverse("portal:template_delete", kwargs={"template_id": tpl.id}))
+    assert r.status_code == 302
+    loc = r.headers.get("Location") or ""
+    assert "/account/templates" in loc and loc.rstrip("/").endswith("/account/templates")
+    assert not EmailTemplate.objects.filter(pk=tpl.id).exists()
+
+
+@pytest.mark.django_db
+def test_portal_template_delete_blocked_when_workflow_references_template_fk(
+    client, customer_user, customer_account, portal_tenant
+):
+    tpl = EmailTemplate.objects.create(
+        tenant=portal_tenant,
+        key="blkfk",
+        name="Blk",
+        category=TemplateCategory.TRANSACTIONAL,
+        status=TemplateStatus.DRAFT,
+    )
+    wf = Workflow.objects.create(tenant=portal_tenant, name="W", slug="blkfk")
+    WorkflowStep.objects.create(
+        workflow=wf,
+        order=0,
+        step_type=WorkflowStepType.SEND_TEMPLATE,
+        template=tpl,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.post(reverse("portal:template_delete", kwargs={"template_id": tpl.id}))
+    assert r.status_code == 302
+    assert EmailTemplate.objects.filter(pk=tpl.id).exists()
+    assert str(tpl.id) in (r.headers.get("Location") or "")
+
+
+@pytest.mark.django_db
+def test_portal_template_delete_blocked_when_workflow_matches_template_key(
+    client, customer_user, customer_account, portal_tenant
+):
+    tpl = EmailTemplate.objects.create(
+        tenant=portal_tenant,
+        key="keymatch",
+        name="Key",
+        category=TemplateCategory.TRANSACTIONAL,
+        status=TemplateStatus.DRAFT,
+    )
+    wf = Workflow.objects.create(tenant=portal_tenant, name="W", slug="keymatch")
+    WorkflowStep.objects.create(
+        workflow=wf,
+        order=0,
+        step_type=WorkflowStepType.SEND_TEMPLATE,
+        template_key="keymatch",
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.post(reverse("portal:template_delete", kwargs={"template_id": tpl.id}))
+    assert r.status_code == 302
+    assert EmailTemplate.objects.filter(pk=tpl.id).exists()
+
+
+@pytest.mark.django_db
+@patch("apps.ui.views.portal_automation.TemplateLLMService")
+def test_template_setup_create_with_ai_passes_llm_instructions(
+    mock_svc_cls, client, customer_user, customer_account, portal_tenant
+):
+    tpl = EmailTemplate.objects.create(
+        tenant=portal_tenant,
+        key="aiinstr",
+        name="AI",
+        category=TemplateCategory.TRANSACTIONAL,
+        status=TemplateStatus.DRAFT,
+    )
+    mock_inst = mock_svc_cls.return_value
+    mock_inst.generate_draft_version.return_value = MagicMock()
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.post(
+        reverse("portal:template_setup", kwargs={"template_id": tpl.id}),
+        {"action": "create_with_ai", "llm_instructions": "  Make it punchy  "},
+    )
+    assert r.status_code == 302
+    mock_inst.generate_draft_version.assert_called_once()
+    call_kw = mock_inst.generate_draft_version.call_args.kwargs
+    assert call_kw.get("extra_user_instructions") == "Make it punchy"

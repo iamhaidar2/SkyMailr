@@ -55,6 +55,11 @@ urlpatterns = [
         templates_views.template_preview_draft,
         name="template_preview_draft",
     ),
+    path(
+        "templates/<uuid:template_id>/delete/",
+        templates_views.template_delete,
+        name="template_delete",
+    ),
     path("templates/<uuid:template_id>/", templates_views.template_detail, name="template_detail"),
     path(
         "templates/<uuid:template_id>/preview/",
