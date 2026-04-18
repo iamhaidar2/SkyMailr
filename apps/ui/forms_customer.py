@@ -171,19 +171,23 @@ class PortalWorkflowStepForm(forms.Form):
         return data
 
 
-class CustomerSignupForm(forms.Form):
-    company_website = forms.CharField(
-        required=False,
-        label="",
-        widget=forms.TextInput(
-            attrs={
-                "class": "absolute -left-[9999px] h-px w-px opacity-0",
-                "tabindex": "-1",
-                "autocomplete": "off",
-                "aria-hidden": "true",
-            }
+# Inline styles so the field stays hidden even if Tailwind utilities are missing or overridden.
+_SIGNUP_HONEYPOT_WIDGET = forms.TextInput(
+    attrs={
+        "class": "customer-signup-honeypot",
+        "tabindex": "-1",
+        "autocomplete": "off",
+        "aria-hidden": "true",
+        "style": (
+            "position:absolute!important;left:-10000px!important;width:1px!important;"
+            "height:1px!important;padding:0!important;margin:0!important;overflow:hidden!important;"
+            "opacity:0!important;pointer-events:none!important;border:0!important;"
         ),
-    )
+    }
+)
+
+
+class CustomerSignupForm(forms.Form):
     display_name = forms.CharField(
         max_length=150,
         label="Your name",
@@ -210,6 +214,12 @@ class CustomerSignupForm(forms.Form):
         label="Account URL slug",
         help_text="Lowercase letters, numbers, and hyphens only.",
         widget=forms.TextInput(attrs={"class": _inp, "placeholder": "acme-corp"}),
+    )
+    # Anti-bot honeypot: must stay empty. Declared last so it renders after labeled fields.
+    company_website = forms.CharField(
+        required=False,
+        label="",
+        widget=_SIGNUP_HONEYPOT_WIDGET,
     )
 
     def clean_email(self):

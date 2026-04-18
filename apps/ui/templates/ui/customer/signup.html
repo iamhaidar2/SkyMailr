@@ -6,6 +6,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Create account · SkyMailr</title>
   {% include "ui/customer/partials/auth_head.html" %}
+  <style>
+    /* Contain honeypot so it cannot reflow as a visible first field */
+    .customer-signup-honeypot-wrap {
+      position: absolute;
+      width: 0;
+      height: 0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+  </style>
 </head>
 <body class="customer-auth-body">
   <div class="customer-auth-topbar">
@@ -15,7 +28,7 @@
     <h1>Create your account</h1>
     <p class="customer-auth-sub">One organization — we create your first connected app when you sign up.</p>
     <p class="mt-2 text-sm"><a href="{% url 'portal:login' %}" class="customer-dash-link">Already have an account? Sign in</a></p>
-    <form method="post" class="mt-6 space-y-4">
+    <form method="post" class="relative mt-6 space-y-4">
       {% csrf_token %}
       {% if form.non_field_errors %}
         <div class="customer-alert-red text-sm">{{ form.non_field_errors }}</div>
@@ -28,10 +41,10 @@
           {% if field.help_text %}<p class="mt-1 text-xs customer-text-muted">{{ field.help_text }}</p>{% endif %}
           {% if field.errors %}<p class="mt-1 text-xs text-red-400">{{ field.errors.0 }}</p>{% endif %}
         </div>
-        {% else %}
-          {{ field }}
         {% endif %}
       {% endfor %}
+      {# Spam honeypot: leave empty; bots often fill it. Filling it blocks signup. #}
+      <div class="customer-signup-honeypot-wrap" aria-hidden="true">{{ form.company_website }}</div>
       <button type="submit" class="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600">Create account</button>
     </form>
     <p class="mt-6 text-center text-xs customer-text-muted">Staff? <a href="{% url 'ui:login' %}" class="customer-dash-link">Staff sign-in</a></p>
