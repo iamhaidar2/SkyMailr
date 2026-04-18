@@ -686,8 +686,9 @@ def workflow_detail(request, workflow_id):
         EmailTemplate.objects.filter(tenant=wf.tenant).values_list("key", flat=True)
     )
     step_form = PortalWorkflowStepForm(
-        initial={"order": max_order + 1},
+        initial={"order": max_order + 1, "step_type": ""},
         template_keys=tenant_tpl_keys,
+        include_blank_step_type=True,
     )
     can_edit = portal_user_can_edit_content(request.user, account)
     edit_step = None
@@ -759,7 +760,11 @@ def workflow_add_step(request, workflow_id):
     tenant_tpl_keys = list(
         EmailTemplate.objects.filter(tenant=wf.tenant).values_list("key", flat=True)
     )
-    form = PortalWorkflowStepForm(request.POST, template_keys=tenant_tpl_keys)
+    form = PortalWorkflowStepForm(
+        request.POST,
+        template_keys=tenant_tpl_keys,
+        include_blank_step_type=True,
+    )
     if not form.is_valid():
         django_messages.error(request, "Invalid step.")
         return redirect("portal:workflow_detail", workflow_id=wf.id)

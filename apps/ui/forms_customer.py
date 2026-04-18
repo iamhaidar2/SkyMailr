@@ -25,6 +25,10 @@ _inp = (
     "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm "
     "text-white placeholder:text-slate-500"
 )
+_inp_compact = (
+    "w-full min-w-0 rounded-md border border-surface-600 bg-surface-800 px-2 py-1.5 text-sm "
+    "text-white placeholder:text-slate-500"
+)
 _chk = "h-4 w-4 rounded border-surface-600 text-accent"
 
 
@@ -217,31 +221,38 @@ class PortalWorkflowStepForm(forms.Form):
         min_value=0,
         initial=0,
         label="Days",
-        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+        widget=forms.NumberInput(attrs={"class": _inp_compact, "placeholder": "0", "min": "0"}),
     )
     wait_hours = forms.IntegerField(
         required=False,
         min_value=0,
         initial=0,
         label="Hours",
-        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+        widget=forms.NumberInput(attrs={"class": _inp_compact, "placeholder": "0", "min": "0"}),
     )
     wait_minutes = forms.IntegerField(
         required=False,
         min_value=0,
         initial=0,
         label="Minutes",
-        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+        widget=forms.NumberInput(attrs={"class": _inp_compact, "placeholder": "0", "min": "0"}),
     )
     wait_sec = forms.IntegerField(
         required=False,
         min_value=0,
         initial=0,
         label="Seconds",
-        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
+        widget=forms.NumberInput(attrs={"class": _inp_compact, "placeholder": "0", "min": "0"}),
     )
 
-    def __init__(self, *args, template_keys=None, extra_template_keys=None, **kwargs):
+    def __init__(
+        self,
+        *args,
+        template_keys=None,
+        extra_template_keys=None,
+        include_blank_step_type: bool = False,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         keys = set(template_keys or [])
         for x in extra_template_keys or []:
@@ -250,10 +261,20 @@ class PortalWorkflowStepForm(forms.Form):
         self.fields["template_key"].choices = [("", "— Select template —")] + [
             (k, k) for k in sorted(keys)
         ]
+        base_choices = [
+            (WorkflowStepType.SEND_TEMPLATE, "Send template email"),
+            (WorkflowStepType.WAIT_DURATION, "Wait (duration)"),
+            (WorkflowStepType.END, "End workflow"),
+        ]
+        if include_blank_step_type:
+            self.fields["step_type"].choices = [("", "— Select step type —")] + base_choices
 
     def clean(self):
         cleaned_data = super().clean()
         st = cleaned_data.get("step_type")
+        if not st:
+            self.add_error("step_type", "Select a step type.")
+            return cleaned_data
 
         def nz(name: str) -> int:
             v = cleaned_data.get(name)
