@@ -25,28 +25,34 @@ html:not([data-theme]) {
   --cs-accent-link-hover: #93c5fd;
 }
 
+/* Light: Mailchimp-inspired — warm neutrals, Cavanagh charcoal, teal + butter yellow accents */
 html[data-theme="light"] {
-  --cs-page-bg: #f1f5f9;
+  --cs-page-bg: #f6f6f4;
   --cs-sidebar-bg: #ffffff;
-  --cs-sidebar-border: #e2e8f0;
-  --cs-topbar-bg: rgba(255, 255, 255, 0.92);
-  --cs-topbar-border: #e2e8f0;
-  --cs-main-bg: #f8fafc;
-  --cs-text: #0f172a;
-  --cs-text-muted: #475569;
-  --cs-text-subtle: #64748b;
-  --cs-nav-hover: #f1f5f9;
-  --cs-nav-active-bg: #e2e8f0;
-  --cs-nav-active-text: #0f172a;
+  --cs-sidebar-border: #ece8e4;
+  --cs-topbar-bg: rgba(255, 255, 253, 0.94);
+  --cs-topbar-border: #ece8e4;
+  --cs-main-bg: #f6f6f4;
+  --cs-text: #241c15;
+  --cs-text-muted: #6b6560;
+  --cs-text-subtle: #8a827b;
+  --cs-nav-hover: #fff9e8;
+  --cs-nav-active-bg: #fff3d6;
+  --cs-nav-active-text: #241c15;
   --cs-card-bg: #ffffff;
-  --cs-card-bg-elevated: #f8fafc;
-  --cs-card-border: #e2e8f0;
-  --cs-badge-bg: #e2e8f0;
+  --cs-card-bg-elevated: #fffefb;
+  --cs-card-border: #e8e4df;
+  --cs-badge-bg: #f0edea;
   --cs-input-bg: #ffffff;
-  --cs-input-border: #cbd5e1;
-  --cs-backdrop: rgba(15, 23, 42, 0.35);
-  --cs-accent-link: #2563eb;
-  --cs-accent-link-hover: #1d4ed8;
+  --cs-input-border: #d9d4cf;
+  --cs-backdrop: rgba(36, 28, 21, 0.28);
+  --cs-accent-link: #007c89;
+  --cs-accent-link-hover: #006069;
+  --cs-accent-brand: #007c89;
+  --cs-accent-yellow: #ffe01b;
+  --cs-dash-pill-bg: #e8f4f5;
+  --cs-dash-pill-hover: #d4ecef;
+  --cs-dash-pill-text: #1a4a52;
 }
 
 .customer-shell-body {
@@ -175,7 +181,8 @@ html[data-theme="light"] {
 }
 
 html[data-theme="light"] .customer-theme-segment--active {
-  background-color: rgba(59, 130, 246, 0.15);
+  background-color: rgba(255, 224, 27, 0.45);
+  color: #241c15;
 }
 
 .customer-theme-icon {
@@ -359,4 +366,89 @@ html:not([data-theme]) .customer-auth-card {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--cs-text-muted);
+}
+
+/*
+ * Light theme: portal templates use Tailwind surface-* + text-white (built for dark).
+ * Remap those utilities inside the customer app so cards and copy read as warm / Mailchimp-like.
+ */
+html[data-theme="light"] .customer-app .bg-surface-900,
+html[data-theme="light"] .customer-app .bg-surface-850,
+html[data-theme="light"] .customer-app .bg-surface-800 {
+  background-color: var(--cs-card-bg) !important;
+}
+
+html[data-theme="light"] .customer-app .bg-surface-700 {
+  background-color: var(--cs-dash-pill-bg) !important;
+  color: var(--cs-dash-pill-text) !important;
+}
+
+html[data-theme="light"] .customer-app .hover\:bg-surface-600:hover {
+  background-color: var(--cs-dash-pill-hover) !important;
+}
+
+html[data-theme="light"] .customer-app .border-surface-600,
+html[data-theme="light"] .customer-app .border-surface-700 {
+  border-color: var(--cs-card-border) !important;
+}
+
+html[data-theme="light"] .customer-app .text-white {
+  color: var(--cs-text) !important;
+}
+
+html[data-theme="light"] .customer-app .text-slate-300 {
+  color: var(--cs-text-muted) !important;
+}
+
+html[data-theme="light"] .customer-app .text-slate-400 {
+  color: var(--cs-text-muted) !important;
+}
+
+html[data-theme="light"] .customer-app .text-slate-500 {
+  color: var(--cs-text-subtle) !important;
+}
+
+html[data-theme="light"] .customer-app .text-blue-400 {
+  color: var(--cs-accent-link) !important;
+}
+
+html[data-theme="light"] .customer-app .hover\:underline:hover {
+  color: var(--cs-accent-link-hover) !important;
+}
+
+html[data-theme="light"] .customer-app .bg-accent {
+  background-color: var(--cs-accent-brand) !important;
+}
+
+html[data-theme="light"] .customer-app .hover\:bg-blue-600:hover {
+  background-color: var(--cs-accent-link-hover) !important;
+}
+
+html[data-theme="light"] .customer-main .rounded-xl.border {
+  box-shadow: 0 1px 3px rgba(36, 28, 21, 0.06);
+}
+
+/* Django messages (base.html) — light surfaces */
+html[data-theme="light"] .customer-main .border-emerald-800 {
+  border-color: #6ee7b7 !important;
+  background-color: #ecfdf5 !important;
+  color: #065f46 !important;
+}
+
+html[data-theme="light"] .customer-main .border-red-800 {
+  border-color: #fca5a5 !important;
+  background-color: #fef2f2 !important;
+  color: #991b1b !important;
+}
+
+html[data-theme="light"] .customer-main .border-amber-800 {
+  border-color: #fcd34d !important;
+  background-color: #fffbeb !important;
+  color: #92400e !important;
+}
+
+html[data-theme="light"] .customer-main .border-surface-600.bg-surface-800 {
+  border-color: var(--cs-card-border) !important;
+  background-color: var(--cs-badge-bg) !important;
+  color: var(--cs-text-muted) !important;
 }
