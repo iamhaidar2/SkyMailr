@@ -32,3 +32,18 @@ def test_render_missing_variable(approved_template):
             context={},
             sanitize=True,
         )
+
+
+def test_render_lenient_undefined_fills_missing_with_empty():
+    """Draft preview uses lenient Jinja so undeclared {{ vars }} do not hard-fail."""
+    out = render_email_version(
+        subject_template="Hi {{ missing }}",
+        preview_template="",
+        html_template="<p>{{ foo }}</p>",
+        text_template="",
+        context={},
+        sanitize=False,
+        strict_undefined=False,
+    )
+    assert out["subject"] == "Hi"  # stripped; missing var renders empty
+    assert "<p></p>" in out["html"] or out["html"] == "<p></p>"

@@ -398,6 +398,7 @@ def template_preview_draft(request, template_id):
             text_template=text,
             context=ctx_data,
             sanitize=True,
+            strict_undefined=False,
         )
     except (TemplateRenderError, ValueError) as e:
         return JsonResponse({"error": str(e)}, status=400)

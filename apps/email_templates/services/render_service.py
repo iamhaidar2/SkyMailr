@@ -2,7 +2,7 @@ import logging
 from typing import Any
 
 import bleach
-from jinja2 import StrictUndefined, TemplateSyntaxError
+from jinja2 import StrictUndefined, TemplateSyntaxError, Undefined
 from jinja2.sandbox import SandboxedEnvironment
 
 logger = logging.getLogger(__name__)
@@ -41,13 +41,16 @@ class TemplateRenderError(Exception):
     pass
 
 
-def _env() -> SandboxedEnvironment:
-    return SandboxedEnvironment(undefined=StrictUndefined)
+def _env(*, strict_undefined: bool) -> SandboxedEnvironment:
+    """strict_undefined=False lets missing variables render empty (used for in-app draft preview)."""
+    return SandboxedEnvironment(undefined=StrictUndefined if strict_undefined else Undefined)
 
 
-def render_string(template_str: str, context: dict[str, Any]) -> str:
+def render_string(
+    template_str: str, context: dict[str, Any], *, strict_undefined: bool = True
+) -> str:
     try:
-        return _env().from_string(template_str).render(**context)
+        return _env(strict_undefined=strict_undefined).from_string(template_str).render(**context)
     except TemplateSyntaxError as e:
         raise TemplateRenderError(f"Invalid template syntax: {e}") from e
     except Exception as e:
@@ -66,11 +69,20 @@ def render_email_version(
     text_template: str,
     context: dict[str, Any],
     sanitize: bool = True,
+    strict_undefined: bool = True,
 ) -> dict[str, str]:
-    subject = render_string(subject_template, context)
-    preview = render_string(preview_template or "", context) if preview_template else ""
-    html_out = render_string(html_template, context)
-    text_out = render_string(text_template or "", context) if text_template else ""
+    subject = render_string(subject_template, context, strict_undefined=strict_undefined)
+    preview = (
+        render_string(preview_template or "", context, strict_undefined=strict_undefined)
+        if preview_template
+        else ""
+    )
+    html_out = render_string(html_template, context, strict_undefined=strict_undefined)
+    text_out = (
+        render_string(text_template or "", context, strict_undefined=strict_undefined)
+        if text_template
+        else ""
+    )
     if sanitize:
         html_out = sanitize_html(html_out)
     return {
