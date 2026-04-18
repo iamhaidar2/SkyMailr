@@ -7,7 +7,9 @@ import json
 
 from django.contrib import messages as django_messages
 from django.db.models import Count, Max, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.accounts.policy import PolicyError
@@ -21,11 +23,13 @@ from apps.email_templates.models import (
     CreatedByType,
     EmailTemplate,
     EmailTemplateVersion,
+    TemplateCategory,
     TemplateRenderLog,
     TemplateStatus,
     VersionSourceType,
 )
 from apps.email_templates.services.llm_service import TemplateLLMService
+from apps.email_templates.services.preview_context import placeholder_context_for_preview
 from apps.email_templates.services.render_service import TemplateRenderError, render_email_version
 from apps.email_templates.services.validation_service import TemplateValidationService
 from apps.email_templates.services.version_actions import approve_latest_version
@@ -37,6 +41,7 @@ from apps.ui.decorators import (
     portal_approve_required,
     portal_editor_required,
 )
+from apps.llm.schemas import TemplateGenerationBriefSchema
 from apps.ui.forms import TemplateApproveForm, TemplatePreviewForm, TemplateReviseForm, WorkflowEnrollForm
 from apps.ui.forms_customer import (
     PortalNewEmailTemplateForm,
@@ -178,6 +183,17 @@ def sender_profile_delete(request, profile_id):
 # --- Templates ---
 
 
+def _version_form_initial_from_latest(latest: EmailTemplateVersion | None) -> dict:
+    if latest is None:
+        return {}
+    return {
+        "subject_template": latest.subject_template or "",
+        "preview_text_template": latest.preview_text_template or "",
+        "html_template": latest.html_template or "",
+        "text_template": latest.text_template or "",
+    }
+
+
 @customer_login_required
 @portal_account_required
 def template_list(request):
@@ -228,12 +244,12 @@ def template_new(request):
                     description=d.get("description") or "",
                     status=TemplateStatus.DRAFT,
                 )
-                django_messages.success(request, "Template created. Add a version next.")
-                return redirect("portal:template_detail", template_id=tpl.id)
+                django_messages.success(request, "Next: add your first version or generate with AI.")
+                return redirect("portal:template_setup", template_id=tpl.id)
     else:
         form = PortalNewEmailTemplateForm(account=account, single_tenant=single)
     ctx = _portal_ctx(request, "New template", "templates")
-    ctx.update({"form": form, "submit_label": "Create template"})
+    ctx.update({"form": form, "submit_label": "Next"})
     return render(request, "ui/customer/template_new.html", ctx)
 
 
@@ -274,12 +290,16 @@ def template_detail(request, template_id):
                 lineterm="",
             )
         )
-    version_form = PortalTemplateVersionForm()
+    version_form = PortalTemplateVersionForm(initial=_version_form_initial_from_latest(latest_version))
     preview_form = TemplatePreviewForm()
     revise_form = TemplateReviseForm()
     approve_form = TemplateApproveForm()
     can_edit = portal_user_can_edit_content(request.user, account)
     can_approve = portal_user_can_approve_templates(request.user, account)
+    default_preview_ctx = placeholder_context_for_preview(tpl)
+    preview_draft_url = request.build_absolute_uri(
+        reverse("portal:template_preview_draft", kwargs={"template_id": tpl.id})
+    )
     ctx = _portal_ctx(request, tpl.name, "templates")
     ctx.update(
         {
@@ -296,6 +316,8 @@ def template_detail(request, template_id):
             "approve_form": approve_form,
             "can_edit": can_edit,
             "can_approve": can_approve,
+            "default_preview_context_json": json.dumps(default_preview_ctx),
+            "preview_draft_url": preview_draft_url,
         }
     )
     return render(request, "ui/customer/template_detail.html", ctx)
@@ -326,6 +348,113 @@ def template_version_create(request, template_id):
     )
     django_messages.success(request, f"Created version {max_v + 1}.")
     return redirect("portal:template_detail", template_id=tpl.id)
+
+
+@customer_login_required
+@portal_editor_required
+@require_POST
+def template_preview_draft(request, template_id):
+    """Render subject/HTML/text from unsaved form fields (JSON body)."""
+    account = _account(request)
+    tpl = get_object_or_404(EmailTemplate, pk=template_id, tenant__account=account)
+    try:
+        body = json.loads(request.body.decode() or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    subject = body.get("subject_template") or ""
+    preview = body.get("preview_text_template") or ""
+    html = body.get("html_template") or ""
+    text = body.get("text_template") or ""
+    ctx_data = body.get("context")
+    if ctx_data is None:
+        ctx_data = placeholder_context_for_preview(tpl)
+    elif not isinstance(ctx_data, dict):
+        return JsonResponse({"error": "context must be a JSON object"}, status=400)
+    try:
+        TemplateValidationService.validate_context(tpl, ctx_data)
+        out = render_email_version(
+            subject_template=subject,
+            preview_template=preview,
+            html_template=html,
+            text_template=text,
+            context=ctx_data,
+            sanitize=True,
+        )
+    except (TemplateRenderError, ValueError) as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse(
+        {
+            "subject": out["subject"],
+            "preview": out["preview"],
+            "html": out["html"],
+            "text": out["text"],
+        }
+    )
+
+
+@customer_login_required
+@portal_editor_required
+def template_setup(request, template_id):
+    """Step 2 after creating a template shell: AI draft or first manual version."""
+    account = _account(request)
+    tpl = get_object_or_404(
+        EmailTemplate.objects.select_related("tenant"),
+        pk=template_id,
+        tenant__account=account,
+    )
+    if tpl.versions.exists():
+        return redirect("portal:template_detail", template_id=tpl.id)
+    if request.method == "POST":
+        if request.POST.get("action") == "create_with_ai":
+            try:
+                assert_tenant_operational(tpl.tenant)
+            except PolicyError as e:
+                django_messages.error(request, e.detail)
+                return redirect("portal:template_setup", template_id=tpl.id)
+            purpose = (tpl.description or "").strip() or f"Email for {tpl.name}"
+            is_m = tpl.category == TemplateCategory.MARKETING
+            brief = TemplateGenerationBriefSchema(
+                template_purpose=purpose,
+                audience="",
+                email_category="marketing" if is_m else "transactional",
+                tone="professional",
+                is_marketing=is_m,
+            )
+            try:
+                TemplateLLMService().generate_draft_version(template=tpl, brief=brief)
+            except Exception as e:
+                django_messages.error(request, str(e))
+                return redirect("portal:template_setup", template_id=tpl.id)
+            django_messages.success(request, "Draft generated. Review and approve when ready.")
+            return redirect("portal:template_detail", template_id=tpl.id)
+        form = PortalTemplateVersionForm(request.POST)
+        if form.is_valid():
+            try:
+                assert_tenant_operational(tpl.tenant)
+            except PolicyError as e:
+                django_messages.error(request, e.detail)
+            else:
+                d = form.cleaned_data
+                max_v = tpl.versions.aggregate(m=Max("version_number")).get("m") or 0
+                EmailTemplateVersion.objects.create(
+                    template=tpl,
+                    version_number=max_v + 1,
+                    created_by_type=CreatedByType.USER,
+                    source_type=VersionSourceType.MANUAL,
+                    subject_template=d["subject_template"],
+                    preview_text_template=d.get("preview_text_template") or "",
+                    html_template=d["html_template"],
+                    text_template=d.get("text_template") or "",
+                    approval_status=ApprovalStatus.PENDING,
+                )
+                django_messages.success(request, f"Created version {max_v + 1}.")
+                return redirect("portal:template_detail", template_id=tpl.id)
+        django_messages.error(request, "Fix the fields below.")
+    else:
+        form = PortalTemplateVersionForm()
+    ctx = _portal_ctx(request, f"{tpl.name} — add content", "templates")
+    ctx.update({"template": tpl, "version_form": form})
+    return render(request, "ui/customer/template_setup.html", ctx)
 
 
 @customer_login_required

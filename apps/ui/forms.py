@@ -376,13 +376,27 @@ class ApiKeyCreateForm(forms.Form):
 
 
 class NewEmailTemplateForm(forms.Form):
-    key = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))
-    name = forms.CharField(widget=forms.TextInput(attrs={"class": _inp}))
+    name = forms.CharField(
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. Welcome email", "autocomplete": "off"}
+        )
+    )
+    key = forms.SlugField(
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. welcome_new_user", "autocomplete": "off"}
+        )
+    )
     category = forms.ChoiceField(
         choices=TemplateCategory.choices,
         widget=forms.Select(attrs={"class": _inp}),
     )
     description = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={"rows": 2, "class": _inp}),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "class": _inp,
+                "placeholder": "Short internal note (optional).",
+            }
+        ),
     )

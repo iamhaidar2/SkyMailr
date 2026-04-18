@@ -8,7 +8,7 @@
     {% for field in form %}
       <div><label class="mb-1 block text-xs text-slate-500">{{ field.label }}</label>{{ field }}{% if field.help_text %}<p class="mt-1 text-xs text-slate-600">{{ field.help_text }}</p>{% endif %}</div>
     {% endfor %}
-    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Create</button>
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">{{ submit_label|default:"Create" }}</button>
   </form>
 </div>
 {% endblock %}

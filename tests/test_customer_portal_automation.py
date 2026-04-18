@@ -239,6 +239,7 @@ def test_template_create_and_approve(
     )
     assert r.status_code == 302
     tpl = EmailTemplate.objects.get(tenant=portal_tenant, key="welcome")
+    assert f"/account/templates/{tpl.id}/setup/" in (r.headers.get("Location") or r.url or "")
     r2 = client.post(
         reverse("portal:template_version_create", kwargs={"template_id": tpl.id}),
         {
@@ -396,6 +397,62 @@ def test_editor_cannot_approve_template(
         {"note": ""},
     )
     assert r.status_code == 403
+
+
+@pytest.mark.django_db
+def test_template_preview_draft_returns_json(client, customer_user, customer_account, portal_tenant):
+    tpl = EmailTemplate.objects.create(
+        tenant=portal_tenant,
+        key="draftpv",
+        name="D",
+        category=TemplateCategory.TRANSACTIONAL,
+        status=TemplateStatus.DRAFT,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    url = reverse("portal:template_preview_draft", kwargs={"template_id": tpl.id})
+    r = client.post(
+        url,
+        data=json.dumps(
+            {
+                "subject_template": "Hi",
+                "preview_text_template": "",
+                "html_template": "<p>ok</p>",
+                "text_template": "",
+                "context": {},
+            }
+        ),
+        content_type="application/json",
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert "html" in data and "subject" in data
+
+
+@pytest.mark.django_db
+def test_template_setup_redirects_when_version_exists(
+    client, customer_user, customer_account, portal_tenant
+):
+    tpl = EmailTemplate.objects.create(
+        tenant=portal_tenant,
+        key="hasv",
+        name="H",
+        category=TemplateCategory.TRANSACTIONAL,
+        status=TemplateStatus.DRAFT,
+    )
+    EmailTemplateVersion.objects.create(
+        template=tpl,
+        version_number=1,
+        created_by_type=CreatedByType.USER,
+        source_type=VersionSourceType.MANUAL,
+        subject_template="S",
+        html_template="<p>x</p>",
+        text_template="x",
+        approval_status=ApprovalStatus.PENDING,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.get(reverse("portal:template_setup", kwargs={"template_id": tpl.id}))
+    assert r.status_code == 302
+    assert f"/account/templates/{tpl.id}/" in (r.headers.get("Location") or r.url or "")
 
 
 @pytest.mark.django_db

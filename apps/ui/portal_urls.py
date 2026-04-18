@@ -156,6 +156,16 @@ urlpatterns = [
     path("account/templates/", portal_automation.template_list, name="template_list"),
     path("account/templates/new/", portal_automation.template_new, name="template_new"),
     path(
+        "account/templates/<uuid:template_id>/setup/",
+        portal_automation.template_setup,
+        name="template_setup",
+    ),
+    path(
+        "account/templates/<uuid:template_id>/preview-draft/",
+        portal_automation.template_preview_draft,
+        name="template_preview_draft",
+    ),
+    path(
         "account/templates/<uuid:template_id>/",
         portal_automation.template_detail,
         name="template_detail",

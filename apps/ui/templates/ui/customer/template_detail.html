@@ -14,8 +14,9 @@
   <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-5">
     <h3 class="text-sm font-semibold text-emerald-100">Current approved version</h3>
     {% if approved_version %}
-      <p class="mt-1 text-xs text-slate-500">This is what SkyMailr uses when sending for this template key.</p>
-      <div class="mt-4 space-y-3 text-sm">
+      <p class="mt-1 text-xs text-slate-500">This is what SkyMailr uses when sending for this template key. You cannot edit this block directly.</p>
+      <p class="mt-2 text-xs text-amber-200/90">To change copy or HTML, scroll to <strong>Add new version</strong> below, save a new draft, then approve it.</p>
+      <div class="mt-4 space-y-4 text-sm">
         <div>
           <p class="text-xs font-medium uppercase text-slate-500">Subject line</p>
           <p class="mt-1 text-white">{{ approved_version.subject_template }}</p>
@@ -27,8 +28,12 @@
         </div>
         {% endif %}
         <div>
-          <p class="text-xs font-medium uppercase text-slate-500">HTML</p>
+          <p class="text-xs font-medium uppercase text-slate-500">HTML — rendered preview (read-only)</p>
           <div class="mt-2 max-h-56 overflow-auto rounded border border-surface-700 bg-white p-3 text-xs text-slate-900">{{ approved_version.html_template|safe }}</div>
+        </div>
+        <div>
+          <p class="text-xs font-medium uppercase text-slate-500">HTML source (read-only)</p>
+          <pre class="mt-2 max-h-48 overflow-auto whitespace-pre-wrap rounded border border-surface-700 bg-surface-900 p-3 text-xs text-slate-400">{{ approved_version.html_template }}</pre>
         </div>
         <div>
           <p class="text-xs font-medium uppercase text-slate-500">Plain text</p>
@@ -40,10 +45,10 @@
     {% endif %}
   </div>
 
-  {% if template.variables.count %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Variables</h3>
-    <p class="mt-1 text-xs text-slate-500">Use these keys in JSON context when previewing or sending.</p>
+    {% include "ui/customer/partials/template_variable_docs.html" %}
+    {% if template.variables.count %}
     <ul class="mt-3 space-y-2 text-sm">
       {% for v in template.variables.all %}
         <li class="flex flex-wrap gap-2 border-b border-surface-700 pb-2">
@@ -53,8 +58,10 @@
         </li>
       {% endfor %}
     </ul>
+    {% else %}
+    <p class="mt-3 text-sm text-slate-500">No variables declared yet. You can still use literals only, or add variables when you create drafts (e.g. via AI).</p>
+    {% endif %}
   </div>
-  {% endif %}
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Version history</h3>
@@ -102,22 +109,33 @@
   {% if can_edit %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Add new version</h3>
-    <p class="mt-1 text-xs text-slate-500">Creates a pending version you can preview and approve.</p>
-    <form method="post" action="{% url 'portal:template_version_create' template.id %}" class="mt-4 space-y-3">
-      {% csrf_token %}
-      <div><label class="text-xs text-slate-500">{{ version_form.subject_template.label }}</label>{{ version_form.subject_template }}</div>
-      <div><label class="text-xs text-slate-500">{{ version_form.preview_text_template.label }}</label>{{ version_form.preview_text_template }}</div>
-      <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
-      <div><label class="text-xs text-slate-500">{{ version_form.text_template.label }}</label>{{ version_form.text_template }}</div>
-      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save version</button>
-    </form>
+    <p class="mt-1 text-xs text-slate-500">Creates a pending version from the fields below (pre-filled from the latest draft when available). Use <strong>Live preview</strong> to see rendered output; save when ready.</p>
+    <div class="mt-4 grid gap-6 lg:grid-cols-2">
+      <form id="template-version-form" method="post" action="{% url 'portal:template_version_create' template.id %}" class="space-y-3">
+        {% csrf_token %}
+        <div><label class="text-xs text-slate-500">{{ version_form.subject_template.label }}</label>{{ version_form.subject_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.preview_text_template.label }}</label>{{ version_form.preview_text_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
+        <div><label class="text-xs text-slate-500">{{ version_form.text_template.label }}</label>{{ version_form.text_template }}</div>
+        <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save version</button>
+      </form>
+      <div class="space-y-2">
+        <p class="text-xs font-medium uppercase text-slate-500">Live preview</p>
+        <p class="text-xs text-slate-500">Updates automatically as you type (uses placeholder context for variables).</p>
+        <div id="template-draft-preview-status" class="text-xs text-slate-500"></div>
+        <div id="template-draft-preview-subject" class="text-sm font-medium text-white"></div>
+        <div class="max-h-72 overflow-auto rounded border border-surface-700 bg-white p-3 text-xs text-slate-900" id="template-draft-preview-html" data-empty="1">
+          <span class="text-slate-500">Preview will appear here.</span>
+        </div>
+      </div>
+    </div>
   </div>
   {% endif %}
 
   <div class="grid gap-6 lg:grid-cols-2">
-    <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-      <h3 class="text-sm font-semibold text-white">Preview with context</h3>
-      <p class="mt-1 text-xs text-slate-500">Renders the latest version (not necessarily approved).</p>
+    <details class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+      <summary class="cursor-pointer text-sm font-semibold text-white">Advanced: preview with custom context JSON</summary>
+      <p class="mt-2 text-xs text-slate-500">Renders the <strong>saved</strong> latest version from the server (not unsaved edits above).</p>
       {% if can_edit %}
       <form method="post" action="{% url 'portal:template_preview' template.id %}" class="mt-4 space-y-3">
         {% csrf_token %}
@@ -127,7 +145,7 @@
       {% else %}
       <p class="mt-3 text-sm text-slate-500">Viewers cannot run preview.</p>
       {% endif %}
-    </div>
+    </details>
     <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
       <h3 class="text-sm font-semibold text-white">Revise with LLM</h3>
       {% if can_edit %}
@@ -158,4 +176,57 @@
   <div class="rounded-xl border border-surface-700 bg-surface-850 p-4 text-sm text-slate-500">Only account owners or admins can approve template versions.</div>
   {% endif %}
 </div>
+{% if can_edit %}
+<script>
+(function () {
+  var url = "{{ preview_draft_url|escapejs }}";
+  var defaultCtx = {{ default_preview_context_json }};
+  var form = document.getElementById("template-version-form");
+  if (!form || !url) return;
+  var subjectEl = document.getElementById("template-draft-preview-subject");
+  var htmlEl = document.getElementById("template-draft-preview-html");
+  var statusEl = document.getElementById("template-draft-preview-status");
+  function getCookie(name) {
+    var v = document.cookie.match("(^|;) ?" + name + "=([^;]*)(;|$)");
+    return v ? decodeURIComponent(v[2]) : "";
+  }
+  var timer = null;
+  function run() {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      var payload = {
+        subject_template: (form.querySelector("[name=subject_template]") || {}).value || "",
+        preview_text_template: (form.querySelector("[name=preview_text_template]") || {}).value || "",
+        html_template: (form.querySelector("[name=html_template]") || {}).value || "",
+        text_template: (form.querySelector("[name=text_template]") || {}).value || "",
+        context: defaultCtx
+      };
+      statusEl.textContent = "Rendering…";
+      fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken") || (form.querySelector("[name=csrfmiddlewaretoken]") || {}).value || ""
+        },
+        credentials: "same-origin",
+        body: JSON.stringify(payload)
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (x) {
+          if (!x.ok) {
+            statusEl.textContent = x.j.error || "Preview failed";
+            return;
+          }
+          statusEl.textContent = "";
+          subjectEl.textContent = x.j.subject || "";
+          htmlEl.innerHTML = x.j.html || "";
+          htmlEl.removeAttribute("data-empty");
+        })
+        .catch(function () { statusEl.textContent = "Preview failed"; });
+    }, 400);
+  }
+  ["input", "change"].forEach(function (ev) { form.addEventListener(ev, run); });
+  run();
+})();
+</script>
+{% endif %}
 {% endblock %}

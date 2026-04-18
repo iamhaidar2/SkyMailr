@@ -90,15 +90,36 @@ class PortalNewEmailTemplateForm(forms.Form):
         label="Connected app",
         widget=forms.Select(attrs={"class": _inp}),
     )
-    key = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))
-    name = forms.CharField(widget=forms.TextInput(attrs={"class": _inp}))
+    name = forms.CharField(
+        label="Name",
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. Welcome email", "autocomplete": "off"}
+        ),
+    )
+    key = forms.SlugField(
+        label="Key",
+        widget=forms.TextInput(
+            attrs={
+                "class": _inp,
+                "placeholder": "e.g. welcome_new_user",
+                "autocomplete": "off",
+            }
+        ),
+    )
     category = forms.ChoiceField(
         choices=TemplateCategory.choices,
         widget=forms.Select(attrs={"class": _inp}),
     )
     description = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={"rows": 2, "class": _inp}),
+        label="Description",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 2,
+                "class": _inp,
+                "placeholder": "Short internal note (optional). Used as AI context when you choose Create with AI.",
+            }
+        ),
     )
 
     def __init__(self, *args, account: Account, single_tenant: Tenant | None = None, **kwargs):

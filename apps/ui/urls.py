@@ -45,6 +45,16 @@ urlpatterns = [
     path("send/preview/template/", send_mail.send_preview_template, name="send_preview_template"),
     path("templates/", templates_views.templates_list, name="templates_list"),
     path("templates/new/", templates_views.template_new, name="template_new"),
+    path(
+        "templates/<uuid:template_id>/versions/",
+        templates_views.template_version_create,
+        name="template_version_create",
+    ),
+    path(
+        "templates/<uuid:template_id>/preview-draft/",
+        templates_views.template_preview_draft,
+        name="template_preview_draft",
+    ),
     path("templates/<uuid:template_id>/", templates_views.template_detail, name="template_detail"),
     path(
         "templates/<uuid:template_id>/preview/",

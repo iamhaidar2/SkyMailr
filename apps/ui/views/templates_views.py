@@ -1,20 +1,44 @@
 import difflib
+import json
 
 from django.contrib import messages as django_messages
-from django.db.models import Q
+from django.db.models import Max, Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from apps.email_templates.models import EmailTemplate, TemplateRenderLog, TemplateStatus
+from apps.email_templates.models import (
+    ApprovalStatus,
+    CreatedByType,
+    EmailTemplate,
+    EmailTemplateVersion,
+    TemplateRenderLog,
+    TemplateStatus,
+    VersionSourceType,
+)
 from apps.email_templates.services.llm_service import TemplateLLMService
+from apps.email_templates.services.preview_context import placeholder_context_for_preview
 from apps.email_templates.services.render_service import TemplateRenderError, render_email_version
 from apps.email_templates.services.validation_service import TemplateValidationService
 from apps.email_templates.services.version_actions import approve_latest_version
 from apps.ui.context import operator_shell_context
 from apps.ui.decorators import operator_required
 from apps.ui.forms import NewEmailTemplateForm, TemplateApproveForm, TemplatePreviewForm, TemplateReviseForm
+from apps.ui.forms_customer import PortalTemplateVersionForm
 from apps.ui.services.operator import get_active_tenant
 from apps.tenants.models import Tenant
+
+
+def _version_form_initial_from_latest(latest: EmailTemplateVersion | None) -> dict:
+    if latest is None:
+        return {}
+    return {
+        "subject_template": latest.subject_template or "",
+        "preview_text_template": latest.preview_text_template or "",
+        "html_template": latest.html_template or "",
+        "text_template": latest.text_template or "",
+    }
 
 
 @operator_required
@@ -95,6 +119,11 @@ def template_detail(request, template_id):
     preview_form = TemplatePreviewForm()
     revise_form = TemplateReviseForm()
     approve_form = TemplateApproveForm()
+    version_form = PortalTemplateVersionForm(initial=_version_form_initial_from_latest(latest_version))
+    default_preview_ctx = placeholder_context_for_preview(tpl)
+    preview_draft_url = request.build_absolute_uri(
+        reverse("ui:template_preview_draft", kwargs={"template_id": tpl.id})
+    )
     ctx = operator_shell_context(request)
     ctx.update(
         {
@@ -107,9 +136,12 @@ def template_detail(request, template_id):
             "diff_subject": diff_subject,
             "diff_text": diff_text,
             "diff_html": diff_html,
+            "version_form": version_form,
             "preview_form": preview_form,
             "revise_form": revise_form,
             "approve_form": approve_form,
+            "default_preview_context_json": json.dumps(default_preview_ctx),
+            "preview_draft_url": preview_draft_url,
         }
     )
     return render(request, "ui/pages/template_detail.html", ctx)
@@ -144,9 +176,74 @@ def template_new(request):
             "nav_active": "templates",
             "form": form,
             "show_tenant_banner": True,
+            "submit_label": "Next",
         }
     )
     return render(request, "ui/pages/template_new.html", ctx)
+
+
+@operator_required
+@require_POST
+def template_version_create(request, template_id):
+    tpl = get_object_or_404(EmailTemplate, pk=template_id)
+    form = PortalTemplateVersionForm(request.POST)
+    if not form.is_valid():
+        django_messages.error(request, "Fix version fields.")
+        return redirect("ui:template_detail", template_id=tpl.id)
+    d = form.cleaned_data
+    max_v = tpl.versions.aggregate(m=Max("version_number")).get("m") or 0
+    EmailTemplateVersion.objects.create(
+        template=tpl,
+        version_number=max_v + 1,
+        created_by_type=CreatedByType.USER,
+        source_type=VersionSourceType.MANUAL,
+        subject_template=d["subject_template"],
+        preview_text_template=d.get("preview_text_template") or "",
+        html_template=d["html_template"],
+        text_template=d.get("text_template") or "",
+        approval_status=ApprovalStatus.PENDING,
+    )
+    django_messages.success(request, f"Created version {max_v + 1}.")
+    return redirect("ui:template_detail", template_id=tpl.id)
+
+
+@operator_required
+@require_POST
+def template_preview_draft(request, template_id):
+    tpl = get_object_or_404(EmailTemplate, pk=template_id)
+    try:
+        body = json.loads(request.body.decode() or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    subject = body.get("subject_template") or ""
+    preview = body.get("preview_text_template") or ""
+    html = body.get("html_template") or ""
+    text = body.get("text_template") or ""
+    ctx_data = body.get("context")
+    if ctx_data is None:
+        ctx_data = placeholder_context_for_preview(tpl)
+    elif not isinstance(ctx_data, dict):
+        return JsonResponse({"error": "context must be a JSON object"}, status=400)
+    try:
+        TemplateValidationService.validate_context(tpl, ctx_data)
+        out = render_email_version(
+            subject_template=subject,
+            preview_template=preview,
+            html_template=html,
+            text_template=text,
+            context=ctx_data,
+            sanitize=True,
+        )
+    except (TemplateRenderError, ValueError) as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse(
+        {
+            "subject": out["subject"],
+            "preview": out["preview"],
+            "html": out["html"],
+            "text": out["text"],
+        }
+    )
 
 
 @operator_required

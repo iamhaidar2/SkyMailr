@@ -1,0 +1,37 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-8">
+  <div>
+    <p class="text-xs text-slate-500">{{ template.tenant.name }}</p>
+    <h2 class="text-xl font-semibold text-white">{{ template.name }}</h2>
+    <p class="font-mono text-sm text-slate-400">{{ template.key }}</p>
+    <p class="mt-2 text-sm text-slate-400">Add your first version: generate a draft with AI, or paste HTML manually.</p>
+  </div>
+
+  <div class="rounded-xl border border-violet-900/50 bg-violet-950/20 p-5">
+    <h3 class="text-sm font-semibold text-violet-100">Create with AI</h3>
+    <p class="mt-1 text-xs text-slate-500">Uses this template’s name, key, description, and category to generate a pending draft (you can edit and approve afterward).</p>
+    <form method="post" class="mt-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_with_ai" />
+      <button type="submit" class="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500">Create with AI</button>
+    </form>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Or add content manually</h3>
+    <form method="post" class="mt-4 space-y-3">
+      {% csrf_token %}
+      <div><label class="text-xs text-slate-500">{{ version_form.subject_template.label }}</label>{{ version_form.subject_template }}</div>
+      <div><label class="text-xs text-slate-500">{{ version_form.preview_text_template.label }}</label>{{ version_form.preview_text_template }}</div>
+      <div><label class="text-xs text-slate-500">{{ version_form.html_template.label }}</label>{{ version_form.html_template }}</div>
+      <div><label class="text-xs text-slate-500">{{ version_form.text_template.label }}</label>{{ version_form.text_template }}</div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save version</button>
+    </form>
+  </div>
+
+  <p class="text-center text-sm">
+    <a href="{% url 'portal:template_detail' template.id %}" class="text-slate-400 hover:text-white">Skip for now</a>
+  </p>
+</div>
+{% endblock %}
