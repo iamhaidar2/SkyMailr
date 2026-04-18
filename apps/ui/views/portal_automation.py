@@ -28,7 +28,7 @@ from apps.email_templates.models import (
     TemplateStatus,
     VersionSourceType,
 )
-from apps.email_templates.services.html_plain_sync import merge_plain_into_html_if_unchanged
+from apps.email_templates.services.html_plain_sync import reconcile_template_bodies
 from apps.email_templates.services.llm_service import TemplateLLMService
 from apps.email_templates.services.preview_context import placeholder_context_for_preview
 from apps.email_templates.services.render_service import TemplateRenderError, render_email_version
@@ -338,10 +338,10 @@ def template_version_create(request, template_id):
     d = form.cleaned_data
     max_v = tpl.versions.aggregate(m=Max("version_number")).get("m") or 0
     latest = tpl.versions.order_by("-version_number").first()
-    html_out = merge_plain_into_html_if_unchanged(
+    html_out, text_out = reconcile_template_bodies(
         (latest.html_template if latest else "") or "",
-        d["html_template"] or "",
         (latest.text_template if latest else "") or "",
+        d["html_template"] or "",
         d.get("text_template") or "",
     )
     EmailTemplateVersion.objects.create(
@@ -352,7 +352,7 @@ def template_version_create(request, template_id):
         subject_template=d["subject_template"],
         preview_text_template=d.get("preview_text_template") or "",
         html_template=html_out,
-        text_template=d.get("text_template") or "",
+        text_template=text_out,
         approval_status=ApprovalStatus.PENDING,
     )
     django_messages.success(request, f"Created version {max_v + 1}.")
@@ -470,10 +470,10 @@ def template_setup(request, template_id):
                 d = form.cleaned_data
                 max_v = tpl.versions.aggregate(m=Max("version_number")).get("m") or 0
                 latest = tpl.versions.order_by("-version_number").first()
-                html_out = merge_plain_into_html_if_unchanged(
+                html_out, text_out = reconcile_template_bodies(
                     (latest.html_template if latest else "") or "",
-                    d["html_template"] or "",
                     (latest.text_template if latest else "") or "",
+                    d["html_template"] or "",
                     d.get("text_template") or "",
                 )
                 EmailTemplateVersion.objects.create(
@@ -484,7 +484,7 @@ def template_setup(request, template_id):
                     subject_template=d["subject_template"],
                     preview_text_template=d.get("preview_text_template") or "",
                     html_template=html_out,
-                    text_template=d.get("text_template") or "",
+                    text_template=text_out,
                     approval_status=ApprovalStatus.PENDING,
                 )
                 django_messages.success(request, f"Created version {max_v + 1}.")

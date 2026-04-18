@@ -32,6 +32,31 @@ def _text_nodes(soup: BeautifulSoup) -> list[NavigableString]:
     return out
 
 
+def plain_text_from_html(html: str) -> str:
+    """Visible text from HTML, newlines between block elements (Jinja stays as text)."""
+    raw = html or ""
+    if not raw.strip():
+        return ""
+    soup = BeautifulSoup(raw, "html.parser")
+    text = soup.get_text("\n")
+    return text.replace("\r\n", "\n").strip("\n")
+
+
+def fallback_plain_to_minimal_html(plain: str) -> str:
+    """
+    When structured merge cannot apply, wrap each line in <p> with raw text (Jinja-friendly).
+    Does not HTML-escape content so {{ }} and {% %} remain valid for rendering.
+    """
+    p = (plain or "").replace("\r\n", "\n")
+    soup = BeautifulSoup("", "html.parser")
+    container = soup.new_tag("div")
+    for line in p.split("\n"):
+        para = soup.new_tag("p")
+        para.append(NavigableString(line))
+        container.append(para)
+    return str(container)
+
+
 def merge_plain_into_html_if_unchanged(
     latest_html: str,
     posted_html: str,
@@ -75,3 +100,43 @@ def merge_plain_into_html_if_unchanged(
         return str(soup)
 
     return posted_html or ""
+
+
+def reconcile_template_bodies(
+    latest_html: str,
+    latest_text: str,
+    posted_html: str,
+    posted_text: str,
+) -> tuple[str, str]:
+    """
+    Produce a consistent (html_template, text_template) pair on Save version.
+
+    - If the HTML field differs from the last saved HTML, HTML wins; plain is derived from HTML.
+    - If HTML is unchanged, merge plain into the existing HTML structure when possible; otherwise
+      wrap plain in minimal paragraphs. Stored plain is always ``plain_text_from_html(html_out)``.
+    """
+    lh = (latest_html or "").strip()
+    ph = (posted_html or "").strip()
+    lt_norm = (latest_text or "").replace("\r\n", "\n")
+    pt_norm = (posted_text or "").replace("\r\n", "\n")
+
+    if ph != lh:
+        html_out = posted_html or ""
+        text_out = plain_text_from_html(html_out)
+        return html_out, text_out
+
+    merged = merge_plain_into_html_if_unchanged(
+        latest_html or "",
+        posted_html or "",
+        latest_text or "",
+        posted_text or "",
+    )
+    posted_cmp = posted_html or ""
+    plain_changed = pt_norm != lt_norm
+    if merged == posted_cmp and plain_changed:
+        html_out = fallback_plain_to_minimal_html(posted_text or "")
+    else:
+        html_out = merged
+
+    text_out = plain_text_from_html(html_out)
+    return html_out, text_out
