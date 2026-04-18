@@ -131,35 +131,23 @@ html[data-theme="light"] {
   color: var(--cs-text);
 }
 
-/* Compact vertical theme switcher (moon = dark, sun = light) */
+/* Horizontal theme switcher (light | dark, same order as marketing nav) */
 .customer-theme-switcher {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex-direction: row;
   align-items: center;
   flex-shrink: 0;
-  width: 2.375rem;
-  padding: 0.2rem 0.25rem 0.3rem;
+  padding: 0.2rem 0.35rem;
   border-radius: 0.5rem;
   border: 1px solid var(--cs-input-border);
   background-color: var(--cs-input-bg);
 }
 
-.customer-theme-label {
-  display: block;
-  font-size: 0.5625rem;
-  line-height: 1.1;
-  font-weight: 500;
-  color: var(--cs-text-muted);
-  margin-bottom: 0.15rem;
-  text-align: center;
-}
-
 .customer-theme-icons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: stretch;
-  gap: 1px;
-  width: 100%;
+  gap: 2px;
 }
 
 .customer-theme-segment {

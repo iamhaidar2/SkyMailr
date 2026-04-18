@@ -103,22 +103,6 @@ def _portal_ctx(request, page_title: str, nav_active: str):
     if account:
         ensure_default_tenant_for_account(account)
         tenant_count = Tenant.objects.filter(account=account).count()
-    usage_alerts: list[str] = []
-    if account and effective_limits and usage and account.status == AccountStatus.ACTIVE:
-        def _warn(label: str, current: int, limit: int) -> None:
-            if limit <= 0:
-                return
-            if current >= limit:
-                usage_alerts.append(f"{label} is at your plan limit ({current}/{limit}).")
-            elif current >= max(1, int(limit * 0.8)):
-                usage_alerts.append(f"{label} is approaching your plan limit ({current}/{limit}).")
-
-        _warn("Monthly sends", usage.monthly_send_count, effective_limits.max_monthly_sends)
-        _warn("Connected apps", usage.tenant_count, effective_limits.max_tenants)
-        _warn("API keys", usage.active_api_key_count, effective_limits.max_active_api_keys)
-        _warn("Templates", usage.template_count, effective_limits.max_templates)
-        _warn("Workflows", usage.workflow_count, effective_limits.max_workflows)
-        _warn("Members", usage.active_member_count, effective_limits.max_members)
     return {
         "page_title": page_title,
         "portal_nav_active": nav_active,
@@ -134,7 +118,6 @@ def _portal_ctx(request, page_title: str, nav_active: str):
         "portal_effective_limits": effective_limits,
         "portal_usage": usage,
         "portal_account_unhealthy": account_unhealthy,
-        "portal_usage_alerts": usage_alerts,
         "portal_nav_items": portal_nav_items(),
         "portal_tenant_count": tenant_count,
     }

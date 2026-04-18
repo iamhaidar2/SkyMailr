@@ -23,7 +23,12 @@ class JsonObjectField(forms.CharField):
             forms.Textarea(
                 attrs={
                     "rows": 4,
-                    "class": "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 font-mono text-xs text-white",
+                    "class": (
+                        "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 "
+                        "font-mono text-xs text-white placeholder:text-slate-500"
+                    ),
+                    "placeholder": '{"example_key": "value"}',
+                    "spellcheck": "false",
                 }
             ),
         )
@@ -44,7 +49,10 @@ class JsonObjectField(forms.CharField):
         return val
 
 
-_select = "w-full rounded-md border border-surface-600 bg-surface-800 px-2 py-1.5 text-sm text-white"
+_select = (
+    "w-full rounded-md border border-surface-600 bg-surface-800 px-2 py-1.5 text-sm "
+    "text-white placeholder:text-slate-500"
+)
 
 
 class MessageFilterForm(forms.Form):
@@ -59,14 +67,31 @@ class MessageFilterForm(forms.Form):
         choices=[("", "Any status")] + list(OutboundStatus.choices),
         widget=forms.Select(attrs={"class": _select}),
     )
-    source_app = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _select}))
-    template_key = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _select}))
-    q = forms.CharField(required=False, label="Search", widget=forms.TextInput(attrs={"class": _select}))
+    source_app = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _select, "placeholder": "e.g. my_app", "autocomplete": "off"}
+        ),
+    )
+    template_key = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _select, "placeholder": "e.g. welcome_email", "autocomplete": "off"}
+        ),
+    )
+    q = forms.CharField(
+        required=False,
+        label="Search",
+        widget=forms.TextInput(attrs={"class": _select, "placeholder": "Search subject, id…"}),
+    )
     date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": _select}))
     date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": _select}))
 
 
-_inp = "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white"
+_inp = (
+    "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm "
+    "text-white placeholder:text-slate-500"
+)
 _chk = "h-4 w-4 rounded border-surface-600 text-accent"
 
 
@@ -92,16 +117,32 @@ class TenantForm(forms.ModelForm):
             "webhook_secret",
         ]
         widgets = {
-            "name": forms.TextInput(attrs={"class": _inp}),
-            "slug": forms.TextInput(attrs={"class": _inp}),
+            "name": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. Production app", "autocomplete": "off"}
+            ),
+            "slug": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. my-app", "autocomplete": "off"}
+            ),
             "status": forms.Select(attrs={"class": _inp}),
-            "default_sender_name": forms.TextInput(attrs={"class": _inp}),
-            "default_sender_email": forms.EmailInput(attrs={"class": _inp}),
-            "reply_to": forms.EmailInput(attrs={"class": _inp}),
-            "sending_domain": forms.TextInput(attrs={"class": _inp}),
-            "timezone": forms.TextInput(attrs={"class": _inp}),
-            "rate_limit_per_minute": forms.NumberInput(attrs={"class": _inp, "min": 1}),
-            "webhook_secret": forms.TextInput(attrs={"class": _inp}),
+            "default_sender_name": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. Acme", "autocomplete": "organization"}
+            ),
+            "default_sender_email": forms.EmailInput(
+                attrs={"class": _inp, "placeholder": "noreply@yourdomain.com", "autocomplete": "email"}
+            ),
+            "reply_to": forms.EmailInput(
+                attrs={"class": _inp, "placeholder": "support@yourdomain.com (optional)", "autocomplete": "email"}
+            ),
+            "sending_domain": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. mail.example.com", "autocomplete": "off"}
+            ),
+            "timezone": forms.TextInput(attrs={"class": _inp, "placeholder": "UTC", "autocomplete": "off"}),
+            "rate_limit_per_minute": forms.NumberInput(
+                attrs={"class": _inp, "min": 1, "placeholder": "e.g. 120"}
+            ),
+            "webhook_secret": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "Optional signing secret", "autocomplete": "off"}
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -142,11 +183,23 @@ class SenderProfileForm(forms.ModelForm):
         model = SenderProfile
         fields = ["name", "category", "from_name", "from_email", "reply_to", "is_default", "is_active"]
         widgets = {
-            "name": forms.TextInput(attrs={"class": _inp}),
+            "name": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. Main — transactional", "autocomplete": "off"}
+            ),
             "category": forms.Select(attrs={"class": _inp}),
-            "from_name": forms.TextInput(attrs={"class": _inp}),
-            "from_email": forms.EmailInput(attrs={"class": _inp}),
-            "reply_to": forms.EmailInput(attrs={"class": _inp}),
+            "from_name": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. Acme Support", "autocomplete": "organization"}
+            ),
+            "from_email": forms.EmailInput(
+                attrs={"class": _inp, "placeholder": "support@yourdomain.com", "autocomplete": "email"}
+            ),
+            "reply_to": forms.EmailInput(
+                attrs={
+                    "class": _inp,
+                    "placeholder": "replies@yourdomain.com (optional)",
+                    "autocomplete": "email",
+                }
+            ),
             "is_default": forms.CheckboxInput(attrs={"class": _chk}),
             "is_active": forms.CheckboxInput(attrs={"class": _chk}),
         }
@@ -171,21 +224,47 @@ class SenderProfileForm(forms.ModelForm):
 
 
 class SendRawForm(forms.Form):
-    source_app = forms.CharField(initial="operator_ui", widget=forms.TextInput(attrs={"class": _inp}))
+    source_app = forms.CharField(
+        initial="operator_ui",
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "e.g. operator_ui", "autocomplete": "off"}),
+    )
     message_type = forms.ChoiceField(
         choices=MessageType.choices,
         initial=MessageType.TRANSACTIONAL,
         widget=forms.Select(attrs={"class": _inp}),
     )
-    to_email = forms.EmailField(widget=forms.EmailInput(attrs={"class": _inp}))
-    to_name = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
-    subject = forms.CharField(widget=forms.TextInput(attrs={"class": _inp}))
-    html_body = forms.CharField(widget=forms.Textarea(attrs={"rows": 12, "class": _inp + " font-mono text-xs"}))
+    to_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": _inp, "placeholder": "user@example.com", "autocomplete": "email"})
+    )
+    to_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "Recipient name (optional)"}),
+    )
+    subject = forms.CharField(
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "e.g. Your order has shipped"})
+    )
+    html_body = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                "rows": 12,
+                "class": _inp + " font-mono text-xs",
+                "placeholder": "<p>Hello,</p>",
+            }
+        )
+    )
     text_body = forms.CharField(
-        required=False, widget=forms.Textarea(attrs={"rows": 6, "class": _inp + " font-mono text-xs"})
+        required=False,
+        widget=forms.Textarea(
+            attrs={"rows": 6, "class": _inp + " font-mono text-xs", "placeholder": "Plain text body…"}
+        ),
     )
     metadata = JsonObjectField()
-    idempotency_key = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
+    idempotency_key = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "Optional idempotency key", "autocomplete": "off"}
+        ),
+    )
     sender_profile = forms.ModelChoiceField(
         queryset=SenderProfile.objects.none(),
         required=False,
@@ -214,15 +293,27 @@ class SendRawForm(forms.Form):
 
 
 class SendTemplateForm(forms.Form):
-    template_key = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))
-    source_app = forms.CharField(initial="operator_ui", widget=forms.TextInput(attrs={"class": _inp}))
+    template_key = forms.SlugField(
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. welcome_email", "autocomplete": "off"}
+        )
+    )
+    source_app = forms.CharField(
+        initial="operator_ui",
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "e.g. operator_ui", "autocomplete": "off"}),
+    )
     message_type = forms.ChoiceField(
         choices=MessageType.choices,
         initial=MessageType.TRANSACTIONAL,
         widget=forms.Select(attrs={"class": _inp}),
     )
-    to_email = forms.EmailField(widget=forms.EmailInput(attrs={"class": _inp}))
-    to_name = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
+    to_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": _inp, "placeholder": "user@example.com", "autocomplete": "email"})
+    )
+    to_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "Recipient name (optional)"}),
+    )
     context = JsonObjectField()
     metadata = JsonObjectField()
     tags = JsonObjectField()
@@ -230,7 +321,12 @@ class SendTemplateForm(forms.Form):
         required=False,
         widget=forms.DateTimeInput(attrs={"type": "datetime-local", "class": _inp}),
     )
-    idempotency_key = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
+    idempotency_key = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "Optional idempotency key", "autocomplete": "off"}
+        ),
+    )
     sender_profile = forms.ModelChoiceField(
         queryset=SenderProfile.objects.none(),
         required=False,
@@ -273,7 +369,16 @@ class TemplateApproveForm(forms.Form):
 
 class TemplateReviseForm(forms.Form):
     instructions = forms.CharField(
-        widget=forms.Textarea(attrs={"rows": 4, "class": "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white"})
+        widget=forms.Textarea(
+            attrs={
+                "rows": 4,
+                "class": (
+                    "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm "
+                    "text-white placeholder:text-slate-500"
+                ),
+                "placeholder": "e.g. Shorten the CTA and use a warmer tone.",
+            }
+        )
     )
 
 
@@ -308,8 +413,8 @@ class TemplateStudioBriefForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name, field in self.fields.items():
-            if name in ("include_images", "is_marketing"):
+        for fname, field in self.fields.items():
+            if fname in ("include_images", "is_marketing"):
                 continue
             if isinstance(field.widget, forms.CheckboxInput):
                 field.widget.attrs.setdefault("class", "h-4 w-4 rounded border-surface-600")
@@ -317,6 +422,22 @@ class TemplateStudioBriefForm(forms.Form):
                 field.widget.attrs.setdefault("class", _inp + " min-h-[72px]")
             else:
                 field.widget.attrs.setdefault("class", _inp)
+        brief_placeholders = {
+            "template_key": "e.g. welcome_new_user",
+            "name": "e.g. Welcome email",
+            "template_purpose": "What this email is for…",
+            "audience": "e.g. New signups",
+            "tone": "e.g. professional",
+            "desired_cta": "e.g. Complete your profile",
+            "mandatory_facts": "One fact per line…",
+            "prohibited_claims": "e.g. guaranteed results",
+            "required_variables": "name, order_id",
+            "legal_compliance_notes": "Optional compliance notes…",
+            "brand_voice_notes": "Optional brand voice notes…",
+        }
+        for fname, ph in brief_placeholders.items():
+            if fname in self.fields:
+                self.fields[fname].widget.attrs.setdefault("placeholder", ph)
 
     def brief_dict(self) -> dict[str, Any]:
         facts = [x.strip() for x in self.cleaned_data.get("mandatory_facts", "").splitlines() if x.strip()]
@@ -350,29 +471,59 @@ class TemplateStudioBriefForm(forms.Form):
 
 
 class WorkflowCreateForm(forms.Form):
-    name = forms.CharField(widget=forms.TextInput(attrs={"class": _inp}))
-    slug = forms.SlugField(widget=forms.TextInput(attrs={"class": _inp}))
+    name = forms.CharField(
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "e.g. Onboarding drip", "autocomplete": "off"})
+    )
+    slug = forms.SlugField(
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "e.g. onboarding-drip", "autocomplete": "off"})
+    )
 
 
 class WorkflowAddStepForm(forms.Form):
-    order = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={"class": _inp}))
+    order = forms.IntegerField(
+        min_value=0, widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0"})
+    )
     step_type = forms.ChoiceField(
         choices=WorkflowStepType.choices,
         widget=forms.Select(attrs={"class": _inp}),
     )
-    template_key = forms.SlugField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
-    wait_seconds = forms.IntegerField(required=False, min_value=0, widget=forms.NumberInput(attrs={"class": _inp}))
+    template_key = forms.SlugField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. welcome_email", "autocomplete": "off"}
+        ),
+    )
+    wait_seconds = forms.IntegerField(
+        required=False, min_value=0, widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "e.g. 3600"})
+    )
 
 
 class WorkflowEnrollForm(forms.Form):
-    recipient_email = forms.EmailField(widget=forms.EmailInput(attrs={"class": _inp}))
-    recipient_name = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
-    external_user_id = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": _inp}))
+    recipient_email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={"class": _inp, "placeholder": "user@example.com", "autocomplete": "email"}
+        )
+    )
+    recipient_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "Recipient name (optional)"}),
+    )
+    external_user_id = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. user_12345 (optional)", "autocomplete": "off"}
+        ),
+    )
     metadata = JsonObjectField()
 
 
 class ApiKeyCreateForm(forms.Form):
-    name = forms.CharField(initial="operator", widget=forms.TextInput(attrs={"class": _inp}))
+    name = forms.CharField(
+        initial="operator",
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. staging backend", "autocomplete": "off"}
+        ),
+    )
 
 
 class NewEmailTemplateForm(forms.Form):
@@ -397,6 +548,7 @@ class NewEmailTemplateForm(forms.Form):
                 "rows": 2,
                 "class": _inp,
                 "placeholder": "Short internal note (optional).",
+                "autocomplete": "off",
             }
         ),
     )

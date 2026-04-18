@@ -21,7 +21,10 @@ from apps.workflows.models import WorkflowStepType
 
 User = get_user_model()
 
-_inp = "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm text-white"
+_inp = (
+    "w-full rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-sm "
+    "text-white placeholder:text-slate-500"
+)
 _chk = "h-4 w-4 rounded border-surface-600 text-accent"
 
 
@@ -42,11 +45,23 @@ class PortalSenderProfileForm(forms.ModelForm):
         ]
         widgets = {
             "tenant": forms.Select(attrs={"class": _inp}),
-            "name": forms.TextInput(attrs={"class": _inp}),
+            "name": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. Main — transactional", "autocomplete": "off"}
+            ),
             "category": forms.Select(attrs={"class": _inp}),
-            "from_name": forms.TextInput(attrs={"class": _inp}),
-            "from_email": forms.EmailInput(attrs={"class": _inp}),
-            "reply_to": forms.EmailInput(attrs={"class": _inp}),
+            "from_name": forms.TextInput(
+                attrs={"class": _inp, "placeholder": "e.g. Acme Support", "autocomplete": "organization"}
+            ),
+            "from_email": forms.EmailInput(
+                attrs={"class": _inp, "placeholder": "support@yourdomain.com", "autocomplete": "email"}
+            ),
+            "reply_to": forms.EmailInput(
+                attrs={
+                    "class": _inp,
+                    "placeholder": "replies@yourdomain.com (optional)",
+                    "autocomplete": "email",
+                }
+            ),
             "is_default": forms.CheckboxInput(attrs={"class": _chk}),
             "is_active": forms.CheckboxInput(attrs={"class": _chk}),
         }
@@ -141,26 +156,47 @@ class PortalNewEmailTemplateForm(forms.Form):
 class PortalTemplateVersionForm(forms.Form):
     subject_template = forms.CharField(
         label="Subject line (template)",
-        widget=forms.TextInput(attrs={"class": _inp}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. Welcome back, {{ name }}", "autocomplete": "off"}
+        ),
     )
     preview_text_template = forms.CharField(
         required=False,
         label="Preview text",
-        widget=forms.TextInput(attrs={"class": _inp}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. Your weekly summary inside", "autocomplete": "off"}
+        ),
     )
     html_template = forms.CharField(
         label="HTML body",
-        widget=forms.Textarea(attrs={"rows": 12, "class": _inp + " font-mono text-xs"}),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 12,
+                "class": _inp + " font-mono text-xs",
+                "placeholder": "<p>Hi {{ name }},</p><p>...</p>",
+                "autocomplete": "off",
+            }
+        ),
     )
     text_template = forms.CharField(
         required=False,
         label="Plain text",
-        widget=forms.Textarea(attrs={"rows": 6, "class": _inp + " font-mono text-xs"}),
+        widget=forms.Textarea(
+            attrs={
+                "rows": 6,
+                "class": _inp + " font-mono text-xs",
+                "placeholder": "Hi {{ name }},\n\nPlain text version...",
+                "autocomplete": "off",
+            }
+        ),
     )
 
 
 class PortalWorkflowStepForm(forms.Form):
-    order = forms.IntegerField(min_value=0, widget=forms.NumberInput(attrs={"class": _inp}))
+    order = forms.IntegerField(
+        min_value=0,
+        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0"}),
+    )
     step_type = forms.ChoiceField(
         choices=[
             (WorkflowStepType.SEND_TEMPLATE, "Send template email"),
@@ -172,12 +208,14 @@ class PortalWorkflowStepForm(forms.Form):
     template_key = forms.SlugField(
         required=False,
         help_text="Required for send-template steps.",
-        widget=forms.TextInput(attrs={"class": _inp}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. welcome_email", "autocomplete": "off"}
+        ),
     )
     wait_seconds = forms.IntegerField(
         required=False,
         min_value=0,
-        widget=forms.NumberInput(attrs={"class": _inp}),
+        widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "e.g. 86400"}),
     )
 
     def clean(self):
@@ -212,10 +250,14 @@ class CustomerSignupForm(forms.Form):
     display_name = forms.CharField(
         max_length=150,
         label="Your name",
-        widget=forms.TextInput(attrs={"class": _inp, "autocomplete": "name"}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "Jane Doe", "autocomplete": "name"}
+        ),
     )
     email = forms.EmailField(
-        widget=forms.EmailInput(attrs={"class": _inp, "autocomplete": "email"}),
+        widget=forms.EmailInput(
+            attrs={"class": _inp, "placeholder": "you@company.com", "autocomplete": "email"}
+        ),
     )
     password1 = forms.CharField(
         label="Password",
@@ -228,7 +270,9 @@ class CustomerSignupForm(forms.Form):
     account_name = forms.CharField(
         max_length=200,
         label="Company or account name",
-        widget=forms.TextInput(attrs={"class": _inp}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. Acme Labs", "autocomplete": "organization"}
+        ),
     )
     account_slug = forms.SlugField(
         max_length=64,
@@ -304,12 +348,18 @@ class PortalApiKeyForm(forms.Form):
     name = forms.CharField(
         max_length=120,
         initial="default",
-        widget=forms.TextInput(attrs={"class": _inp}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "e.g. production CI", "autocomplete": "off"}
+        ),
     )
 
 
 class PortalInviteForm(forms.Form):
-    email = forms.EmailField(widget=forms.EmailInput(attrs={"class": _inp, "autocomplete": "email"}))
+    email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={"class": _inp, "placeholder": "colleague@company.com", "autocomplete": "email"}
+        )
+    )
     role = forms.ChoiceField(choices=[], widget=forms.Select(attrs={"class": _inp}))
 
     def __init__(self, *args, inviter_role: str = "", **kwargs):
@@ -351,7 +401,9 @@ class InviteSignupForm(forms.Form):
     display_name = forms.CharField(
         max_length=150,
         label="Your name",
-        widget=forms.TextInput(attrs={"class": _inp, "autocomplete": "name"}),
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "Jane Doe", "autocomplete": "name"}
+        ),
     )
     password1 = forms.CharField(
         label="Password",
