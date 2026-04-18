@@ -50,6 +50,7 @@ from apps.ui.forms_customer import (
     PortalSenderProfileForm,
     PortalTemplateVersionForm,
     PortalWorkflowStepForm,
+    portal_workflow_step_initial_from_instance,
 )
 from apps.ui.forms import WorkflowCreateForm
 from apps.ui.views.customer_portal import _portal_ctx
@@ -61,6 +62,7 @@ from apps.ui.services.portal_permissions import (
 )
 from apps.workflows.models import Workflow, WorkflowEnrollment, WorkflowExecution, WorkflowStep, WorkflowStepType
 from apps.workflows.services.workflow_engine import enroll_workflow
+from apps.workflows.services.workflow_steps import apply_step_order, delete_step_and_renumber
 
 
 def _account(request):
@@ -688,6 +690,21 @@ def workflow_detail(request, workflow_id):
         template_keys=tenant_tpl_keys,
     )
     can_edit = portal_user_can_edit_content(request.user, account)
+    edit_step = None
+    edit_step_form = None
+    edit_param = (request.GET.get("edit") or "").strip()
+    if can_edit and edit_param:
+        edit_step = get_object_or_404(WorkflowStep, pk=edit_param, workflow=wf)
+        cur_key = ""
+        if edit_step.step_type == WorkflowStepType.SEND_TEMPLATE:
+            cur_key = (
+                edit_step.template.key if edit_step.template else (edit_step.template_key or "")
+            )
+        edit_step_form = PortalWorkflowStepForm(
+            initial=portal_workflow_step_initial_from_instance(edit_step),
+            template_keys=tenant_tpl_keys,
+            extra_template_keys=[cur_key] if cur_key else [],
+        )
     ctx = _portal_ctx(request, wf.name, "workflows")
     ctx.update(
         {
@@ -697,6 +714,8 @@ def workflow_detail(request, workflow_id):
             "executions": executions,
             "enroll_form": enroll_form,
             "step_form": step_form,
+            "edit_step": edit_step,
+            "edit_step_form": edit_step_form,
             "tenant_template_keys": tenant_tpl_keys,
             "can_edit": can_edit,
         }
@@ -767,4 +786,65 @@ def workflow_add_step(request, workflow_id):
         wait_seconds=wait_seconds,
     )
     django_messages.success(request, "Step added.")
+    return redirect("portal:workflow_detail", workflow_id=wf.id)
+
+
+@customer_login_required
+@portal_editor_required
+@require_POST
+def workflow_step_update(request, workflow_id, step_id):
+    account = _account(request)
+    wf = get_object_or_404(
+        Workflow.objects.select_related("tenant"), pk=workflow_id, tenant__account=account
+    )
+    step = get_object_or_404(WorkflowStep, pk=step_id, workflow=wf)
+    tenant_tpl_keys = list(
+        EmailTemplate.objects.filter(tenant=wf.tenant).values_list("key", flat=True)
+    )
+    cur_key = ""
+    if step.step_type == WorkflowStepType.SEND_TEMPLATE:
+        cur_key = step.template.key if step.template else (step.template_key or "")
+    form = PortalWorkflowStepForm(
+        request.POST,
+        template_keys=tenant_tpl_keys,
+        extra_template_keys=[cur_key] if cur_key else [],
+    )
+    if not form.is_valid():
+        django_messages.error(request, "Invalid step.")
+        return redirect(f"{reverse('portal:workflow_detail', kwargs={'workflow_id': wf.id})}?edit={step.id}")
+    d = form.cleaned_data
+    st = d["step_type"]
+    tpl = None
+    tkey = (d.get("template_key") or "").strip()
+    if st == WorkflowStepType.SEND_TEMPLATE and tkey:
+        tpl = EmailTemplate.objects.filter(tenant=wf.tenant, key=tkey).first()
+        if not tpl:
+            django_messages.error(request, "Template key not found for this tenant.")
+            return redirect(f"{reverse('portal:workflow_detail', kwargs={'workflow_id': wf.id})}?edit={step.id}")
+    wait_seconds = d.get("wait_seconds")
+    if st == WorkflowStepType.WAIT_DURATION:
+        wait_seconds = wait_seconds if wait_seconds is not None else 0
+    else:
+        wait_seconds = None
+    if d["order"] != step.order:
+        apply_step_order(workflow=wf, step=step, new_order=d["order"])
+        step.refresh_from_db()
+    step.step_type = st
+    step.template = tpl
+    step.template_key = tkey if not tpl else ""
+    step.wait_seconds = wait_seconds
+    step.save(update_fields=["step_type", "template", "template_key", "wait_seconds"])
+    django_messages.success(request, "Step updated.")
+    return redirect("portal:workflow_detail", workflow_id=wf.id)
+
+
+@customer_login_required
+@portal_editor_required
+@require_POST
+def workflow_step_delete(request, workflow_id, step_id):
+    account = _account(request)
+    wf = get_object_or_404(Workflow, pk=workflow_id, tenant__account=account)
+    step = get_object_or_404(WorkflowStep, pk=step_id, workflow=wf)
+    delete_step_and_renumber(workflow=wf, step=step)
+    django_messages.success(request, "Step removed.")
     return redirect("portal:workflow_detail", workflow_id=wf.id)

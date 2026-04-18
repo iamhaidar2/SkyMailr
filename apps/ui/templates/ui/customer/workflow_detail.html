@@ -19,16 +19,43 @@
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Steps</h3>
     {% if steps %}
-      <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
+      <ol class="mt-3 list-decimal space-y-4 pl-5 text-sm text-slate-300">
         {% for s in steps %}
-          <li>
-            <span class="font-medium text-white">{{ s.get_step_type_display }}</span>
-            {% if s.step_type == "send_template" %}
-              — <code class="text-violet-300">{{ s.template_key|default:s.template.key }}</code>
-            {% elif s.step_type == "wait_duration" %}
-              — {{ s.wait_seconds }}s
+          <li class="pl-1">
+            {% if can_edit and edit_step and edit_step.id == s.id and edit_step_form %}
+              <div class="ml-[-0.25rem] rounded-lg border border-accent/40 bg-surface-900/80 p-4">
+                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Edit step</p>
+                <form method="post" action="{% url 'portal:workflow_step_update' workflow.id s.id %}" class="mt-3 space-y-3">
+                  {% csrf_token %}
+                  {% include "ui/customer/partials/workflow_step_form_fields.html" with wf_step_form=edit_step_form %}
+                  <div class="flex flex-wrap gap-3">
+                    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Save step</button>
+                    <a href="{% url 'portal:workflow_detail' workflow.id %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Cancel</a>
+                  </div>
+                </form>
+              </div>
+            {% else %}
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <div>
+                  <span class="font-medium text-white">{{ s.get_step_type_display }}</span>
+                  {% if s.step_type == "send_template" %}
+                    — <code class="text-violet-300">{{ s.template_key|default:s.template.key }}</code>
+                  {% elif s.step_type == "wait_duration" %}
+                    — {{ s.wait_seconds }}s
+                  {% endif %}
+                  <span class="text-slate-500">(order {{ s.order }})</span>
+                </div>
+                {% if can_edit %}
+                  <div class="flex flex-wrap gap-2">
+                    <a href="{% url 'portal:workflow_detail' workflow.id %}?edit={{ s.id }}" class="text-xs font-medium text-accent hover:underline">Edit</a>
+                    <form method="post" action="{% url 'portal:workflow_step_delete' workflow.id s.id %}" class="inline" onsubmit="return confirm('Remove this step? This cannot be undone.');">
+                      {% csrf_token %}
+                      <button type="submit" class="text-xs font-medium text-red-400 hover:underline">Delete</button>
+                    </form>
+                  </div>
+                {% endif %}
+              </div>
             {% endif %}
-            <span class="text-slate-500">(order {{ s.order }})</span>
           </li>
         {% endfor %}
       </ol>
@@ -40,71 +67,12 @@
   {% if can_edit %}
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Add step</h3>
-    <p class="mt-1 text-xs text-slate-500">Pick a step type first: <strong>Send template</strong> needs a template; <strong>Wait</strong> uses only the time fields; <strong>End</strong> needs neither.</p>
-    <form method="post" action="{% url 'portal:workflow_add_step' workflow.id %}" class="mt-4 space-y-3" id="workflow-add-step-form">
+    <p class="mt-1 text-xs text-slate-500">Send template, wait, or end. Template key must exist on this connected app.</p>
+    <form method="post" action="{% url 'portal:workflow_add_step' workflow.id %}" class="mt-4 space-y-3">
       {% csrf_token %}
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div><label class="text-xs text-slate-500">{{ step_form.order.label }}</label>{{ step_form.order }}</div>
-        <div><label class="text-xs text-slate-500">{{ step_form.step_type.label }}</label>{{ step_form.step_type }}</div>
-      </div>
-      <div id="workflow-add-step-template">
-        <label class="text-xs text-slate-500" for="{{ step_form.template_key.id_for_label }}">{{ step_form.template_key.label }}</label>
-        {{ step_form.template_key }}
-        {% if step_form.template_key.errors %}<p class="mt-1 text-xs text-red-400">{{ step_form.template_key.errors.0 }}</p>{% endif %}
-        {% if step_form.template_key.help_text %}<p class="mt-1 text-xs text-slate-500">{{ step_form.template_key.help_text }}</p>{% endif %}
-      </div>
-      <div id="workflow-add-step-wait">
-        <p class="text-xs text-slate-500">Wait time</p>
-        <p class="mt-1 text-xs text-slate-500">For wait steps only; days, hours, minutes, and seconds combine into one delay.</p>
-        <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div>
-            <label class="text-xs text-slate-500" for="{{ step_form.wait_days.id_for_label }}">{{ step_form.wait_days.label }}</label>
-            {{ step_form.wait_days }}
-            {% if step_form.wait_days.errors %}<p class="mt-1 text-xs text-red-400">{{ step_form.wait_days.errors.0 }}</p>{% endif %}
-          </div>
-          <div>
-            <label class="text-xs text-slate-500" for="{{ step_form.wait_hours.id_for_label }}">{{ step_form.wait_hours.label }}</label>
-            {{ step_form.wait_hours }}
-            {% if step_form.wait_hours.errors %}<p class="mt-1 text-xs text-red-400">{{ step_form.wait_hours.errors.0 }}</p>{% endif %}
-          </div>
-          <div>
-            <label class="text-xs text-slate-500" for="{{ step_form.wait_minutes.id_for_label }}">{{ step_form.wait_minutes.label }}</label>
-            {{ step_form.wait_minutes }}
-            {% if step_form.wait_minutes.errors %}<p class="mt-1 text-xs text-red-400">{{ step_form.wait_minutes.errors.0 }}</p>{% endif %}
-          </div>
-          <div>
-            <label class="text-xs text-slate-500" for="{{ step_form.wait_sec.id_for_label }}">{{ step_form.wait_sec.label }}</label>
-            {{ step_form.wait_sec }}
-            {% if step_form.wait_sec.errors %}<p class="mt-1 text-xs text-red-400">{{ step_form.wait_sec.errors.0 }}</p>{% endif %}
-          </div>
-        </div>
-      </div>
-      {% if step_form.non_field_errors %}
-        <p class="text-sm text-red-400">{{ step_form.non_field_errors.0 }}</p>
-      {% endif %}
+      {% include "ui/customer/partials/workflow_step_form_fields.html" with wf_step_form=step_form %}
       <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm text-white">Add step</button>
     </form>
-    <script>
-    (function () {
-      var stepSel = document.getElementById("id_step_type");
-      var templateWrap = document.getElementById("workflow-add-step-template");
-      var waitWrap = document.getElementById("workflow-add-step-wait");
-      if (!stepSel || !templateWrap || !waitWrap) return;
-      function sync() {
-        var v = stepSel.value;
-        var showTpl = v === "send_template";
-        var showWait = v === "wait_duration";
-        templateWrap.hidden = !showTpl;
-        waitWrap.hidden = !showWait;
-        var tplSelect = templateWrap.querySelector("select");
-        if (tplSelect && !showTpl) {
-          tplSelect.selectedIndex = 0;
-        }
-      }
-      stepSel.addEventListener("change", sync);
-      sync();
-    })();
-    </script>
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">

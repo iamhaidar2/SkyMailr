@@ -209,6 +209,16 @@ urlpatterns = [
         name="workflow_enroll",
     ),
     path(
+        "account/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/update/",
+        portal_automation.workflow_step_update,
+        name="workflow_step_update",
+    ),
+    path(
+        "account/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/delete/",
+        portal_automation.workflow_step_delete,
+        name="workflow_step_delete",
+    ),
+    path(
         "account/workflows/<uuid:workflow_id>/steps/",
         portal_automation.workflow_add_step,
         name="workflow_add_step",

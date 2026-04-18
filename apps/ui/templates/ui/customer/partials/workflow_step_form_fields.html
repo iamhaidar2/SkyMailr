@@ -1,0 +1,39 @@
+<div class="grid gap-3 sm:grid-cols-2">
+  <div><label class="text-xs text-slate-500">{{ wf_step_form.order.label }}</label>{{ wf_step_form.order }}</div>
+  <div><label class="text-xs text-slate-500">{{ wf_step_form.step_type.label }}</label>{{ wf_step_form.step_type }}</div>
+</div>
+<div>
+  <label class="text-xs text-slate-500" for="{{ wf_step_form.template_key.id_for_label }}">{{ wf_step_form.template_key.label }}</label>
+  {{ wf_step_form.template_key }}
+  {% if wf_step_form.template_key.errors %}<p class="mt-1 text-xs text-red-400">{{ wf_step_form.template_key.errors.0 }}</p>{% endif %}
+  {% if wf_step_form.template_key.help_text %}<p class="mt-1 text-xs text-slate-500">{{ wf_step_form.template_key.help_text }}</p>{% endif %}
+</div>
+<div>
+  <p class="text-xs text-slate-500">Wait time</p>
+  <p class="mt-1 text-xs text-slate-500">For wait steps only; days, hours, minutes, and seconds combine into one delay.</p>
+  <div class="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div>
+      <label class="text-xs text-slate-500" for="{{ wf_step_form.wait_days.id_for_label }}">{{ wf_step_form.wait_days.label }}</label>
+      {{ wf_step_form.wait_days }}
+      {% if wf_step_form.wait_days.errors %}<p class="mt-1 text-xs text-red-400">{{ wf_step_form.wait_days.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="text-xs text-slate-500" for="{{ wf_step_form.wait_hours.id_for_label }}">{{ wf_step_form.wait_hours.label }}</label>
+      {{ wf_step_form.wait_hours }}
+      {% if wf_step_form.wait_hours.errors %}<p class="mt-1 text-xs text-red-400">{{ wf_step_form.wait_hours.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="text-xs text-slate-500" for="{{ wf_step_form.wait_minutes.id_for_label }}">{{ wf_step_form.wait_minutes.label }}</label>
+      {{ wf_step_form.wait_minutes }}
+      {% if wf_step_form.wait_minutes.errors %}<p class="mt-1 text-xs text-red-400">{{ wf_step_form.wait_minutes.errors.0 }}</p>{% endif %}
+    </div>
+    <div>
+      <label class="text-xs text-slate-500" for="{{ wf_step_form.wait_sec.id_for_label }}">{{ wf_step_form.wait_sec.label }}</label>
+      {{ wf_step_form.wait_sec }}
+      {% if wf_step_form.wait_sec.errors %}<p class="mt-1 text-xs text-red-400">{{ wf_step_form.wait_sec.errors.0 }}</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% if wf_step_form.non_field_errors %}
+  <p class="text-sm text-red-400">{{ wf_step_form.non_field_errors.0 }}</p>
+{% endif %}

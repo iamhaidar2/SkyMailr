@@ -17,7 +17,7 @@ from apps.tenants.models import SenderProfile, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import normalize_fqdn
 from apps.ui.forms import TenantForm
 from apps.ui.tenant_validators import from_email_allowed_for_tenant
-from apps.workflows.models import WorkflowStepType
+from apps.workflows.models import WorkflowStep, WorkflowStepType
 
 User = get_user_model()
 
@@ -241,9 +241,12 @@ class PortalWorkflowStepForm(forms.Form):
         widget=forms.NumberInput(attrs={"class": _inp, "placeholder": "0", "min": "0"}),
     )
 
-    def __init__(self, *args, template_keys=None, **kwargs):
+    def __init__(self, *args, template_keys=None, extra_template_keys=None, **kwargs):
         super().__init__(*args, **kwargs)
-        keys = list(template_keys or [])
+        keys = set(template_keys or [])
+        for x in extra_template_keys or []:
+            if (x or "").strip():
+                keys.add(x.strip())
         self.fields["template_key"].choices = [("", "— Select template —")] + [
             (k, k) for k in sorted(keys)
         ]
@@ -251,10 +254,6 @@ class PortalWorkflowStepForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
         st = cleaned_data.get("step_type")
-
-        # Wait / end steps never use a template; ignore any posted template (e.g. stale UI selection).
-        if st != WorkflowStepType.SEND_TEMPLATE:
-            cleaned_data["template_key"] = ""
 
         def nz(name: str) -> int:
             v = cleaned_data.get(name)
@@ -274,6 +273,32 @@ class PortalWorkflowStepForm(forms.Form):
         if st == WorkflowStepType.SEND_TEMPLATE and not tk:
             raise forms.ValidationError("Template key is required for send-template steps.")
         return cleaned_data
+
+
+def wait_seconds_to_components(total: int | None) -> dict[str, int]:
+    t = 0 if total is None else max(0, int(total))
+    days, rem = divmod(t, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, sec = divmod(rem, 60)
+    return {
+        "wait_days": days,
+        "wait_hours": hours,
+        "wait_minutes": minutes,
+        "wait_sec": sec,
+    }
+
+
+def portal_workflow_step_initial_from_instance(step: WorkflowStep) -> dict:
+    tk = ""
+    if step.step_type == WorkflowStepType.SEND_TEMPLATE:
+        tk = step.template.key if step.template else (step.template_key or "")
+    init = {
+        "order": step.order,
+        "step_type": step.step_type,
+        "template_key": tk,
+    }
+    init.update(wait_seconds_to_components(step.wait_seconds))
+    return init
 
 
 # Inline styles so the field stays hidden even if Tailwind utilities are missing or overridden.

@@ -364,38 +364,53 @@ def test_workflow_step_validates_template_key(
 
 
 @pytest.mark.django_db
-def test_workflow_add_wait_step_ignores_stale_template_key(
-    client, customer_user, customer_account, portal_tenant
-):
-    """Wait steps do not store a template key; ignore posted template (e.g. after switching step type)."""
+def test_workflow_step_edit_and_delete(client, customer_user, customer_account, portal_tenant):
     EmailTemplate.objects.create(
         tenant=portal_tenant,
-        key="ignored_tpl",
-        name="Ignored",
+        key="step_tpl",
+        name="Step",
         category=TemplateCategory.TRANSACTIONAL,
         status=TemplateStatus.DRAFT,
     )
-    wf = Workflow.objects.create(tenant=portal_tenant, name="W2", slug="w2-wait")
+    wf = Workflow.objects.create(tenant=portal_tenant, name="W", slug="w-edit")
+    step = WorkflowStep.objects.create(
+        workflow=wf,
+        order=1,
+        step_type=WorkflowStepType.WAIT_DURATION,
+        wait_seconds=30,
+    )
     bind_portal_account_session(client, customer_user, customer_account)
-    r = client.post(
-        reverse("portal:workflow_add_step", kwargs={"workflow_id": wf.id}),
+    r = client.get(
+        f"{reverse('portal:workflow_detail', kwargs={'workflow_id': wf.id})}?edit={step.id}"
+    )
+    assert r.status_code == 200
+    assert b"Save step" in r.content
+    r2 = client.post(
+        reverse(
+            "portal:workflow_step_update",
+            kwargs={"workflow_id": wf.id, "step_id": step.id},
+        ),
         {
             "order": "1",
             "step_type": "wait_duration",
-            "template_key": "ignored_tpl",
+            "template_key": "",
             "wait_days": "0",
             "wait_hours": "0",
             "wait_minutes": "1",
-            "wait_sec": "0",
+            "wait_sec": "5",
         },
     )
-    assert r.status_code == 302
-    assert wf.steps.count() == 1
-    step = wf.steps.get()
-    assert step.step_type == WorkflowStepType.WAIT_DURATION
-    assert step.wait_seconds == 60
-    assert step.template_key == ""
-    assert step.template_id is None
+    assert r2.status_code == 302
+    step.refresh_from_db()
+    assert step.wait_seconds == 65
+    r3 = client.post(
+        reverse(
+            "portal:workflow_step_delete",
+            kwargs={"workflow_id": wf.id, "step_id": step.id},
+        ),
+    )
+    assert r3.status_code == 302
+    assert wf.steps.count() == 0
 
 
 @pytest.mark.django_db
