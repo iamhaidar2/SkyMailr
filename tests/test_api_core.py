@@ -24,7 +24,6 @@ from apps.messages.models import (
 )
 from apps.messages.services.message_actions import cancel_outbound_message, retry_outbound_message
 from apps.workflows.models import Workflow, WorkflowEnrollment, WorkflowStep, WorkflowStepType
-from apps.workflows.services.workflow_engine import enroll_workflow, process_due_executions
 
 
 @pytest.mark.django_db
@@ -327,10 +326,8 @@ def test_workflow_create_enroll_and_dispatch(api_key, tenant, approved_template)
         format="json",
     )
     assert er.status_code == 200
-    en = WorkflowEnrollment.objects.get()
-    enroll_workflow(enrollment=en)
-    n = process_due_executions(limit=5)
-    assert n >= 1
+    WorkflowEnrollment.objects.get()
+    # API enroll calls enroll_workflow; engine schedules an immediate sweep
     assert OutboundMessage.objects.filter(tenant=tenant, to_email="wf@example.com").exists()
     om = OutboundMessage.objects.get(to_email="wf@example.com")
     assert om.status == OutboundStatus.SENT

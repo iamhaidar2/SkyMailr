@@ -19,6 +19,20 @@ from apps.workflows.models import (
 logger = logging.getLogger(__name__)
 
 
+def _kick_workflow_sweep_soon(*, countdown_seconds: int = 0) -> None:
+    """Ensure due workflow steps run without relying only on Celery Beat (often missing from DB schedules)."""
+    try:
+        from apps.workflows.tasks import process_workflow_due_steps
+
+        cs = max(0, int(countdown_seconds))
+        if cs == 0:
+            process_workflow_due_steps.delay()
+        else:
+            process_workflow_due_steps.apply_async(countdown=cs)
+    except Exception:
+        logger.exception("failed to schedule workflow sweep (countdown=%s)", countdown_seconds)
+
+
 def next_linear_step(workflow, after_order: int):
     return workflow.steps.filter(order__gt=after_order).order_by("order").first()
 
@@ -37,6 +51,7 @@ def enroll_workflow(*, enrollment: WorkflowEnrollment) -> WorkflowExecution:
             "next_run_at": timezone.now(),
         },
     )
+    _kick_workflow_sweep_soon(countdown_seconds=0)
     return ex
 
 
@@ -129,6 +144,7 @@ def _process_one_execution(ex: WorkflowExecution) -> None:
             ex.next_run_at = now + timedelta(seconds=wait_s)
             ex.status = ExecutionStatus.WAITING
             ex.save(update_fields=["current_step", "next_run_at", "status"])
+            _kick_workflow_sweep_soon(countdown_seconds=wait_s)
             return
         ex.current_step = nxt
         ex.next_run_at = now
