@@ -111,9 +111,10 @@ def test_quick_start_page_ok(client, customer_user, customer_account):
     assert b"Connect your app end-to-end" in r.content
     assert b"Copy this for your coding agent" in r.content
     assert b"Coding Agent" in r.content
-    assert b"Manual</button>" in r.content
-    assert b"/api/v1" in r.content
+    assert b"You Code</button>" in r.content
+    assert "You Code \u2014 integrate".encode("utf-8") in r.content
     assert b"SKYMAILR_BASE_URL" in r.content
+    assert b"/api/v1" in r.content
     assert b"SKYMAILR_API_KEY" in r.content
 
 

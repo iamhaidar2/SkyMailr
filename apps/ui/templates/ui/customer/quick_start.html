@@ -55,18 +55,55 @@
     background: rgb(37 99 235);
     color: rgb(255 255 255);
   }
+  /* Override light-theme slate→muted remap for long-form Quick Start copy on cards */
+  .customer-app .qs-readable .text-slate-300,
+  .customer-app .qs-readable .text-slate-400,
+  .customer-app .qs-readable ol,
+  .customer-app .qs-readable ul,
+  .customer-app .qs-readable li {
+    color: rgb(226 232 240);
+  }
+  html[data-theme="light"] .customer-app .qs-readable .text-slate-300,
+  html[data-theme="light"] .customer-app .qs-readable .text-slate-400,
+  html[data-theme="light"] .customer-app .qs-readable ol,
+  html[data-theme="light"] .customer-app .qs-readable ul,
+  html[data-theme="light"] .customer-app .qs-readable li,
+  html[data-theme="light"] .customer-app .qs-readable p {
+    color: rgb(51 65 85) !important;
+  }
+  html[data-theme="light"] .customer-app .qs-readable .text-slate-200,
+  html[data-theme="light"] .customer-app .qs-readable .font-medium.text-slate-200 {
+    color: rgb(15 23 42) !important;
+  }
+  html[data-theme="light"] .customer-app .qs-readable .font-mono.text-slate-400,
+  html[data-theme="light"] .customer-app .qs-readable .font-mono.text-xs.text-slate-400 {
+    color: rgb(71 85 105) !important;
+  }
+  html[data-theme="light"] .customer-app .qs-readable .rounded.bg-surface-900.font-mono {
+    background-color: rgb(241 245 249) !important;
+    color: rgb(15 23 42) !important;
+    border: 1px solid rgb(203 213 225);
+  }
+  html[data-theme="light"] .customer-app .qs-readable .font-medium.text-slate-300 {
+    color: rgb(15 23 42) !important;
+  }
+  html[data-theme="light"] .customer-app .qs-readable .text-slate-500 {
+    color: rgb(100 116 139) !important;
+  }
 </style>
 {% endblock %}
 {% block content %}
 <div class="mx-auto max-w-6xl space-y-8">
   <div>
     <h2 class="text-2xl font-semibold text-white">Quick Start</h2>
-    <p class="mt-2 text-sm text-slate-400">
-      This Quick Start guide for SkyMailr walks through what you need to connect an app and send mail. Start with <strong class="font-medium text-slate-300">Connect your app end-to-end</strong> below, then use the tabs for a copy-paste prompt to your coding agent or a gentler walkthrough.
-    </p>
+    <div class="qs-readable mt-2 text-sm text-slate-400">
+      <p>
+        This Quick Start guide for SkyMailr walks through what you need to connect an app and send mail. Start with <strong class="font-medium text-slate-300">Connect your app end-to-end</strong> below, then use the tabs: <strong class="font-medium text-slate-300">Coding Agent</strong> for a single prompt to paste into an assistant, or <strong class="font-medium text-slate-300">You Code</strong> for the same integration with more detail and copy-paste examples.
+      </p>
+    </div>
   </div>
 
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+  <div class="qs-readable rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-base font-semibold text-white">Connect your app end-to-end</h3>
     <p class="mt-2 text-sm text-slate-400">Work from top to bottom. Steps 1–6 happen in SkyMailr; steps 7–8 connect your own product and where it runs.</p>
     <ol class="mt-4 list-decimal space-y-3 pl-5 text-sm text-slate-300">
@@ -76,7 +113,7 @@
       <li>Set the <strong class="font-medium text-slate-200">From name and address</strong> under <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a> for that connected app.</li>
       <li>Create <strong class="font-medium text-slate-200">email templates</strong> under <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a> and have an owner or admin <strong class="text-slate-200">approve</strong> them for sending.</li>
       <li><strong class="font-medium text-slate-200">Optional:</strong> <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a> for automated sequences and <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a> so teammates can help.</li>
-      <li><strong class="font-medium text-slate-200">Add SkyMailr to your app’s code.</strong> Your product should read the secret from configuration (for example an environment variable), never from source control. When you send mail, call SkyMailr’s <strong class="text-slate-200">send-template</strong> API with that secret in the <strong class="text-slate-200">Authorization</strong> header. Use the <span class="text-slate-200">Coding Agent</span> tab below for a prompt you can paste into an assistant, or ask your developer to follow <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">docs/06-api-and-auth.md</code> in the SkyMailr repo.</li>
+      <li><strong class="font-medium text-slate-200">Add SkyMailr to your app’s code.</strong> Your product should read the secret from configuration (for example <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_API_KEY</code>), never from source control. When you send mail, call SkyMailr’s <strong class="text-slate-200">send-template</strong> API with that secret in the <strong class="text-slate-200">Authorization</strong> header. Use the <strong class="text-slate-200">Coding Agent</strong> or <strong class="text-slate-200">You Code</strong> tab below for prompts and examples, or follow <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">docs/06-api-and-auth.md</code> in the SkyMailr repo.</li>
       <li><strong class="font-medium text-slate-200">Configure your app host</strong> (for example <strong class="text-slate-200">Railway</strong>, Heroku, or Fly.io). In the host’s <strong class="text-slate-200">Variables</strong> or <strong class="text-slate-200">Environment</strong> screen, add <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_BASE_URL</code> = <code class="font-mono text-xs text-slate-400">{{ skymailr_site_root }}</code> (your SkyMailr site address only—<strong class="text-slate-200">no</strong> <code class="font-mono text-xs">/api/v1</code> at the end) and <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_API_KEY</code> = the secret from step 2. Save, then <strong class="text-slate-200">redeploy</strong> so the server restarts and picks up the values.</li>
     </ol>
     <p class="mt-4 text-xs text-slate-500">If your app only reads environment variables when it starts, you must redeploy after every change to those variables. The <a href="{% url 'portal:dashboard' %}" class="text-blue-400 hover:underline">Dashboard</a> setup checklist mirrors these steps in a shorter list.</p>
@@ -85,12 +122,12 @@
   <div class="qs-tabbed-panel rounded-xl border border-surface-600 bg-surface-850" data-qs-tab-group>
     <div class="qs-tab-row" role="tablist" aria-label="Setup instructions">
       <button type="button" class="qs-tab qs-tab-active" data-qs-tab="agent" role="tab" aria-selected="true">Coding Agent</button>
-      <button type="button" class="qs-tab" data-qs-tab="manual" role="tab" aria-selected="false">Manual</button>
+      <button type="button" class="qs-tab" data-qs-tab="youcode" role="tab" aria-selected="false">You Code</button>
     </div>
-    <div class="p-5">
+    <div class="p-5 qs-readable">
       <div data-qs-panel="agent" role="tabpanel">
         <h3 class="text-sm font-semibold text-white">Copy this for your coding agent</h3>
-        <p class="mt-2 text-sm text-slate-400">Paste the block below into Cursor, Copilot, ChatGPT, or any coding assistant. It tells them how SkyMailr’s API works and what must already be set up in your account.</p>
+        <p class="mt-2 text-sm text-slate-400">Paste the block below into Cursor, Copilot, ChatGPT, or any coding assistant. It tells them how SkyMailr’s API works and what must already be set up in your account. For a longer version with examples, open the <strong class="font-medium text-slate-300">You Code</strong> tab.</p>
         <div class="qs-code-wrap mt-3">
           <pre id="qs-agent-prompt" class="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded bg-surface-900 p-3 pr-24 text-left text-xs leading-relaxed text-slate-300">You are helping integrate an application with SkyMailr (hosted email sending).
 
@@ -128,29 +165,97 @@ Repository reference (if you have the SkyMailr repo): docs/06-api-and-auth.md</p
           <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-agent-prompt">Copy</button>
         </div>
       </div>
-      <div data-qs-panel="manual" class="hidden" role="tabpanel" hidden>
-        <h3 class="text-sm font-semibold text-white">Do it yourself (simple steps)</h3>
-        <p class="mt-2 text-sm text-slate-400">Follow these in order. You can pause between steps—SkyMailr saves your work.</p>
-        <ol class="mt-3 list-decimal space-y-3 pl-5 text-sm text-slate-300">
-          <li><strong class="font-medium text-slate-200">Sign in</strong> to this SkyMailr account (you are already signed in if you see this page).</li>
-          <li><strong class="font-medium text-slate-200">Name your product</strong> as a connected app under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>. This is just a label for “the app that will send mail.”</li>
-          <li><strong class="font-medium text-slate-200">Create a secret key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>: pick your connected app, type a short label (for example “production”), click generate, and <strong class="text-slate-200">copy the long secret immediately</strong> into a password manager or a note only you can see. It will not be shown again.</li>
-          <li><strong class="font-medium text-slate-200">If you want email to come from your own website address</strong> (for example noreply@yourdomain.com): open <a href="{% url 'portal:sending_domains' %}" class="text-blue-400 hover:underline">Sending domains</a>, add your domain, then add the DNS records your DNS company (GoDaddy, Cloudflare, etc.) asks for. When you are done, use “Check records” in SkyMailr until it shows verified.</li>
-          <li><strong class="font-medium text-slate-200">Set who mail is “from”</strong> under <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>: pick your connected app, create a profile with the name and address recipients should see.</li>
-          <li><strong class="font-medium text-slate-200">Create your email design</strong> under <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>, then ask an owner or admin to <strong class="text-slate-200">approve</strong> it. Only approved designs can be sent through the API.</li>
-          <li><strong class="font-medium text-slate-200">Optional:</strong> set up <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a> for automatic follow-ups, and invite teammates under <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a>.</li>
-        </ol>
+      <div data-qs-panel="youcode" class="hidden" role="tabpanel" hidden>
+        <h3 class="text-sm font-semibold text-white">You Code — integrate SkyMailr yourself</h3>
+        <p class="mt-2 text-sm text-slate-400">This is the same integration as the <strong class="font-medium text-slate-300">Coding Agent</strong> tab, with more step-by-step detail, explicit environment variable names, and small examples you can copy.</p>
+
+        <h4 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Before you call the API</h4>
+        <p class="mt-2 text-sm text-slate-400">Complete <strong class="font-medium text-slate-300">Connect your app end-to-end</strong> above (steps 1–6): connected app, API key, optional sending domain + DNS, sender profile, approved templates. Without those, requests return errors or mail will not send as you expect.</p>
+
+        <h4 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Environment variables (your app + host)</h4>
+        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-300">
+          <li><code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_BASE_URL</code> — your SkyMailr site root only, e.g. <code class="font-mono text-xs text-slate-400">{{ skymailr_site_root }}</code>. Do <strong class="text-slate-200">not</strong> append <code class="font-mono text-xs">/api/v1</code>; your code or HTTP client adds path <code class="font-mono text-xs">/api/v1/messages/send-template/</code>.</li>
+          <li><code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_API_KEY</code> — the raw secret from <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>. Set it in Railway / Heroku / Fly “Variables”, not in git.</li>
+        </ul>
+
+        <h4 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">HTTP request</h4>
+        <ul class="mt-2 list-disc space-y-2 pl-5 text-sm text-slate-300">
+          <li><strong class="text-slate-200">Method &amp; URL:</strong> <code class="font-mono text-xs text-slate-400">POST {{ api_base_url }}/messages/send-template/</code></li>
+          <li><strong class="text-slate-200">Headers:</strong> <code class="font-mono text-xs text-slate-400">Authorization: Bearer &lt;SKYMAILR_API_KEY&gt;</code> and <code class="font-mono text-xs text-slate-400">Content-Type: application/json</code></li>
+          <li><strong class="text-slate-200">JSON body fields:</strong> <code class="font-mono text-xs">template_key</code> (must match an approved template), <code class="font-mono text-xs">to_email</code>, <code class="font-mono text-xs">context</code> (object of template variables), <code class="font-mono text-xs">source_app</code> (stable id for logs), <code class="font-mono text-xs">message_type</code> (e.g. <code class="font-mono text-xs">transactional</code>), optional <code class="font-mono text-xs">idempotency_key</code> for safe retries.</li>
+        </ul>
+
+        <h4 class="mt-5 text-xs font-semibold uppercase tracking-wide text-slate-500">Examples</h4>
+        <p class="mt-2 text-sm text-slate-400">Replace template key, recipient, and context keys with your own. Each block has a Copy button.</p>
+
+        <p class="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Python (httpx)</p>
+        <div class="qs-code-wrap relative mt-1">
+          <pre id="qs-you-py" class="max-h-64 overflow-auto whitespace-pre rounded bg-surface-900 p-3 pr-20 text-left text-xs leading-relaxed text-slate-300">import os
+import httpx
+
+base = os.environ["SKYMAILR_BASE_URL"].rstrip("/")
+url = f"{base}/api/v1/messages/send-template/"
+headers = {
+    "Authorization": f"Bearer {os.environ['SKYMAILR_API_KEY']}",
+    "Content-Type": "application/json",
+}
+body = {
+    "template_key": "welcome_new_user",
+    "to_email": "user@example.com",
+    "context": {"user_name": "Ada"},
+    "source_app": "my_product",
+    "message_type": "transactional",
+}
+r = httpx.post(url, json=body, headers=headers, timeout=30.0)
+r.raise_for_status()
+print(r.json())</pre>
+          <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-you-py">Copy</button>
+        </div>
+
+        <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">JavaScript (Node / fetch)</p>
+        <div class="qs-code-wrap relative mt-1">
+          <pre id="qs-you-js" class="max-h-64 overflow-auto whitespace-pre rounded bg-surface-900 p-3 pr-20 text-left text-xs leading-relaxed text-slate-300">const base = process.env.SKYMAILR_BASE_URL.replace(/\/$/, "");
+const url = `${base}/api/v1/messages/send-template/`;
+const res = await fetch(url, {
+  method: "POST",
+  headers: {
+    Authorization: `Bearer ${process.env.SKYMAILR_API_KEY}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    template_key: "welcome_new_user",
+    to_email: "user@example.com",
+    context: { user_name: "Ada" },
+    source_app: "my_product",
+    message_type: "transactional",
+  }),
+});
+if (!res.ok) throw new Error(await res.text());
+console.log(await res.json());</pre>
+          <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-you-js">Copy</button>
+        </div>
+
+        <p class="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">cURL</p>
+        <div class="qs-code-wrap relative mt-1">
+          <pre id="qs-you-curl" class="max-h-48 overflow-auto whitespace-pre-wrap rounded bg-surface-900 p-3 pr-20 text-left text-xs leading-relaxed text-slate-300">curl -sS -X POST "{{ api_base_url }}/messages/send-template/" \
+  -H "Authorization: Bearer $SKYMAILR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"template_key":"welcome_new_user","to_email":"user@example.com","context":{"user_name":"Ada"},"source_app":"cli","message_type":"transactional"}'</pre>
+          <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-you-curl">Copy</button>
+        </div>
+
+        <p class="mt-5 text-xs text-slate-500">Full route list and edge cases: <code class="font-mono text-slate-400">docs/06-api-and-auth.md</code> in the SkyMailr repository.</p>
       </div>
     </div>
   </div>
 
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+  <div class="qs-readable rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Sender profiles</h3>
     <p class="mt-2 text-sm text-slate-400">Sender profiles tie a display name and mailbox to your connected app. The API references them when sending so recipients see a consistent From line that matches your verified domain.</p>
     <p class="mt-3"><a href="{% url 'portal:sender_profile_list' %}" class="text-sm text-blue-400 hover:underline">Open sender profiles →</a></p>
   </div>
 
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+  <div class="qs-readable rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Email templates</h3>
     <p class="mt-2 text-sm text-slate-400">Templates hold HTML and text for reusable messages. After you save a version, an owner or admin approves it for production; only approved templates can be used by the send API for that app.</p>
     <p class="mt-3"><a href="{% url 'portal:template_list' %}" class="text-sm text-blue-400 hover:underline">Open email templates →</a></p>
@@ -162,7 +267,7 @@ Repository reference (if you have the SkyMailr repo): docs/06-api-and-auth.md</p
     <p class="mt-3"><a href="{% url 'portal:workflow_list' %}" class="text-sm text-blue-400 hover:underline">Open workflows →</a></p>
   </div>
 
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+  <div class="qs-readable rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h3 class="text-sm font-semibold text-white">Members</h3>
     <p class="mt-2 text-sm text-slate-400">Members are people who can sign in to this SkyMailr account. Roles control who can approve templates, edit content, manage connected apps, invite others, or view usage.</p>
     <p class="mt-3"><a href="{% url 'portal:members_list' %}" class="text-sm text-blue-400 hover:underline">Open members →</a></p>
