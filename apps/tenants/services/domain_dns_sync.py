@@ -48,6 +48,10 @@ def sync_domain_dns_metadata(
     if meta.get("return_path_cname_target"):
         td.return_path_cname_target = meta["return_path_cname_target"]
         changed = True
+    mx_t = meta.get("mx_targets")
+    if isinstance(mx_t, list) and len(mx_t) > 0:
+        td.mx_targets = [str(x).strip() for x in mx_t if str(x).strip()]
+        changed = True
     if meta.get("dmarc_txt_expected"):
         td.dmarc_txt_expected = meta["dmarc_txt_expected"]
         changed = True

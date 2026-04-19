@@ -40,6 +40,13 @@ begin
   rp = domain.return_path_domain.to_s
   if rp.present?
     dns[:return_path_cname_name] = rp
+    rpt = Postal::Config.dns.return_path_domain.to_s.strip
+    dns[:return_path_cname_target] = rpt if rpt.present?
+  end
+
+  mx = Postal::Config.dns.mx_records
+  if mx.present?
+    dns[:mx_targets] = mx.map(&:to_s).map(&:strip).reject(&:blank?)
   end
 
   unless domain.verified?

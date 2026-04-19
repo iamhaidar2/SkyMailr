@@ -49,12 +49,31 @@ def _extract_from_domain_obj(obj: dict[str, Any], domain_fqdn: str) -> dict[str,
         if isinstance(v, str) and "v=dkim1" in v.lower().replace(" ", ""):
             out["dkim_txt_value"] = v.strip()
             break
-    # Return path / bounce
-    for key in ("return_path_domain", "bounce_domain", "rp_cname_target"):
-        v = obj.get(key)
-        if isinstance(v, str) and v.strip():
-            out["return_path_cname_target"] = v.strip().rstrip(".")
-            break
+    # Return path / bounce (explicit keys from bridge or newer APIs)
+    rpt = obj.get("return_path_cname_target") or obj.get("return_path_hostname")
+    if isinstance(rpt, str) and rpt.strip():
+        out["return_path_cname_target"] = rpt.strip().rstrip(".")
+    rpn = obj.get("return_path_cname_name")
+    if isinstance(rpn, str) and rpn.strip():
+        out["return_path_cname_name"] = rpn.strip().rstrip(".")
+    mx_list = obj.get("mx_targets")
+    if isinstance(mx_list, list) and mx_list:
+        hosts = [str(x).strip().rstrip(".") for x in mx_list if str(x).strip()]
+        if hosts:
+            out["mx_targets"] = hosts
+    if "mx_targets" not in out:
+        mx_records = obj.get("mx_records")
+        if isinstance(mx_records, list) and mx_records:
+            hosts = [str(x).strip().rstrip(".") for x in mx_records if str(x).strip()]
+            if hosts:
+                out["mx_targets"] = hosts
+    # Legacy: some payloads only expose a single string for return-path CNAME target
+    if "return_path_cname_target" not in out:
+        for key in ("bounce_domain", "rp_cname_target"):
+            v = obj.get(key)
+            if isinstance(v, str) and v.strip():
+                out["return_path_cname_target"] = v.strip().rstrip(".")
+                break
     if "return_path_cname_target" in out and "return_path_cname_name" not in out:
         out["return_path_cname_name"] = f"rp.{d}"
 
@@ -84,7 +103,7 @@ def fetch_domain_dns_metadata(domain_fqdn: str, *, timeout: float | None = None)
     """
     Returns a dict with optional keys:
     spf_txt_expected, dkim_selector, dkim_txt_value,
-    return_path_cname_name, return_path_cname_target, dmarc_txt_expected
+    return_path_cname_name, return_path_cname_target, mx_targets, dmarc_txt_expected
     or None if nothing could be fetched.
     """
     base, key, default_timeout, verify = _base_config()

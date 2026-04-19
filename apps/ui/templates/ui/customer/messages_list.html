@@ -3,8 +3,47 @@
 <div class="mx-auto max-w-6xl space-y-6">
   <div>
     <h2 class="text-2xl font-semibold text-white">Messages</h2>
-    <p class="mt-1 text-sm text-slate-500">Recent messages across your connected apps (up to 100).</p>
+    <p class="mt-1 text-sm text-slate-500">Recent messages across your connected apps (up to 100). Use filters to narrow by date, recipient, template, or workflow.</p>
   </div>
+
+  <form method="get" class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+    <div class="flex flex-wrap items-end gap-3 text-sm">
+      <div>
+        <label class="mb-1 block text-xs text-slate-500" for="id_date_from">From date</label>
+        <input type="date" name="date_from" id="id_date_from" value="{{ filter_date_from }}" class="rounded border border-surface-600 bg-surface-900 px-2 py-1.5 text-slate-200" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500" for="id_date_to">To date</label>
+        <input type="date" name="date_to" id="id_date_to" value="{{ filter_date_to }}" class="rounded border border-surface-600 bg-surface-900 px-2 py-1.5 text-slate-200" />
+      </div>
+      <div class="min-w-[12rem] flex-1">
+        <label class="mb-1 block text-xs text-slate-500" for="id_to_email">To email</label>
+        <input type="text" name="to_email" id="id_to_email" value="{{ filter_to_email }}" placeholder="Contains…" class="w-full rounded border border-surface-600 bg-surface-900 px-2 py-1.5 text-slate-200" />
+      </div>
+      <div class="min-w-[14rem] flex-1">
+        <label class="mb-1 block text-xs text-slate-500" for="id_template">Email template</label>
+        <select name="template" id="id_template" class="w-full rounded border border-surface-600 bg-surface-900 px-2 py-1.5 text-slate-200">
+          <option value="">Any</option>
+          {% for t in filter_templates %}
+            <option value="{{ t.id }}" {% if selected_template_uuid and t.id == selected_template_uuid %}selected{% endif %}>{{ t.tenant.name }} — {{ t.name }} ({{ t.key }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="min-w-[14rem] flex-1">
+        <label class="mb-1 block text-xs text-slate-500" for="id_workflow">Workflow</label>
+        <select name="workflow" id="id_workflow" class="w-full rounded border border-surface-600 bg-surface-900 px-2 py-1.5 text-slate-200">
+          <option value="">Any</option>
+          {% for w in filter_workflows %}
+            <option value="{{ w.id }}" {% if selected_workflow_uuid and w.id == selected_workflow_uuid %}selected{% endif %}>{{ w.tenant.name }} — {{ w.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Apply</button>
+      <a href="{% url 'portal:messages_list' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Clear</a>
+    </div>
+    <p class="mt-3 text-xs text-slate-500">Date range uses UTC day boundaries.</p>
+  </form>
+
   <div class="rounded-xl border border-surface-600 bg-surface-850 overflow-hidden">
     <div class="border-b border-surface-600 px-5 py-3">
       <h3 class="text-sm font-semibold text-white">All messages</h3>

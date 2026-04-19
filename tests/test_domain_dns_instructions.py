@@ -75,6 +75,42 @@ def test_is_customer_ready_requires_dkim_key_material():
 
 
 @pytest.mark.django_db
+def test_return_path_and_mx_rows_when_targets_present():
+    td = TenantDomain(
+        domain="send.example.com",
+        spf_txt_expected="v=spf1 include:x ~all",
+        dkim_txt_value="v=DKIM1; p=KEYMATERIAL",
+        dkim_selector="postal",
+        return_path_cname_name="psrp.send.example.com",
+        return_path_cname_target="rp.postal.example.com",
+        mx_targets=["mx1.postal.example.com", "mx2.postal.example.com"],
+    )
+    inst = build_dns_instructions_for_domain(td)
+    kinds = [r.kind for r in inst.rows]
+    assert "return_path" in kinds
+    assert kinds.count("mx") == 2
+    rp = next(r for r in inst.rows if r.kind == "return_path")
+    assert rp.record_type == "CNAME"
+    assert rp.value == "rp.postal.example.com"
+    mx_rows = [r for r in inst.rows if r.kind == "mx"]
+    assert mx_rows[0].value == "10 mx1.postal.example.com"
+    assert mx_rows[1].value == "10 mx2.postal.example.com"
+
+
+@pytest.mark.django_db
+@override_settings(SKYMAILR_MX_TARGETS="mx.from.settings")
+def test_mx_from_operator_settings_when_domain_mx_empty():
+    td = TenantDomain(
+        domain="mxset.example.com",
+        spf_txt_expected="v=spf1 include:x ~all",
+        dkim_txt_value="v=DKIM1; p=KEY",
+        dkim_selector="postal",
+    )
+    inst = build_dns_instructions_for_domain(td)
+    assert any(r.kind == "mx" and r.value == "10 mx.from.settings" for r in inst.rows)
+
+
+@pytest.mark.django_db
 @override_settings(SKYMAILR_SPF_INCLUDE_HINT="spf.op.example", SKYMAILR_RETURN_PATH_HOST="rp.provider.test")
 def test_layered_resolution_from_settings():
     td = TenantDomain(domain="b.com", dkim_txt_value="v=DKIM1; p=KEYMATERIAL")

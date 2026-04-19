@@ -130,6 +130,11 @@ class TenantDomain(models.Model):
         null=True,
         help_text="CNAME target for return-path/bounce handling.",
     )
+    mx_targets = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Inbound MX hostnames from Postal (priority 10 in UI); informational DNS rows.",
+    )
     dmarc_txt_expected = models.TextField(
         blank=True,
         null=True,

@@ -11,7 +11,7 @@ from apps.tenants.models import TenantDomain
 
 @dataclass(frozen=True)
 class DnsInstructionRow:
-    kind: str  # spf | dkim | dmarc | return_path | postal_verification
+    kind: str  # spf | dkim | dmarc | return_path | mx | postal_verification
     record_type: str
     name: str
     host_label: str
@@ -121,6 +121,26 @@ def resolve_return_path(td: TenantDomain, d: str) -> tuple[str | None, str | Non
     return normalize_fqdn(name), tgt.rstrip("."), "domain_or_settings"
 
 
+def _settings_mx_targets() -> list[str]:
+    hint = (getattr(settings, "SKYMAILR_MX_TARGETS", None) or "").strip()
+    if not hint:
+        return []
+    return [p.strip().rstrip(".") for p in hint.split(",") if p.strip()]
+
+
+def resolve_mx_hostnames(td: TenantDomain) -> tuple[list[str], str]:
+    """Returns (mx hostnames for priority-10 rows, provenance staff note)."""
+    raw = getattr(td, "mx_targets", None)
+    if isinstance(raw, list):
+        hosts = [str(x).strip().rstrip(".") for x in raw if str(x).strip()]
+        if hosts:
+            return hosts, "domain"
+    st = _settings_mx_targets()
+    if st:
+        return st, "operator_settings"
+    return [], "missing"
+
+
 def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
     """
     Layered resolution:
@@ -154,6 +174,7 @@ def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
     dkim_sel, dkim_txt, dkim_src = resolve_dkim(td)
     dmarc_txt, dmarc_src = resolve_dmarc_txt(td)
     rp_name, rp_tgt, rp_src = resolve_return_path(td, d)
+    mx_hosts, mx_src = resolve_mx_hostnames(td)
 
     if spf_txt:
         rows.append(
@@ -206,6 +227,24 @@ def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
                     "Some providers use this hostname for bounce handling and reputation alignment."
                 ),
                 staff_source=rp_src,
+            )
+        )
+
+    for mx_host in mx_hosts:
+        rows.append(
+            DnsInstructionRow(
+                kind="mx",
+                record_type="MX",
+                name=d,
+                host_label=host_label_for_record(d, d),
+                value=f"10 {mx_host}",
+                ttl=300,
+                title="MX (incoming mail)",
+                purpose=(
+                    "Optional: points inbound mail for this domain at your mail server (Postal). "
+                    "You do not need this record only to send outbound mail."
+                ),
+                staff_source=mx_src,
             )
         )
 

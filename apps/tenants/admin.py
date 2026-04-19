@@ -71,6 +71,7 @@ class TenantDomainAdmin(admin.ModelAdmin):
                     "dkim_txt_value",
                     "return_path_cname_name",
                     "return_path_cname_target",
+                    "mx_targets",
                     "dmarc_txt_expected",
                     "postal_verification_txt_expected",
                     "postal_verification_bridge_at",

@@ -72,7 +72,7 @@
     {% if dns_rows %}
       <p class="mt-2 text-xs text-slate-500">
         {% if dns_instruction_set.is_customer_ready %}
-          Copy each value carefully. SPF authorizes sending; DKIM signs messages; DMARC sets policy; return-path (if listed) helps bounces align with your provider.
+          Copy each value carefully. SPF authorizes sending; DKIM signs messages; DMARC sets policy; return-path CNAME (if listed) helps bounces align with your provider; MX (if listed) is for receiving mail in Postal.
         {% else %}
           Add each record below at your DNS host. You can publish multiple TXT records at the same hostname (for example, both mail-server verification and SPF at <span class="font-mono text-slate-400">@</span>).
         {% endif %}

@@ -67,6 +67,7 @@ _DNS_PATCH_KEYS = (
     "dkim_txt_value",
     "return_path_cname_name",
     "return_path_cname_target",
+    "mx_targets",
     "dmarc_txt_expected",
     "postal_verification_txt_expected",
 )
@@ -107,8 +108,15 @@ def _log(r: ProvisionResult, msg: str, *args: Any) -> None:
 
 def _merge_dns_from_webhook_dict(dns: dict[str, Any], dns_patch: dict[str, Any]) -> None:
     for k in _DNS_PATCH_KEYS:
-        if dns.get(k):
-            dns_patch[str(k)] = dns[k]
+        v = dns.get(k)
+        if v is None:
+            continue
+        if isinstance(v, list):
+            if len(v) > 0:
+                dns_patch[str(k)] = v
+            continue
+        if v:
+            dns_patch[str(k)] = v
 
 
 def _merge_webhook_dns_after_http_fetch(domain: str, r: ProvisionResult) -> None:
@@ -492,11 +500,20 @@ def apply_dns_patch_to_tenant_domain(td: Any, patch: dict[str, Any]) -> bool:
         "dkim_txt_value",
         "return_path_cname_name",
         "return_path_cname_target",
+        "mx_targets",
         "dmarc_txt_expected",
         "postal_verification_txt_expected",
     ):
-        if k in patch and patch[k]:
-            setattr(td, k, patch[k])
+        if k not in patch:
+            continue
+        v = patch[k]
+        if isinstance(v, list):
+            if len(v) == 0:
+                continue
+            setattr(td, k, v)
+            changed = True
+        elif v:
+            setattr(td, k, v)
             changed = True
     if changed:
         td.dns_source = DnsMetadataSource.POSTAL_API

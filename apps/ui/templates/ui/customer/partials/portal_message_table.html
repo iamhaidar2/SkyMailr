@@ -5,16 +5,16 @@
       <th class="px-4 py-2">Time</th>
       <th class="px-4 py-2">Connected app</th>
       <th class="px-4 py-2">To</th>
-      <th class="px-4 py-2">Status</th>
+      <th class="px-4 py-2 text-right">Status</th>
     </tr>
   </thead>
   <tbody class="divide-y divide-surface-700">
     {% for m in messages %}
       <tr class="hover:bg-surface-800/80">
-        <td class="px-4 py-2 text-slate-500">{{ m.created_at }}</td>
+        <td class="px-4 py-2 text-slate-500">{{ m.created_at|date:"F j, Y, g:i a" }}</td>
         <td class="px-4 py-2 text-slate-300">{{ m.tenant.slug }}</td>
         <td class="px-4 py-2 text-slate-300">{{ m.to_email }}</td>
-        <td class="px-4 py-2">
+        <td class="px-4 py-2 text-right">
           {% if m.status == "failed" %}
             <span class="rounded bg-red-950/60 px-2 py-0.5 text-xs text-red-100">{{ m.get_status_display }}</span>
           {% elif m.status == "delivered" %}

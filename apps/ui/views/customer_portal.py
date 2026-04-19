@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from collections import defaultdict
+from datetime import date, datetime, time as dt_time
 
 from django.contrib import messages as django_messages
 from django.contrib.auth import login
@@ -12,6 +14,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.models import (
@@ -32,7 +35,9 @@ from apps.accounts.services.enforcement import (
 from apps.accounts.services.usage import usage_snapshot
 from apps.accounts.services.email_verification import create_verification_token
 from apps.accounts.services.invite_service import ensure_user_profile
+from apps.email_templates.models import EmailTemplate
 from apps.messages.models import OutboundMessage
+from apps.workflows.models import Workflow
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
 from apps.tenants.services.sending_readiness import compute_sending_readiness
@@ -67,6 +72,15 @@ SESSION_PORTAL_NEW_API_KEY_TENANT_ID = "_portal_new_api_key_tenant_id"
 SESSION_PORTAL_NEW_API_KEY_LABEL = "_portal_new_api_key_label"
 
 logger = logging.getLogger("apps.accounts.audit")
+
+
+def _portal_parse_date_param(raw: str | None) -> date | None:
+    if not raw or not str(raw).strip():
+        return None
+    try:
+        return date.fromisoformat(str(raw).strip())
+    except ValueError:
+        return None
 
 
 def portal_nav_items() -> list[dict[str, str]]:
@@ -427,13 +441,77 @@ def api_keys_hub(request):
 @portal_account_required
 def messages_list(request):
     account = get_active_portal_account(request)
-    qs = (
-        OutboundMessage.objects.filter(tenant__account=account)
-        .select_related("tenant")
-        .order_by("-created_at")[:100]
+    assert account is not None
+    qs = OutboundMessage.objects.filter(tenant__account=account).select_related(
+        "tenant",
+        "template",
+        "workflow_execution__enrollment__workflow",
     )
+
+    date_from = _portal_parse_date_param(request.GET.get("date_from"))
+    date_to = _portal_parse_date_param(request.GET.get("date_to"))
+    if date_from is not None:
+        start = timezone.make_aware(datetime.combine(date_from, dt_time.min))
+        qs = qs.filter(created_at__gte=start)
+    if date_to is not None:
+        end = timezone.make_aware(datetime.combine(date_to, dt_time.max))
+        qs = qs.filter(created_at__lte=end)
+
+    to_email_q = (request.GET.get("to_email") or "").strip()
+    if to_email_q:
+        qs = qs.filter(to_email__icontains=to_email_q)
+
+    selected_template_uuid = None
+    selected_workflow_uuid = None
+
+    template_raw = (request.GET.get("template") or "").strip()
+    if template_raw:
+        try:
+            tid = uuid.UUID(template_raw)
+        except ValueError:
+            tid = None
+        if tid and EmailTemplate.objects.filter(pk=tid, tenant__account=account).exists():
+            qs = qs.filter(template_id=tid)
+            selected_template_uuid = tid
+
+    workflow_raw = (request.GET.get("workflow") or "").strip()
+    if workflow_raw:
+        try:
+            wid = uuid.UUID(workflow_raw)
+        except ValueError:
+            wid = None
+        if wid and Workflow.objects.filter(pk=wid, tenant__account=account).exists():
+            qs = qs.filter(workflow_execution__enrollment__workflow_id=wid)
+            selected_workflow_uuid = wid
+
+    messages = list(qs.order_by("-created_at")[:100])
+
+    filter_templates = list(
+        EmailTemplate.objects.filter(tenant__account=account)
+        .select_related("tenant")
+        .order_by("tenant__name", "name")[:500]
+    )
+    filter_workflows = list(
+        Workflow.objects.filter(tenant__account=account)
+        .select_related("tenant")
+        .order_by("tenant__name", "name")[:500]
+    )
+
     ctx = _portal_ctx(request, "Messages", "messages")
-    ctx.update({"messages": qs})
+    ctx.update(
+        {
+            "messages": messages,
+            "filter_templates": filter_templates,
+            "filter_workflows": filter_workflows,
+            "filter_date_from": request.GET.get("date_from") or "",
+            "filter_date_to": request.GET.get("date_to") or "",
+            "filter_to_email": to_email_q,
+            "filter_template": template_raw,
+            "filter_workflow": workflow_raw,
+            "selected_template_uuid": selected_template_uuid,
+            "selected_workflow_uuid": selected_workflow_uuid,
+        }
+    )
     return render(request, "ui/customer/messages_list.html", ctx)
 
 

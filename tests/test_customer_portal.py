@@ -11,6 +11,7 @@ from apps.accounts.plans import DEFAULT_PLAN_CODE
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.email_templates.models import EmailTemplate
 from apps.email_templates.starter_pack import STARTER_TEMPLATE_KEYS
+from apps.messages.models import MessageType, OutboundMessage, OutboundStatus
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
 from tests.portal_helpers import bind_portal_account_session
 
@@ -106,6 +107,38 @@ def test_quick_start_page_ok(client, customer_user, customer_account):
     r = client.get(reverse("portal:quick_start"))
     assert r.status_code == 200
     assert b"Quick Start guide for SkyMailr" in r.content
+
+
+@pytest.mark.django_db
+def test_portal_messages_list_email_filter_and_table(client, customer_user, customer_account):
+    tenant = Tenant.objects.create(
+        account=customer_account,
+        name="Msg App",
+        slug="msg-app",
+        status=TenantStatus.ACTIVE,
+        default_sender_email="a@msg-app.com",
+    )
+    OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.TRANSACTIONAL,
+        to_email="unique-filter-hit@example.com",
+        status=OutboundStatus.SENT,
+    )
+    OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.TRANSACTIONAL,
+        to_email="other@example.com",
+        status=OutboundStatus.SENT,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.get(reverse("portal:messages_list"), {"to_email": "unique-filter-hit"})
+    assert r.status_code == 200
+    assert b"unique-filter-hit@example.com" in r.content
+    assert b"other@example.com" not in r.content
+    assert b"Time" in r.content
+    assert b"Status" in r.content
 
 
 @pytest.mark.django_db
