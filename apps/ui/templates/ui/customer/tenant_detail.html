@@ -19,7 +19,7 @@
     <h3 class="text-sm font-semibold text-white">Automation for this app</h3>
     <p class="mt-1 text-xs text-slate-500">Jump to lists filtered to this app.</p>
     <ul class="mt-4 flex flex-wrap gap-3 text-sm">
-      <li><a class="text-blue-400 hover:underline" href="{% url 'portal:sender_profile_list' %}?tenant={{ tenant.id }}">Sender profiles ({{ tenant.sender_profiles.count }})</a></li>
+      <li><a class="text-blue-400 hover:underline" href="{% url 'portal:sender_profile_list' %}?tenant={{ tenant.id }}">Sender profiles</a></li>
       <li><a class="text-blue-400 hover:underline" href="{% url 'portal:template_list' %}?tenant={{ tenant.id }}">Email templates</a></li>
       <li><a class="text-blue-400 hover:underline" href="{% url 'portal:workflow_list' %}?tenant={{ tenant.id }}">Workflows</a></li>
       <li><a class="text-blue-400 hover:underline" href="{% url 'portal:tenant_domain_list' tenant.id %}">Sending domains</a></li>

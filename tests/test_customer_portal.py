@@ -13,6 +13,7 @@ from apps.email_templates.models import EmailTemplate
 from apps.email_templates.starter_pack import STARTER_TEMPLATE_KEYS
 from apps.messages.models import MessageType, OutboundMessage, OutboundStatus
 from apps.tenants.models import Tenant, TenantAPIKey, TenantStatus
+from apps.ui.services.portal_default_tenant import ensure_default_tenant_for_account
 from tests.portal_helpers import bind_portal_account_session
 
 User = get_user_model()
@@ -107,6 +108,35 @@ def test_quick_start_page_ok(client, customer_user, customer_account):
     r = client.get(reverse("portal:quick_start"))
     assert r.status_code == 200
     assert b"Quick Start guide for SkyMailr" in r.content
+
+
+@pytest.mark.django_db
+def test_sending_domains_hub_redirects_when_single_tenant(client, customer_user, customer_account):
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.get(reverse("portal:sending_domains"), follow=False)
+    assert r.status_code == 302
+    tenant = Tenant.objects.filter(account=customer_account).order_by("name", "id").first()
+    assert tenant is not None
+    expected = reverse("portal:tenant_domain_list", kwargs={"tenant_id": tenant.id})
+    assert r["Location"].endswith(expected)
+
+
+@pytest.mark.django_db
+def test_sending_domains_hub_lists_when_multiple_tenants(client, customer_user, customer_account):
+    bind_portal_account_session(client, customer_user, customer_account)
+    ensure_default_tenant_for_account(customer_account)
+    t1 = Tenant.objects.filter(account=customer_account).order_by("name", "id").first()
+    Tenant.objects.create(
+        account=customer_account,
+        name="Beta App",
+        slug="beta-app-sdhub",
+        status=TenantStatus.ACTIVE,
+        default_sender_email="beta@example.com",
+    )
+    r = client.get(reverse("portal:sending_domains"))
+    assert r.status_code == 200
+    assert b"Beta App" in r.content
+    assert t1.name.encode() in r.content
 
 
 @pytest.mark.django_db

@@ -55,7 +55,7 @@ def tenant_domain_list(request, tenant_id):
     assert account is not None
     domains = tenant.domains.order_by("-is_primary", "domain")
     readiness = compute_sending_readiness(tenant)
-    ctx = _portal_ctx(request, f"Domains — {tenant.name}", "tenants")
+    ctx = _portal_ctx(request, f"Domains — {tenant.name}", "sending_domains")
     ctx.update(
         {
             "tenant": tenant,
@@ -115,7 +115,7 @@ def tenant_domain_new(request, tenant_id):
             return redirect("portal:tenant_domain_detail", tenant_id=tenant.id, domain_id=td.id)
     else:
         form = PortalTenantDomainForm(tenant=tenant)
-    ctx = _portal_ctx(request, f"Add domain — {tenant.name}", "tenants")
+    ctx = _portal_ctx(request, f"Add domain — {tenant.name}", "sending_domains")
     ctx.update({"tenant": tenant, "form": form})
     return render(request, "ui/customer/tenant_domain_form.html", ctx)
 
@@ -135,7 +135,7 @@ def tenant_domain_detail(request, tenant_id, domain_id):
     )
     dns_rows = dns_instruction_set.rows if show_dns_table else ()
     readiness = compute_sending_readiness(tenant)
-    ctx = _portal_ctx(request, td.domain, "tenants")
+    ctx = _portal_ctx(request, td.domain, "sending_domains")
     ctx.update(
         {
             "tenant": tenant,
