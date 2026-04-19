@@ -13,7 +13,7 @@
     <p class="mt-2 text-sm text-slate-400">Typical order:</p>
     <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
       <li>Create a <strong class="font-medium text-slate-200">connected app</strong> (your product or environment) under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>.</li>
-      <li>Add an <strong class="font-medium text-slate-200">API key</strong> for that app on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a> (open the app, generate a key, copy it once).</li>
+      <li>Add an <strong class="font-medium text-slate-200">API key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a> (pick the connected app, generate a key, copy it once).</li>
       <li>Configure a <strong class="font-medium text-slate-200">sender profile</strong> so messages have a valid From identity: <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>.</li>
       <li>Create and <strong class="font-medium text-slate-200">approve email templates</strong> your API or workflows will use: <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>.</li>
       <li>Optionally define <strong class="font-medium text-slate-200">workflows</strong> for lifecycle automation: <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a>.</li>

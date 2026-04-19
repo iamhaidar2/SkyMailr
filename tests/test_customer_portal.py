@@ -310,8 +310,25 @@ def test_customer_api_key_only_own_tenant(client, customer_user, customer_accoun
         {"name": "k1"},
     )
     assert r2.status_code == 302
-    assert r2.url == reverse("portal:api_keys")
+    assert r2["Location"].endswith(reverse("portal:api_keys"))
     assert TenantAPIKey.objects.filter(tenant=own).exists()
+
+
+@pytest.mark.django_db
+def test_api_keys_hub_create_from_dropdown(client, customer_user, customer_account):
+    ensure_default_tenant_for_account(customer_account)
+    own = Tenant.objects.filter(account=customer_account).order_by("name", "id").first()
+    assert own is not None
+    bind_portal_account_session(client, customer_user, customer_account)
+    fixed_key = "portal_hub_create_01234567890123456789012345678901234567890"
+    with patch("apps.ui.views.customer_portal.generate_api_key", return_value=fixed_key):
+        r = client.post(
+            reverse("portal:api_keys_hub_create"),
+            {"tenant_id": str(own.id), "name": "ci-from-hub"},
+        )
+    assert r.status_code == 302
+    assert r["Location"].endswith(reverse("portal:api_keys"))
+    assert TenantAPIKey.objects.filter(tenant=own, name="ci-from-hub").exists()
 
 
 @pytest.mark.django_db

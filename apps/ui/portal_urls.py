@@ -7,6 +7,7 @@ from apps.ui.views.customer_portal import (
     account_billing,
     account_usage,
     api_keys_hub,
+    api_keys_hub_create,
     dashboard,
     messages_list,
     quick_start,
@@ -133,6 +134,7 @@ urlpatterns = [
         name="tenant_domain_delete",
     ),
     path("account/api-keys/", api_keys_hub, name="api_keys"),
+    path("account/api-keys/create/", api_keys_hub_create, name="api_keys_hub_create"),
     path("account/messages/", messages_list, name="messages_list"),
     # Sender profiles
     path("account/sender-profiles/", portal_automation.sender_profile_list, name="sender_profile_list"),

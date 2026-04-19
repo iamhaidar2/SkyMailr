@@ -398,11 +398,11 @@ def tenant_create_api_key(request, tenant_id):
         assert_tenant_operational(tenant)
     except PolicyError as e:
         django_messages.error(request, e.detail)
-        return redirect("portal:tenant_detail", tenant_id=tenant.id)
+        return HttpResponseRedirect(reverse("portal:tenant_detail", kwargs={"tenant_id": tenant.id}))
     form = PortalApiKeyForm(request.POST)
     if not form.is_valid():
         django_messages.error(request, "Invalid label.")
-        return redirect("portal:tenant_detail", tenant_id=tenant.id)
+        return HttpResponseRedirect(reverse("portal:tenant_detail", kwargs={"tenant_id": tenant.id}))
     raw = generate_api_key()
     TenantAPIKey.objects.create(
         tenant=tenant,
@@ -413,7 +413,7 @@ def tenant_create_api_key(request, tenant_id):
     request.session[SESSION_PORTAL_NEW_API_KEY_TENANT_ID] = str(tenant.id)
     request.session[SESSION_PORTAL_NEW_API_KEY_LABEL] = form.cleaned_data["name"]
     django_messages.warning(request, "API key created. Copy it now — it will not be shown again.")
-    return redirect("portal:api_keys")
+    return HttpResponseRedirect(reverse("portal:api_keys"))
 
 
 @customer_login_required
@@ -453,9 +453,47 @@ def api_keys_hub(request):
             "new_api_key_label": new_api_key_label,
             "new_api_key_tenant": new_api_key_tenant,
             "api_base_url": api_base_url,
+            "api_key_hub_form": PortalApiKeyForm(),
         }
     )
     return render(request, "ui/customer/api_keys_hub.html", ctx)
+
+
+@customer_login_required
+@portal_manage_required
+@require_POST
+def api_keys_hub_create(request):
+    """Create an API key from the hub page (POST tenant_id + label)."""
+    account = get_active_portal_account(request)
+    assert account is not None
+    tenant_raw = (request.POST.get("tenant_id") or "").strip()
+    try:
+        tid = uuid.UUID(tenant_raw)
+    except ValueError:
+        django_messages.error(request, "Choose a connected app for this key.")
+        return HttpResponseRedirect(reverse("portal:api_keys"))
+    tenant = get_object_or_404(Tenant, pk=tid, account=account)
+    try:
+        assert_can_create_api_key(account)
+        assert_tenant_operational(tenant)
+    except PolicyError as e:
+        django_messages.error(request, e.detail)
+        return HttpResponseRedirect(reverse("portal:api_keys"))
+    form = PortalApiKeyForm(request.POST)
+    if not form.is_valid():
+        django_messages.error(request, "Invalid label.")
+        return HttpResponseRedirect(reverse("portal:api_keys"))
+    raw = generate_api_key()
+    TenantAPIKey.objects.create(
+        tenant=tenant,
+        name=form.cleaned_data["name"],
+        key_hash=hash_api_key(raw),
+    )
+    request.session[SESSION_PORTAL_NEW_API_KEY] = raw
+    request.session[SESSION_PORTAL_NEW_API_KEY_TENANT_ID] = str(tenant.id)
+    request.session[SESSION_PORTAL_NEW_API_KEY_LABEL] = form.cleaned_data["name"]
+    django_messages.warning(request, "API key created. Copy it now — it will not be shown again.")
+    return HttpResponseRedirect(reverse("portal:api_keys"))
 
 
 @customer_login_required

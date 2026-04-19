@@ -22,8 +22,31 @@
 <div class="mx-auto max-w-3xl space-y-8">
   <div class="hub-animate-in">
     <h2 class="text-2xl font-semibold text-white">API keys</h2>
-    <p class="mt-1 text-sm text-slate-400">Keys belong to a connected app. The full secret is shown only once when you generate a key; we store a hash, so lost keys cannot be recovered—create a new key from the app’s page instead.</p>
+    <p class="mt-1 text-sm text-slate-400">Keys belong to a connected app. The full secret is shown only once when you generate a key; we store a hash, so lost keys cannot be recovered—create another key here or from each app’s <span class="text-slate-300">Manage app</span> page.</p>
   </div>
+
+  {% if portal_can_manage and tenants %}
+    <section id="create-api-key" class="hub-animate-in scroll-mt-24 rounded-xl border border-surface-600 bg-surface-850 p-5" aria-labelledby="hub-create-heading">
+      <h3 id="hub-create-heading" class="text-sm font-semibold text-white">Create API key</h3>
+      <p class="mt-1 text-xs text-slate-500">Pick the connected app the key will authenticate as, then choose a label (for your own reference).</p>
+      <form method="post" action="{% url 'portal:api_keys_hub_create' %}" class="mt-4 flex flex-wrap items-end gap-4 text-sm">
+        {% csrf_token %}
+        <div>
+          <label class="mb-1 block text-xs text-slate-500" for="id_hub_api_key_tenant">Connected app</label>
+          <select id="id_hub_api_key_tenant" name="tenant_id" required class="w-full min-w-[12rem] rounded-md border border-surface-600 bg-surface-800 px-3 py-2 text-white">
+            {% for t in tenants %}
+              <option value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs text-slate-500" for="id_hub_api_key_name">Label</label>
+          {{ api_key_hub_form.name }}
+        </div>
+        <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-blue-600">Generate key</button>
+      </form>
+    </section>
+  {% endif %}
 
   {% if new_api_key %}
     <div class="hub-animate-in rounded-xl border border-amber-700 bg-amber-950/50 p-4" data-new-key-banner>
@@ -59,12 +82,12 @@
                   <span class="text-xs text-slate-500">created {{ k.created_at|date:"M j, Y" }}</span>
                 </div>
                 <p class="mt-2 font-mono text-xs text-slate-400">sk_live_••••••••</p>
-                <p class="mt-1 text-xs text-slate-500">Full secret is not stored. If you lost this key, open Manage app and generate a new one.</p>
+                <p class="mt-1 text-xs text-slate-500">Full secret is not stored. If you lost this key, generate a new one above or from <a href="{% url 'portal:tenant_detail' k.tenant.id %}" class="text-blue-400 hover:underline">Manage app</a>.</p>
               </li>
             {% endfor %}
           </ul>
         {% else %}
-          <p class="mt-3 text-sm text-slate-500">No active keys for this app yet. <a href="{% url 'portal:tenant_detail' group.tenant.id %}" class="text-blue-400 hover:underline">Create one</a> under the app.</p>
+          <p class="mt-3 text-sm text-slate-500">No active keys for this app yet.{% if portal_can_manage %} <a href="#create-api-key" class="text-blue-400 hover:underline">Create a key</a> above.{% else %} <a href="{% url 'portal:tenant_detail' group.tenant.id %}" class="text-blue-400 hover:underline">Open the app</a> and ask an owner or admin to create one.{% endif %}</p>
         {% endif %}
       </div>
     {% empty %}
