@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -82,6 +83,25 @@ def _settings_return_path_target() -> str | None:
     return v or None
 
 
+_SPF_INCLUDE_RE = re.compile(r"include:([^\s]+)", re.IGNORECASE)
+
+
+def _postal_rp_and_mx_from_spf(spf_txt: str) -> tuple[str | None, list[str]]:
+    """
+    When Postal's SPF uses `include:spf.<zone>`, the companion hosts are typically
+    `rp.<zone>` (return-path CNAME target) and `mx.<zone>` (inbound MX). This lets us
+    show complete DNS rows even if the provisioning bridge did not persist those fields.
+    """
+    if not (spf_txt or "").strip():
+        return None, []
+    for m in _SPF_INCLUDE_RE.finditer(spf_txt):
+        inc = m.group(1).strip().rstrip(".").lower()
+        if inc.startswith("spf.") and len(inc) > 4:
+            rest = inc[4:]
+            return f"rp.{rest}", [f"mx.{rest}"]
+    return None, []
+
+
 def resolve_expected_spf_txt(td: TenantDomain) -> tuple[str | None, str]:
     """Returns (spf_txt, provenance staff note)."""
     direct = (td.spf_txt_expected or "").strip()
@@ -115,10 +135,17 @@ def resolve_dmarc_txt(td: TenantDomain) -> tuple[str, str]:
 def resolve_return_path(td: TenantDomain, d: str) -> tuple[str | None, str | None, str]:
     """Returns (cname_name_fqdn, target, provenance)."""
     tgt = (td.return_path_cname_target or "").strip() or _settings_return_path_target()
+    prov = "domain_or_settings"
+    if not tgt:
+        der_rp, _ = _postal_rp_and_mx_from_spf((td.spf_txt_expected or "").strip())
+        if der_rp:
+            tgt = der_rp
+            prov = "derived_from_spf_include"
     if not tgt:
         return None, None, "missing"
-    name = (td.return_path_cname_name or "").strip() or f"rp.{d}"
-    return normalize_fqdn(name), tgt.rstrip("."), "domain_or_settings"
+    prefix = (getattr(settings, "SKYMAILR_RETURN_PATH_PREFIX", None) or "psrp").strip() or "psrp"
+    name = (td.return_path_cname_name or "").strip() or f"{prefix}.{d}"
+    return normalize_fqdn(name), tgt.rstrip("."), prov
 
 
 def _settings_mx_targets() -> list[str]:
@@ -138,6 +165,9 @@ def resolve_mx_hostnames(td: TenantDomain) -> tuple[list[str], str]:
     st = _settings_mx_targets()
     if st:
         return st, "operator_settings"
+    _, mx_from_spf = _postal_rp_and_mx_from_spf((td.spf_txt_expected or "").strip())
+    if mx_from_spf:
+        return mx_from_spf, "derived_from_spf_include"
     return [], "missing"
 
 

@@ -146,6 +146,10 @@ POSTAL_PROVISIONING_SECRET = os.environ.get("POSTAL_PROVISIONING_SECRET", "").st
 SKYMAILR_SPF_INCLUDE_HINT = os.environ.get("SKYMAILR_SPF_INCLUDE_HINT", "").strip()
 SKYMAILR_DKIM_SELECTOR = os.environ.get("SKYMAILR_DKIM_SELECTOR", "postal").strip()
 SKYMAILR_RETURN_PATH_HOST = os.environ.get("SKYMAILR_RETURN_PATH_HOST", "").strip()
+# Host label for return-path CNAME on the customer's domain (Postal default is often psrp).
+SKYMAILR_RETURN_PATH_PREFIX = os.environ.get("SKYMAILR_RETURN_PATH_PREFIX", "psrp").strip() or "psrp"
+# Comma-separated MX hostnames when the bridge did not store mx_targets on TenantDomain.
+SKYMAILR_MX_TARGETS = os.environ.get("SKYMAILR_MX_TARGETS", "").strip()
 
 # --- LLM (BrainList-compatible env names) ---
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "dummy").lower()

@@ -139,6 +139,9 @@ def test_portal_messages_list_email_filter_and_table(client, customer_user, cust
     assert b"other@example.com" not in r.content
     assert b"Time" in r.content
     assert b"Status" in r.content
+    # Regression: do not pass outbound rows as Django's `messages` (base template would render __str__).
+    om = OutboundMessage.objects.get(to_email="unique-filter-hit@example.com")
+    assert f"{om.id} ->".encode() not in r.content
 
 
 @pytest.mark.django_db

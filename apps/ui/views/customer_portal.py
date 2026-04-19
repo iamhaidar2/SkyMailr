@@ -484,7 +484,7 @@ def messages_list(request):
             qs = qs.filter(workflow_execution__enrollment__workflow_id=wid)
             selected_workflow_uuid = wid
 
-    messages = list(qs.order_by("-created_at")[:100])
+    outbound_messages = list(qs.order_by("-created_at")[:100])
 
     filter_templates = list(
         EmailTemplate.objects.filter(tenant__account=account)
@@ -500,7 +500,7 @@ def messages_list(request):
     ctx = _portal_ctx(request, "Messages", "messages")
     ctx.update(
         {
-            "messages": messages,
+            "outbound_messages": outbound_messages,
             "filter_templates": filter_templates,
             "filter_workflows": filter_workflows,
             "filter_date_from": request.GET.get("date_from") or "",

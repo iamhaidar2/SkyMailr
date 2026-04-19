@@ -75,6 +75,22 @@ def test_is_customer_ready_requires_dkim_key_material():
 
 
 @pytest.mark.django_db
+def test_return_path_and_mx_derived_from_postal_style_spf_include():
+    td = TenantDomain(
+        domain="kanassist.com",
+        spf_txt_expected="v=spf1 a mx include:spf.postal.skymailr.com ~all",
+        dkim_txt_value="v=DKIM1; p=KEYMATERIAL",
+        dkim_selector="postal",
+    )
+    inst = build_dns_instructions_for_domain(td)
+    rp = next(r for r in inst.rows if r.kind == "return_path")
+    assert rp.record_type == "CNAME"
+    assert rp.host_label == "psrp"
+    assert rp.value == "rp.postal.skymailr.com"
+    assert any(r.kind == "mx" and r.value == "10 mx.postal.skymailr.com" for r in inst.rows)
+
+
+@pytest.mark.django_db
 def test_return_path_and_mx_rows_when_targets_present():
     td = TenantDomain(
         domain="send.example.com",
