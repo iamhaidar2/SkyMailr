@@ -1,5 +1,7 @@
 """Customer portal: signup, login, tenant scoping, API keys."""
 
+from unittest.mock import patch
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
@@ -234,7 +236,36 @@ def test_customer_api_key_only_own_tenant(client, customer_user, customer_accoun
         {"name": "k1"},
     )
     assert r2.status_code == 302
+    assert r2.url == reverse("portal:api_keys")
     assert TenantAPIKey.objects.filter(tenant=own).exists()
+
+
+@pytest.mark.django_db
+def test_api_keys_hub_lists_masked_key_and_one_time_reveal(client, customer_user, customer_account):
+    own = Tenant.objects.create(
+        account=customer_account,
+        name="Mine",
+        slug="mine-app-2",
+        status=TenantStatus.ACTIVE,
+        default_sender_email="a@mine.com",
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    # Must not resemble a Stripe live key (sk_live_…) or GitHub push protection blocks the push.
+    fixed_key = "portal_onetime_test_01234567890123456789012345678901234567890"
+    with patch("apps.ui.views.customer_portal.generate_api_key", return_value=fixed_key):
+        client.post(
+            reverse("portal:tenant_create_api_key", kwargs={"tenant_id": own.id}),
+            {"name": "integration"},
+        )
+    hub = client.get(reverse("portal:api_keys"))
+    assert hub.status_code == 200
+    assert fixed_key.encode() in hub.content
+    assert b"sk_live_" in hub.content  # masked placeholder for stored keys in hub UI
+    assert b"Mine" in hub.content
+    assert b"integration" in hub.content
+    hub2 = client.get(reverse("portal:api_keys"))
+    assert hub2.status_code == 200
+    assert fixed_key.encode() not in hub2.content
 
 
 @pytest.mark.django_db

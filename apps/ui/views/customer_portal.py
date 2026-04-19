@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 
 from django.contrib import messages as django_messages
 from django.contrib.auth import login
@@ -62,6 +63,8 @@ from apps.ui.services.portal_permissions import (
 )
 
 SESSION_PORTAL_NEW_API_KEY = "_portal_new_api_key_once"
+SESSION_PORTAL_NEW_API_KEY_TENANT_ID = "_portal_new_api_key_tenant_id"
+SESSION_PORTAL_NEW_API_KEY_LABEL = "_portal_new_api_key_label"
 
 logger = logging.getLogger("apps.accounts.audit")
 
@@ -321,14 +324,12 @@ def tenant_detail(request, tenant_id):
             return redirect("portal:tenant_detail", tenant_id=tenant.id)
         django_messages.error(request, "Fix the errors below and try again.")
     keys = tenant.api_keys.order_by("-created_at")[:50]
-    new_key = request.session.pop(SESSION_PORTAL_NEW_API_KEY, None)
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, tenant.name, "tenants")
     ctx.update(
         {
             "tenant": tenant,
             "api_keys": keys,
-            "new_api_key": new_key,
             "api_key_form": PortalApiKeyForm(),
             "settings_form": settings_form,
             "can_manage": can_manage,
@@ -363,8 +364,10 @@ def tenant_create_api_key(request, tenant_id):
         key_hash=hash_api_key(raw),
     )
     request.session[SESSION_PORTAL_NEW_API_KEY] = raw
+    request.session[SESSION_PORTAL_NEW_API_KEY_TENANT_ID] = str(tenant.id)
+    request.session[SESSION_PORTAL_NEW_API_KEY_LABEL] = form.cleaned_data["name"]
     django_messages.warning(request, "API key created. Copy it now — it will not be shown again.")
-    return redirect("portal:tenant_detail", tenant_id=tenant.id)
+    return redirect("portal:api_keys")
 
 
 @customer_login_required
@@ -377,8 +380,35 @@ def api_keys_hub(request):
         .annotate(active_key_count=Count("api_keys", filter=Q(api_keys__revoked_at__isnull=True)))
         .order_by("name")
     )
+    active_keys = list(
+        TenantAPIKey.objects.filter(tenant__account=account, revoked_at__isnull=True)
+        .select_related("tenant")
+        .order_by("tenant__name", "-created_at")
+    )
+    keys_by_tenant: defaultdict[int, list[TenantAPIKey]] = defaultdict(list)
+    for key in active_keys:
+        keys_by_tenant[key.tenant_id].append(key)
+    api_key_groups = [{"tenant": t, "keys": keys_by_tenant[t.id]} for t in tenants]
+
+    new_api_key = request.session.pop(SESSION_PORTAL_NEW_API_KEY, None)
+    new_api_key_tenant_id = request.session.pop(SESSION_PORTAL_NEW_API_KEY_TENANT_ID, None)
+    new_api_key_label = request.session.pop(SESSION_PORTAL_NEW_API_KEY_LABEL, None)
+    new_api_key_tenant = None
+    if new_api_key_tenant_id:
+        new_api_key_tenant = next((t for t in tenants if str(t.id) == new_api_key_tenant_id), None)
+
+    api_base_url = request.build_absolute_uri("/api/v1/").rstrip("/")
     ctx = _portal_ctx(request, "API keys", "api_keys")
-    ctx.update({"tenants": tenants})
+    ctx.update(
+        {
+            "tenants": tenants,
+            "api_key_groups": api_key_groups,
+            "new_api_key": new_api_key,
+            "new_api_key_label": new_api_key_label,
+            "new_api_key_tenant": new_api_key_tenant,
+            "api_base_url": api_base_url,
+        }
+    )
     return render(request, "ui/customer/api_keys_hub.html", ctx)
 
 
