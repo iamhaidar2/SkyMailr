@@ -36,7 +36,7 @@ def build_portal_dashboard_context(account) -> dict[str, Any]:
         .order_by("-created_at")[:15]
     )
 
-    recent_messages = base.select_related("tenant").order_by("-created_at")[:25]
+    recent_messages = base.select_related("tenant").order_by("-created_at")[:10]
 
     delivery = build_delivery_context()
 

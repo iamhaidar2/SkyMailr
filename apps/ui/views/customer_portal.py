@@ -78,15 +78,16 @@ def portal_nav_items() -> list[dict[str, str]]:
     }
     return [
         {"label": "Dashboard", "url": reverse("portal:dashboard"), "name": "dashboard"},
+        {"label": "Quick Start", "url": reverse("portal:quick_start"), "name": "quick_start"},
         {"label": "Usage", "url": reverse("portal:account_usage"), "name": "usage"},
-        {"label": "Billing", "url": reverse("portal:account_billing"), "name": "billing"},
-        {"label": "Members", "url": reverse("portal:members_list"), "name": "members"},
         tenant_link,
         {"label": "API keys", "url": reverse("portal:api_keys"), "name": "api_keys"},
         {"label": "Sender profiles", "url": reverse("portal:sender_profile_list"), "name": "sender_profiles"},
-        {"label": "Templates", "url": reverse("portal:template_list"), "name": "templates"},
+        {"label": "Email Templates", "url": reverse("portal:template_list"), "name": "templates"},
         {"label": "Workflows", "url": reverse("portal:workflow_list"), "name": "workflows"},
         {"label": "Messages", "url": reverse("portal:messages_list"), "name": "messages"},
+        {"label": "Members", "url": reverse("portal:members_list"), "name": "members"},
+        {"label": "Billing", "url": reverse("portal:account_billing"), "name": "billing"},
     ]
 
 
@@ -241,6 +242,16 @@ def dashboard(request):
         }
     )
     return render(request, "ui/customer/dashboard.html", ctx)
+
+
+@customer_login_required
+@portal_account_required
+def quick_start(request):
+    account = get_active_portal_account(request)
+    assert account is not None
+    ensure_default_tenant_for_account(account)
+    ctx = _portal_ctx(request, "Quick Start", "quick_start")
+    return render(request, "ui/customer/quick_start.html", ctx)
 
 
 @customer_login_required

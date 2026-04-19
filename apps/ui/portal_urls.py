@@ -9,6 +9,7 @@ from apps.ui.views.customer_portal import (
     api_keys_hub,
     dashboard,
     messages_list,
+    quick_start,
     signup,
     switch_account,
     tenant_create_api_key,
@@ -43,6 +44,7 @@ urlpatterns = [
     path("logout/", CustomerLogoutView.as_view(), name="logout"),
     path("switch-account/", switch_account, name="switch_account"),
     path("account/usage/", account_usage, name="account_usage"),
+    path("account/quick-start/", quick_start, name="quick_start"),
     path("account/billing/", account_billing, name="account_billing"),
     # Password reset
     path("password-reset/", PortalPasswordResetView.as_view(), name="password_reset"),

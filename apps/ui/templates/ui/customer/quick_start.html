@@ -1,0 +1,49 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-8">
+  <div>
+    <h2 class="text-2xl font-semibold text-white">Quick Start</h2>
+    <p class="mt-2 text-sm text-slate-400">
+      This Quick Start guide for SkyMailr walks through what you need to connect an app and send mail. Each area of the portal has a specific job; you can open the linked pages when you are ready.
+    </p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Connect your app end-to-end</h3>
+    <p class="mt-2 text-sm text-slate-400">Typical order:</p>
+    <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
+      <li>Create a <strong class="font-medium text-slate-200">connected app</strong> (your product or environment) under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>.</li>
+      <li>Add an <strong class="font-medium text-slate-200">API key</strong> for that app on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a> (open the app, generate a key, copy it once).</li>
+      <li>Configure a <strong class="font-medium text-slate-200">sender profile</strong> so messages have a valid From identity: <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>.</li>
+      <li>Create and <strong class="font-medium text-slate-200">approve email templates</strong> your API or workflows will use: <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>.</li>
+      <li>Optionally define <strong class="font-medium text-slate-200">workflows</strong> for lifecycle automation: <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a>.</li>
+      <li>Invite <strong class="font-medium text-slate-200">members</strong> so teammates can help manage content or billing: <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a>.</li>
+    </ol>
+    <p class="mt-4 text-xs text-slate-500">The dashboard setup checklist reflects the same milestones in a compact checklist.</p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Sender profiles</h3>
+    <p class="mt-2 text-sm text-slate-400">Sender profiles tie a display name and mailbox to your connected app. The API references them when sending so recipients see a consistent From line that matches your verified domain.</p>
+    <p class="mt-3"><a href="{% url 'portal:sender_profile_list' %}" class="text-sm text-blue-400 hover:underline">Open sender profiles →</a></p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Email templates</h3>
+    <p class="mt-2 text-sm text-slate-400">Templates hold HTML and text for reusable messages. After you save a version, an owner or admin approves it for production; only approved templates can be used by the send API for that app.</p>
+    <p class="mt-3"><a href="{% url 'portal:template_list' %}" class="text-sm text-blue-400 hover:underline">Open email templates →</a></p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Workflows</h3>
+    <p class="mt-2 text-sm text-slate-400">Workflows let you automate multi-step mail (for example enrollments or follow-ups) without calling the send API for every step manually.</p>
+    <p class="mt-3"><a href="{% url 'portal:workflow_list' %}" class="text-sm text-blue-400 hover:underline">Open workflows →</a></p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Members</h3>
+    <p class="mt-2 text-sm text-slate-400">Members are people who can sign in to this SkyMailr account. Roles control who can approve templates, edit content, manage connected apps, invite others, or view usage.</p>
+    <p class="mt-3"><a href="{% url 'portal:members_list' %}" class="text-sm text-blue-400 hover:underline">Open members →</a></p>
+  </div>
+</div>
+{% endblock %}

@@ -101,6 +101,14 @@ def test_signup_logs_in_and_session(client):
 
 
 @pytest.mark.django_db
+def test_quick_start_page_ok(client, customer_user, customer_account):
+    bind_portal_account_session(client, customer_user, customer_account)
+    r = client.get(reverse("portal:quick_start"))
+    assert r.status_code == 200
+    assert b"Quick Start guide for SkyMailr" in r.content
+
+
+@pytest.mark.django_db
 def test_signup_rejects_duplicate_email(client, customer_user):
     r = client.post(
         reverse("portal:signup"),

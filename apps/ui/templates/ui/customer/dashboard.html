@@ -57,7 +57,7 @@
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
     <h2 class="text-sm font-semibold text-white">Quick actions</h2>
     <div class="mt-3 flex flex-wrap gap-2">
-      <a href="{% url 'portal:template_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Templates</a>
+      <a href="{% url 'portal:template_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Email templates</a>
       <a href="{% url 'portal:api_keys' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">API keys</a>
       <a href="{% url 'portal:workflow_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Workflows</a>
       <a href="{% url 'portal:messages_list' %}" class="rounded-md bg-surface-700 px-3 py-1.5 text-sm text-white hover:bg-surface-600">Messages</a>
@@ -114,47 +114,15 @@
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 overflow-hidden">
-    <div class="border-b border-surface-600 px-5 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-surface-600 px-5 py-3">
       <h2 class="text-sm font-semibold text-white">Recent messages</h2>
+      <span class="text-xs text-slate-500">Last 10</span>
     </div>
     <div class="overflow-x-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead class="bg-surface-800 text-xs uppercase text-slate-500">
-          <tr>
-            <th class="px-4 py-2">Time</th>
-            <th class="px-4 py-2">Connected app</th>
-            <th class="px-4 py-2">To</th>
-            <th class="px-4 py-2">Status</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-surface-700">
-          {% for m in recent_messages %}
-            <tr class="hover:bg-surface-800/80">
-              <td class="px-4 py-2 text-slate-500">{{ m.created_at }}</td>
-              <td class="px-4 py-2 text-slate-300">{{ m.tenant.slug }}</td>
-              <td class="px-4 py-2 text-slate-300">{{ m.to_email }}</td>
-              <td class="px-4 py-2">
-                {% if m.status == "failed" %}
-                  <span class="rounded bg-red-950/60 px-2 py-0.5 text-xs text-red-100">{{ m.get_status_display }}</span>
-                {% elif m.status == "delivered" %}
-                  <span class="rounded bg-emerald-950/50 px-2 py-0.5 text-xs text-emerald-200">{{ m.get_status_display }}</span>
-                {% elif m.status == "queued" or m.status == "deferred" %}
-                  <span class="rounded bg-amber-950/50 px-2 py-0.5 text-xs text-amber-200">{{ m.get_status_display }}</span>
-                {% elif m.status == "sent" %}
-                  <span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-200">{{ m.get_status_display }}</span>
-                {% else %}
-                  <span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-300">{{ m.get_status_display }}</span>
-                {% endif %}
-              </td>
-            </tr>
-          {% empty %}
-            <tr><td colspan="4" class="px-4 py-8 text-center text-slate-500">No messages yet. Use the API or workflows to send.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% include "ui/customer/partials/portal_message_table.html" with messages=recent_messages %}
     </div>
     <div class="border-t border-surface-600 px-5 py-3">
-      <a href="{% url 'portal:messages_list' %}" class="text-sm text-blue-400">All messages →</a>
+      <a href="{% url 'portal:messages_list' %}" class="text-sm text-blue-400">View all messages →</a>
     </div>
   </div>
 </div>

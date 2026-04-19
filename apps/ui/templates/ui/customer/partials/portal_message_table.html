@@ -1,0 +1,39 @@
+{# Expects: messages (iterable of OutboundMessage), empty_message (optional string) #}
+<table class="min-w-full text-left text-sm">
+  <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+    <tr>
+      <th class="px-4 py-2">Time</th>
+      <th class="px-4 py-2">Connected app</th>
+      <th class="px-4 py-2">To</th>
+      <th class="px-4 py-2">Status</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-surface-700">
+    {% for m in messages %}
+      <tr class="hover:bg-surface-800/80">
+        <td class="px-4 py-2 text-slate-500">{{ m.created_at }}</td>
+        <td class="px-4 py-2 text-slate-300">{{ m.tenant.slug }}</td>
+        <td class="px-4 py-2 text-slate-300">{{ m.to_email }}</td>
+        <td class="px-4 py-2">
+          {% if m.status == "failed" %}
+            <span class="rounded bg-red-950/60 px-2 py-0.5 text-xs text-red-100">{{ m.get_status_display }}</span>
+          {% elif m.status == "delivered" %}
+            <span class="rounded bg-emerald-950/50 px-2 py-0.5 text-xs text-emerald-200">{{ m.get_status_display }}</span>
+          {% elif m.status == "queued" or m.status == "deferred" %}
+            <span class="rounded bg-amber-950/50 px-2 py-0.5 text-xs text-amber-200">{{ m.get_status_display }}</span>
+          {% elif m.status == "sent" %}
+            <span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-200">{{ m.get_status_display }}</span>
+          {% else %}
+            <span class="rounded bg-surface-700 px-2 py-0.5 text-xs text-slate-300">{{ m.get_status_display }}</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="4" class="px-4 py-8 text-center text-slate-500">
+          {{ empty_message|default:"No messages yet. Use the API or workflows to send." }}
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
