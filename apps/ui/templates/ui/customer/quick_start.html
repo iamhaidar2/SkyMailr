@@ -7,27 +7,52 @@
   .qs-tabbed-panel .qs-tab-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    border-bottom: 1px solid rgb(51 65 85 / 0.8);
-    background: rgb(15 23 42 / 0.35);
-    padding: 0.5rem 0.5rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid rgb(51 65 85 / 0.9);
+    background: rgb(15 23 42 / 0.5);
+    padding: 0.625rem 0.75rem;
   }
   .qs-tabbed-panel .qs-tab {
     border-radius: 0.375rem;
-    padding: 0.375rem 0.75rem;
+    padding: 0.5rem 1rem;
     font-size: 0.875rem;
-    font-weight: 500;
-    color: rgb(148 163 184);
-    background: transparent;
-    border: none;
+    font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid rgb(71 85 105);
+    background: rgb(30 41 59);
+    color: rgb(241 245 249);
+    box-shadow: 0 1px 0 rgb(15 23 42 / 0.5);
   }
   .qs-tabbed-panel .qs-tab:hover {
-    color: rgb(226 232 240);
+    background: rgb(51 65 85);
+    color: rgb(255 255 255);
+    border-color: rgb(100 116 139);
   }
   .qs-tabbed-panel .qs-tab.qs-tab-active {
-    background: rgb(51 65 85);
+    border-color: rgb(59 130 246);
+    background: rgb(37 99 235);
+    color: rgb(255 255 255);
+    box-shadow: 0 0 0 1px rgb(96 165 250 / 0.45), 0 2px 6px rgb(0 0 0 / 0.25);
+  }
+  html[data-theme="light"] .qs-tabbed-panel .qs-tab-row {
+    background: rgb(241 245 249);
+    border-bottom-color: rgb(203 213 225);
+  }
+  html[data-theme="light"] .qs-tabbed-panel .qs-tab {
+    border-color: rgb(148 163 184);
+    background: rgb(255 255 255);
+    color: rgb(15 23 42);
+    box-shadow: none;
+  }
+  html[data-theme="light"] .qs-tabbed-panel .qs-tab:hover {
+    background: rgb(226 232 240);
+    border-color: rgb(100 116 139);
+    color: rgb(15 23 42);
+  }
+  html[data-theme="light"] .qs-tabbed-panel .qs-tab.qs-tab-active {
+    border-color: rgb(29 78 216);
+    background: rgb(37 99 235);
     color: rgb(255 255 255);
   }
 </style>
@@ -37,8 +62,24 @@
   <div>
     <h2 class="text-2xl font-semibold text-white">Quick Start</h2>
     <p class="mt-2 text-sm text-slate-400">
-      This Quick Start guide for SkyMailr walks through what you need to connect an app and send mail. Each area of the portal has a specific job; you can open the linked pages when you are ready.
+      This Quick Start guide for SkyMailr walks through what you need to connect an app and send mail. Start with <strong class="font-medium text-slate-300">Connect your app end-to-end</strong> below, then use the tabs for a copy-paste prompt to your coding agent or a gentler walkthrough.
     </p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-base font-semibold text-white">Connect your app end-to-end</h3>
+    <p class="mt-2 text-sm text-slate-400">Work from top to bottom. Steps 1–6 happen in SkyMailr; steps 7–8 connect your own product and where it runs.</p>
+    <ol class="mt-4 list-decimal space-y-3 pl-5 text-sm text-slate-300">
+      <li>Create a <strong class="font-medium text-slate-200">connected app</strong> (your product or environment) under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>.</li>
+      <li>Add an <strong class="font-medium text-slate-200">API key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>: choose the app, generate a key, and <strong class="text-slate-200">copy the secret once</strong> to a password manager—you will not see it again.</li>
+      <li>If mail should come <strong class="font-medium text-slate-200">from your own domain</strong> (for example <span class="font-mono text-xs text-slate-400">noreply@yourdomain.com</span>): open <a href="{% url 'portal:sending_domains' %}" class="text-blue-400 hover:underline">Sending domains</a>, add the domain, add the DNS records your DNS host shows, then run <strong class="text-slate-200">Check records</strong> in SkyMailr until it shows verified.</li>
+      <li>Set the <strong class="font-medium text-slate-200">From name and address</strong> under <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a> for that connected app.</li>
+      <li>Create <strong class="font-medium text-slate-200">email templates</strong> under <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a> and have an owner or admin <strong class="text-slate-200">approve</strong> them for sending.</li>
+      <li><strong class="font-medium text-slate-200">Optional:</strong> <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a> for automated sequences and <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a> so teammates can help.</li>
+      <li><strong class="font-medium text-slate-200">Add SkyMailr to your app’s code.</strong> Your product should read the secret from configuration (for example an environment variable), never from source control. When you send mail, call SkyMailr’s <strong class="text-slate-200">send-template</strong> API with that secret in the <strong class="text-slate-200">Authorization</strong> header. Use the <span class="text-slate-200">Coding Agent</span> tab below for a prompt you can paste into an assistant, or ask your developer to follow <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">docs/06-api-and-auth.md</code> in the SkyMailr repo.</li>
+      <li><strong class="font-medium text-slate-200">Configure your app host</strong> (for example <strong class="text-slate-200">Railway</strong>, Heroku, or Fly.io). In the host’s <strong class="text-slate-200">Variables</strong> or <strong class="text-slate-200">Environment</strong> screen, add <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_BASE_URL</code> = <code class="font-mono text-xs text-slate-400">{{ skymailr_site_root }}</code> (your SkyMailr site address only—<strong class="text-slate-200">no</strong> <code class="font-mono text-xs">/api/v1</code> at the end) and <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_API_KEY</code> = the secret from step 2. Save, then <strong class="text-slate-200">redeploy</strong> so the server restarts and picks up the values.</li>
+    </ol>
+    <p class="mt-4 text-xs text-slate-500">If your app only reads environment variables when it starts, you must redeploy after every change to those variables. The <a href="{% url 'portal:dashboard' %}" class="text-blue-400 hover:underline">Dashboard</a> setup checklist mirrors these steps in a shorter list.</p>
   </div>
 
   <div class="qs-tabbed-panel rounded-xl border border-surface-600 bg-surface-850" data-qs-tab-group>
@@ -101,33 +142,6 @@ Repository reference (if you have the SkyMailr repo): docs/06-api-and-auth.md</p
         </ol>
       </div>
     </div>
-  </div>
-
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">If your app runs on Railway (or similar)</h3>
-    <p class="mt-2 text-sm text-slate-400">These steps are for the <strong class="font-medium text-slate-200">program that sends mail</strong> (your own website or API), not for SkyMailr itself. Railway is just one example—Heroku, Fly.io, and others work the same idea: “environment variables.”</p>
-    <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
-      <li>In Railway, open <strong class="text-slate-200">your project</strong> (the service that runs your app code).</li>
-      <li>Open the <strong class="text-slate-200">Variables</strong> tab (sometimes called Environment).</li>
-      <li>Add <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_BASE_URL</code> = the main web address of this SkyMailr site, for example <code class="font-mono text-xs text-slate-400">{{ skymailr_site_root }}</code>. Use the same value you see in the browser when you log in, <strong class="text-slate-200">without</strong> adding <code class="font-mono text-xs">/api/v1</code> at the end—libraries add that part for you.</li>
-      <li>Add <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_API_KEY</code> = the secret key you copied from <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>. Treat it like a password: do not put it in screenshots, public chat, or GitHub.</li>
-      <li>Save variables, then <strong class="text-slate-200">redeploy</strong> or trigger a new deploy so your app restarts and reads the new values.</li>
-    </ol>
-    <p class="mt-3 text-xs text-slate-500">If your app reads settings only when it starts, you must redeploy after every change to these variables.</p>
-  </div>
-
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">Connect your app end-to-end</h3>
-    <p class="mt-2 text-sm text-slate-400">Typical order:</p>
-    <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
-      <li>Create a <strong class="font-medium text-slate-200">connected app</strong> (your product or environment) under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>.</li>
-      <li>Add an <strong class="font-medium text-slate-200">API key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a> (pick the connected app, generate a key, copy it once).</li>
-      <li>Configure a <strong class="font-medium text-slate-200">sender profile</strong> so messages have a valid From identity: <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>.</li>
-      <li>Create and <strong class="font-medium text-slate-200">approve email templates</strong> your API or workflows will use: <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>.</li>
-      <li>Optionally define <strong class="font-medium text-slate-200">workflows</strong> for lifecycle automation: <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a>.</li>
-      <li>Invite <strong class="font-medium text-slate-200">members</strong> so teammates can help manage content or billing: <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a>.</li>
-    </ol>
-    <p class="mt-4 text-xs text-slate-500">The dashboard setup checklist reflects the same milestones in a compact checklist.</p>
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">

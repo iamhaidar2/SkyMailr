@@ -108,6 +108,7 @@ def test_quick_start_page_ok(client, customer_user, customer_account):
     r = client.get(reverse("portal:quick_start"))
     assert r.status_code == 200
     assert b"Quick Start guide for SkyMailr" in r.content
+    assert b"Connect your app end-to-end" in r.content
     assert b"Copy this for your coding agent" in r.content
     assert b"Coding Agent" in r.content
     assert b"Manual</button>" in r.content
