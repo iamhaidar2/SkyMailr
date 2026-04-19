@@ -1,6 +1,6 @@
 {% extends "ui/customer/base.html" %}
 {% block content %}
-<div class="mx-auto max-w-4xl space-y-6">
+<div class="mx-auto max-w-6xl space-y-6">
   <div class="flex flex-wrap items-center justify-between gap-3">
     <h2 class="text-2xl font-semibold text-white">Connected apps</h2>
     {% if portal_can_manage and portal_effective_limits and portal_usage and portal_usage.tenant_count < portal_effective_limits.max_tenants %}
