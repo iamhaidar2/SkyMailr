@@ -1,4 +1,10 @@
 {% extends "ui/customer/base.html" %}
+{% block extra_head %}
+<style>
+  .qs-code-wrap { position: relative; }
+  .qs-code-wrap pre { padding-right: 5rem; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="mx-auto max-w-6xl space-y-8">
   <div>
@@ -6,6 +12,74 @@
     <p class="mt-2 text-sm text-slate-400">
       This Quick Start guide for SkyMailr walks through what you need to connect an app and send mail. Each area of the portal has a specific job; you can open the linked pages when you are ready.
     </p>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Copy this for your coding agent</h3>
+    <p class="mt-2 text-sm text-slate-400">Paste the block below into Cursor, Copilot, ChatGPT, or any coding assistant. It tells them how SkyMailr’s API works and what must already be set up in your account.</p>
+    <div class="qs-code-wrap mt-3">
+      <pre id="qs-agent-prompt" class="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded bg-surface-900 p-3 pr-24 text-left text-xs leading-relaxed text-slate-300">You are helping integrate an application with SkyMailr (hosted email sending).
+
+SkyMailr REST API base (all paths below this URL): {{ api_base_url }}
+
+Authentication
+Send this HTTP header on API requests:
+  Authorization: Bearer &lt;SKYMAILR_API_KEY&gt;
+The human creates the secret key once in the SkyMailr web app under API keys, then stores it only in the app’s environment or secret manager (never in git or the browser).
+
+Customer portal (where humans configure SkyMailr): {{ portal_app_root }}
+
+Main endpoint to send a templated email
+  POST {{ api_base_url }}/messages/send-template/
+  Content-Type: application/json
+
+Request body (shape):
+{
+  "template_key": "string matching an approved template in SkyMailr",
+  "to_email": "recipient@example.com",
+  "context": { "key": "values used inside the template" },
+  "source_app": "stable short id for this product (for logs)",
+  "message_type": "transactional",
+  "idempotency_key": "optional unique string so retries do not duplicate sends"
+}
+
+Before sends succeed, the human must complete in the portal:
+- At least one connected app (their product or environment).
+- An API key for that app, copied to secure storage.
+- If mail must come From their own domain: add DNS records SkyMailr shows, then verify under Sending domains.
+- A sender profile (the visible From name and address) for that connected app.
+- An email template saved and approved; template_key in JSON must match that template.
+
+Repository reference (if you have the SkyMailr repo): docs/06-api-and-auth.md</pre>
+      <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-agent-prompt">Copy</button>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Do it yourself (simple steps)</h3>
+    <p class="mt-2 text-sm text-slate-400">Follow these in order. You can pause between steps—SkyMailr saves your work.</p>
+    <ol class="mt-3 list-decimal space-y-3 pl-5 text-sm text-slate-300">
+      <li><strong class="font-medium text-slate-200">Sign in</strong> to this SkyMailr account (you are already signed in if you see this page).</li>
+      <li><strong class="font-medium text-slate-200">Name your product</strong> as a connected app under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>. This is just a label for “the app that will send mail.”</li>
+      <li><strong class="font-medium text-slate-200">Create a secret key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>: pick your connected app, type a short label (for example “production”), click generate, and <strong class="text-slate-200">copy the long secret immediately</strong> into a password manager or a note only you can see. It will not be shown again.</li>
+      <li><strong class="font-medium text-slate-200">If you want email to come from your own website address</strong> (for example noreply@yourdomain.com): open <a href="{% url 'portal:sending_domains' %}" class="text-blue-400 hover:underline">Sending domains</a>, add your domain, then add the DNS records your DNS company (GoDaddy, Cloudflare, etc.) asks for. When you are done, use “Check records” in SkyMailr until it shows verified.</li>
+      <li><strong class="font-medium text-slate-200">Set who mail is “from”</strong> under <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>: pick your connected app, create a profile with the name and address recipients should see.</li>
+      <li><strong class="font-medium text-slate-200">Create your email design</strong> under <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>, then ask an owner or admin to <strong class="text-slate-200">approve</strong> it. Only approved designs can be sent through the API.</li>
+      <li><strong class="font-medium text-slate-200">Optional:</strong> set up <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a> for automatic follow-ups, and invite teammates under <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a>.</li>
+    </ol>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">If your app runs on Railway (or similar)</h3>
+    <p class="mt-2 text-sm text-slate-400">These steps are for the <strong class="font-medium text-slate-200">program that sends mail</strong> (your own website or API), not for SkyMailr itself. Railway is just one example—Heroku, Fly.io, and others work the same idea: “environment variables.”</p>
+    <ol class="mt-3 list-decimal space-y-2 pl-5 text-sm text-slate-300">
+      <li>In Railway, open <strong class="text-slate-200">your project</strong> (the service that runs your app code).</li>
+      <li>Open the <strong class="text-slate-200">Variables</strong> tab (sometimes called Environment).</li>
+      <li>Add <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_BASE_URL</code> = the main web address of this SkyMailr site, for example <code class="font-mono text-xs text-slate-400">{{ skymailr_site_root }}</code>. Use the same value you see in the browser when you log in, <strong class="text-slate-200">without</strong> adding <code class="font-mono text-xs">/api/v1</code> at the end—libraries add that part for you.</li>
+      <li>Add <code class="rounded bg-surface-900 px-1 font-mono text-xs text-emerald-200/90">SKYMAILR_API_KEY</code> = the secret key you copied from <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>. Treat it like a password: do not put it in screenshots, public chat, or GitHub.</li>
+      <li>Save variables, then <strong class="text-slate-200">redeploy</strong> or trigger a new deploy so your app restarts and reads the new values.</li>
+    </ol>
+    <p class="mt-3 text-xs text-slate-500">If your app reads settings only when it starts, you must redeploy after every change to these variables.</p>
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
@@ -46,4 +120,29 @@
     <p class="mt-3"><a href="{% url 'portal:members_list' %}" class="text-sm text-blue-400 hover:underline">Open members →</a></p>
   </div>
 </div>
+<script>
+(function () {
+  function flash(btn, ok) {
+    var prev = btn.textContent;
+    btn.textContent = ok ? "Copied!" : "Copy failed";
+    btn.disabled = true;
+    setTimeout(function () {
+      btn.textContent = prev;
+      btn.disabled = false;
+    }, 1600);
+  }
+  document.querySelectorAll("[data-copy-from]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var sel = btn.getAttribute("data-copy-from");
+      var el = sel && document.querySelector(sel);
+      var text = el ? (el.textContent || "").trim() : "";
+      if (!text || !navigator.clipboard || !navigator.clipboard.writeText) {
+        flash(btn, false);
+        return;
+      }
+      navigator.clipboard.writeText(text).then(function () { flash(btn, true); }).catch(function () { flash(btn, false); });
+    });
+  });
+})();
+</script>
 {% endblock %}

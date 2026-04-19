@@ -266,7 +266,17 @@ def quick_start(request):
     account = get_active_portal_account(request)
     assert account is not None
     ensure_default_tenant_for_account(account)
+    api_base_url = request.build_absolute_uri("/api/v1/").rstrip("/")
+    portal_app_root = request.build_absolute_uri("/app/").rstrip("/")
+    skymailr_site_root = request.build_absolute_uri("/").rstrip("/")
     ctx = _portal_ctx(request, "Quick Start", "quick_start")
+    ctx.update(
+        {
+            "api_base_url": api_base_url,
+            "portal_app_root": portal_app_root,
+            "skymailr_site_root": skymailr_site_root,
+        }
+    )
     return render(request, "ui/customer/quick_start.html", ctx)
 
 

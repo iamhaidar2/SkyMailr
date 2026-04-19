@@ -108,6 +108,10 @@ def test_quick_start_page_ok(client, customer_user, customer_account):
     r = client.get(reverse("portal:quick_start"))
     assert r.status_code == 200
     assert b"Quick Start guide for SkyMailr" in r.content
+    assert b"Copy this for your coding agent" in r.content
+    assert b"/api/v1" in r.content
+    assert b"SKYMAILR_BASE_URL" in r.content
+    assert b"SKYMAILR_API_KEY" in r.content
 
 
 @pytest.mark.django_db
