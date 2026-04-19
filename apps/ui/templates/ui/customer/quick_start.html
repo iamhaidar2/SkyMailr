@@ -3,6 +3,33 @@
 <style>
   .qs-code-wrap { position: relative; }
   .qs-code-wrap pre { padding-right: 5rem; }
+  .qs-tabbed-panel { overflow: hidden; }
+  .qs-tabbed-panel .qs-tab-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    border-bottom: 1px solid rgb(51 65 85 / 0.8);
+    background: rgb(15 23 42 / 0.35);
+    padding: 0.5rem 0.5rem;
+  }
+  .qs-tabbed-panel .qs-tab {
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(148 163 184);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .qs-tabbed-panel .qs-tab:hover {
+    color: rgb(226 232 240);
+  }
+  .qs-tabbed-panel .qs-tab.qs-tab-active {
+    background: rgb(51 65 85);
+    color: rgb(255 255 255);
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -14,11 +41,17 @@
     </p>
   </div>
 
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">Copy this for your coding agent</h3>
-    <p class="mt-2 text-sm text-slate-400">Paste the block below into Cursor, Copilot, ChatGPT, or any coding assistant. It tells them how SkyMailr’s API works and what must already be set up in your account.</p>
-    <div class="qs-code-wrap mt-3">
-      <pre id="qs-agent-prompt" class="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded bg-surface-900 p-3 pr-24 text-left text-xs leading-relaxed text-slate-300">You are helping integrate an application with SkyMailr (hosted email sending).
+  <div class="qs-tabbed-panel rounded-xl border border-surface-600 bg-surface-850" data-qs-tab-group>
+    <div class="qs-tab-row" role="tablist" aria-label="Setup instructions">
+      <button type="button" class="qs-tab qs-tab-active" data-qs-tab="agent" role="tab" aria-selected="true">Coding Agent</button>
+      <button type="button" class="qs-tab" data-qs-tab="manual" role="tab" aria-selected="false">Manual</button>
+    </div>
+    <div class="p-5">
+      <div data-qs-panel="agent" role="tabpanel">
+        <h3 class="text-sm font-semibold text-white">Copy this for your coding agent</h3>
+        <p class="mt-2 text-sm text-slate-400">Paste the block below into Cursor, Copilot, ChatGPT, or any coding assistant. It tells them how SkyMailr’s API works and what must already be set up in your account.</p>
+        <div class="qs-code-wrap mt-3">
+          <pre id="qs-agent-prompt" class="max-h-[28rem] overflow-auto whitespace-pre-wrap rounded bg-surface-900 p-3 pr-24 text-left text-xs leading-relaxed text-slate-300">You are helping integrate an application with SkyMailr (hosted email sending).
 
 SkyMailr REST API base (all paths below this URL): {{ api_base_url }}
 
@@ -51,22 +84,23 @@ Before sends succeed, the human must complete in the portal:
 - An email template saved and approved; template_key in JSON must match that template.
 
 Repository reference (if you have the SkyMailr repo): docs/06-api-and-auth.md</pre>
-      <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-agent-prompt">Copy</button>
+          <button type="button" class="absolute right-2 top-2 rounded border border-surface-600 bg-surface-800 px-2 py-1 text-xs text-slate-300 hover:bg-surface-700" data-copy-from="#qs-agent-prompt">Copy</button>
+        </div>
+      </div>
+      <div data-qs-panel="manual" class="hidden" role="tabpanel" hidden>
+        <h3 class="text-sm font-semibold text-white">Do it yourself (simple steps)</h3>
+        <p class="mt-2 text-sm text-slate-400">Follow these in order. You can pause between steps—SkyMailr saves your work.</p>
+        <ol class="mt-3 list-decimal space-y-3 pl-5 text-sm text-slate-300">
+          <li><strong class="font-medium text-slate-200">Sign in</strong> to this SkyMailr account (you are already signed in if you see this page).</li>
+          <li><strong class="font-medium text-slate-200">Name your product</strong> as a connected app under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>. This is just a label for “the app that will send mail.”</li>
+          <li><strong class="font-medium text-slate-200">Create a secret key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>: pick your connected app, type a short label (for example “production”), click generate, and <strong class="text-slate-200">copy the long secret immediately</strong> into a password manager or a note only you can see. It will not be shown again.</li>
+          <li><strong class="font-medium text-slate-200">If you want email to come from your own website address</strong> (for example noreply@yourdomain.com): open <a href="{% url 'portal:sending_domains' %}" class="text-blue-400 hover:underline">Sending domains</a>, add your domain, then add the DNS records your DNS company (GoDaddy, Cloudflare, etc.) asks for. When you are done, use “Check records” in SkyMailr until it shows verified.</li>
+          <li><strong class="font-medium text-slate-200">Set who mail is “from”</strong> under <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>: pick your connected app, create a profile with the name and address recipients should see.</li>
+          <li><strong class="font-medium text-slate-200">Create your email design</strong> under <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>, then ask an owner or admin to <strong class="text-slate-200">approve</strong> it. Only approved designs can be sent through the API.</li>
+          <li><strong class="font-medium text-slate-200">Optional:</strong> set up <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a> for automatic follow-ups, and invite teammates under <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a>.</li>
+        </ol>
+      </div>
     </div>
-  </div>
-
-  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
-    <h3 class="text-sm font-semibold text-white">Do it yourself (simple steps)</h3>
-    <p class="mt-2 text-sm text-slate-400">Follow these in order. You can pause between steps—SkyMailr saves your work.</p>
-    <ol class="mt-3 list-decimal space-y-3 pl-5 text-sm text-slate-300">
-      <li><strong class="font-medium text-slate-200">Sign in</strong> to this SkyMailr account (you are already signed in if you see this page).</li>
-      <li><strong class="font-medium text-slate-200">Name your product</strong> as a connected app under <a href="{% url 'portal:tenant_list' %}" class="text-blue-400 hover:underline">Connected apps</a>. This is just a label for “the app that will send mail.”</li>
-      <li><strong class="font-medium text-slate-200">Create a secret key</strong> on <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>: pick your connected app, type a short label (for example “production”), click generate, and <strong class="text-slate-200">copy the long secret immediately</strong> into a password manager or a note only you can see. It will not be shown again.</li>
-      <li><strong class="font-medium text-slate-200">If you want email to come from your own website address</strong> (for example noreply@yourdomain.com): open <a href="{% url 'portal:sending_domains' %}" class="text-blue-400 hover:underline">Sending domains</a>, add your domain, then add the DNS records your DNS company (GoDaddy, Cloudflare, etc.) asks for. When you are done, use “Check records” in SkyMailr until it shows verified.</li>
-      <li><strong class="font-medium text-slate-200">Set who mail is “from”</strong> under <a href="{% url 'portal:sender_profile_list' %}" class="text-blue-400 hover:underline">Sender profiles</a>: pick your connected app, create a profile with the name and address recipients should see.</li>
-      <li><strong class="font-medium text-slate-200">Create your email design</strong> under <a href="{% url 'portal:template_list' %}" class="text-blue-400 hover:underline">Email templates</a>, then ask an owner or admin to <strong class="text-slate-200">approve</strong> it. Only approved designs can be sent through the API.</li>
-      <li><strong class="font-medium text-slate-200">Optional:</strong> set up <a href="{% url 'portal:workflow_list' %}" class="text-blue-400 hover:underline">Workflows</a> for automatic follow-ups, and invite teammates under <a href="{% url 'portal:members_list' %}" class="text-blue-400 hover:underline">Members</a>.</li>
-    </ol>
   </div>
 
   <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
@@ -141,6 +175,27 @@ Repository reference (if you have the SkyMailr repo): docs/06-api-and-auth.md</p
         return;
       }
       navigator.clipboard.writeText(text).then(function () { flash(btn, true); }).catch(function () { flash(btn, false); });
+    });
+  });
+  document.querySelectorAll("[data-qs-tab-group]").forEach(function (root) {
+    var tabs = root.querySelectorAll("[data-qs-tab]");
+    var panels = root.querySelectorAll("[data-qs-panel]");
+    function activate(name) {
+      tabs.forEach(function (btn) {
+        var on = btn.getAttribute("data-qs-tab") === name;
+        btn.classList.toggle("qs-tab-active", on);
+        btn.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      panels.forEach(function (panel) {
+        var show = panel.getAttribute("data-qs-panel") === name;
+        panel.classList.toggle("hidden", !show);
+        panel.hidden = !show;
+      });
+    }
+    tabs.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        activate(btn.getAttribute("data-qs-tab"));
+      });
     });
   });
 })();
