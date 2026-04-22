@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 from apps.tenants.models import Tenant
@@ -10,6 +11,30 @@ class SuppressionReason(models.TextChoices):
     COMPLAINT = "complaint", "Complaint"
     MANUAL = "manual", "Manual"
     UNSUBSCRIBE = "unsubscribe", "Unsubscribe"
+
+
+class SuppressionRemovalLog(models.Model):
+    """Audit trail when an operator or API client removes a DeliverySuppression."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    original_suppression_id = models.UUIDField(db_index=True)
+    email = models.EmailField(db_index=True)
+    tenant = models.ForeignKey(
+        Tenant, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reason = models.CharField(max_length=32)
+    metadata_snapshot = models.JSONField(default=dict, blank=True)
+    removed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    removed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+
+    class Meta:
+        ordering = ["-removed_at"]
 
 
 class DeliverySuppression(models.Model):

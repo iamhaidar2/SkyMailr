@@ -14,6 +14,7 @@ from apps.api.v1.views import (
     ProviderWebhookView,
     SendRawView,
     SendTemplateView,
+    SuppressionDetailView,
     SuppressionListView,
     TemplateApproveView,
     TemplateGenerateView,
@@ -58,5 +59,6 @@ urlpatterns = [
         ProviderWebhookView.as_view(),
     ),
     path("api/v1/tenants/api-keys/", CreateApiKeyView.as_view()),
+    path("api/v1/suppressions/<uuid:suppression_id>/", SuppressionDetailView.as_view()),
     path("api/v1/suppressions/", SuppressionListView.as_view()),
 ]

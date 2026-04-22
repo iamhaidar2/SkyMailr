@@ -1,0 +1,41 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-xl space-y-6">
+  <div class="flex items-center justify-between gap-4">
+    <h2 class="text-xl font-semibold text-white">Add suppression</h2>
+    <a href="{% url 'ui:suppressions_list' %}" class="text-sm text-slate-400 hover:text-white">← Suppressions</a>
+  </div>
+  <p class="text-sm text-slate-400">Manual suppressions use reason &quot;Manual&quot; and merge with any existing manual row for the same tenant (or global) and email.</p>
+  <form method="post" class="space-y-4 rounded-xl border border-surface-600 bg-surface-850 p-6">
+    {% csrf_token %}
+    <div>
+      <label class="mb-1 block text-xs text-slate-500">Email</label>
+      {{ form.email }}
+    </div>
+    <div>
+      <label class="mb-1 block text-xs text-slate-500">Tenant (leave as global for all tenants)</label>
+      {{ form.tenant }}
+    </div>
+    <div class="flex flex-wrap gap-6">
+      <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+        {{ form.applies_to_marketing }} Applies to marketing / lifecycle
+      </label>
+      <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+        {{ form.applies_to_transactional }} Applies to transactional / system
+      </label>
+    </div>
+    <div>
+      <label class="mb-1 block text-xs text-slate-500">Optional source message UUID</label>
+      {{ form.source_message_id }}
+    </div>
+    <div>
+      <label class="mb-1 block text-xs text-slate-500">Note</label>
+      {{ form.note }}
+    </div>
+    {% if form.non_field_errors %}
+      <div class="text-sm text-red-300">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Save suppression</button>
+  </form>
+</div>
+{% endblock %}

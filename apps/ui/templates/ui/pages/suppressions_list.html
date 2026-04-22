@@ -1,22 +1,105 @@
 {% extends "ui/base.html" %}
 {% block content %}
-<div class="mx-auto max-w-5xl overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
-  <table class="min-w-full text-left text-sm">
-    <thead class="bg-surface-800 text-xs uppercase text-slate-500">
-      <tr><th class="px-4 py-2">Email</th><th class="px-4 py-2">Tenant</th><th class="px-4 py-2">Reason</th><th class="px-4 py-2">When</th></tr>
-    </thead>
-    <tbody class="divide-y divide-surface-700">
-      {% for r in rows %}
+<div class="mx-auto max-w-7xl space-y-6">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <h2 class="text-xl font-semibold text-white">Suppressions</h2>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'ui:suppression_add' %}" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Add suppression</a>
+      <a href="{% url 'ui:unsubscribes_list' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Unsubscribes</a>
+    </div>
+  </div>
+  <p class="text-sm text-slate-400">Blocked addresses for marketing and/or transactional mail. Global rows apply across tenants where the product checks them (e.g. marketing-only global list).</p>
+
+  <form method="get" class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Email</label>
+        {{ filter_form.email }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Reason</label>
+        {{ filter_form.reason }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Tenant filter</label>
+        {{ filter_form.tenant }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Scope</label>
+        {{ filter_form.scope }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Channel flags</label>
+        {{ filter_form.affects }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">From date</label>
+        {{ filter_form.date_from }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">To date</label>
+        {{ filter_form.date_to }}
+      </div>
+    </div>
+    <div class="mt-4 flex gap-2">
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Apply filters</button>
+      <a href="{% url 'ui:suppressions_list' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300">Reset</a>
+    </div>
+  </form>
+
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
         <tr>
-          <td class="px-4 py-2">{{ r.email }}</td>
-          <td class="px-4 py-2">{{ r.tenant.slug|default:"—" }}</td>
-          <td class="px-4 py-2">{{ r.get_reason_display }}</td>
-          <td class="px-4 py-2 text-slate-500">{{ r.created_at }}</td>
+          <th class="px-4 py-2">Created</th>
+          <th class="px-4 py-2">Email</th>
+          <th class="px-4 py-2">Reason</th>
+          <th class="px-4 py-2">Scope</th>
+          <th class="px-4 py-2">Mktg</th>
+          <th class="px-4 py-2">Txn</th>
+          <th class="px-4 py-2">Metadata</th>
+          <th class="px-4 py-2">Source message</th>
+          <th class="px-4 py-2"></th>
         </tr>
-      {% empty %}
-        <tr><td colspan="4" class="px-4 py-10 text-center text-slate-500">No suppressions.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for row in suppression_rows %}
+          {% with r=row.s %}
+          <tr class="hover:bg-surface-800/80">
+            <td class="px-4 py-2 text-slate-500">{{ r.created_at }}</td>
+            <td class="px-4 py-2 font-mono text-xs">{{ r.email }}</td>
+            <td class="px-4 py-2">{{ r.get_reason_display }}</td>
+            <td class="px-4 py-2 text-slate-400">{% if r.tenant %}{{ r.tenant.slug }}{% else %}<span class="text-amber-200/90">Global</span>{% endif %}</td>
+            <td class="px-4 py-2">{% if r.applies_to_marketing %}<span class="text-emerald-400">Yes</span>{% else %}<span class="text-slate-600">No</span>{% endif %}</td>
+            <td class="px-4 py-2">{% if r.applies_to_transactional %}<span class="text-emerald-400">Yes</span>{% else %}<span class="text-slate-600">No</span>{% endif %}</td>
+            <td class="max-w-xs truncate px-4 py-2 text-xs text-slate-500" title="{{ row.summary }}">{{ row.summary }}</td>
+            <td class="px-4 py-2 text-xs">
+              {% if row.message %}
+                <a href="{% url 'ui:message_detail' row.message.id %}" class="text-blue-400 hover:underline">Open message</a>
+              {% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-2 whitespace-nowrap">
+              <a href="{% url 'ui:suppression_delete' r.id %}" class="text-red-300 hover:underline">Remove…</a>
+            </td>
+          </tr>
+          {% endwith %}
+        {% empty %}
+          <tr><td colspan="9" class="px-4 py-10 text-center text-slate-500">No suppressions match.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+    <div class="flex justify-center gap-2 text-sm">
+      {% if page_obj.has_previous %}
+        <a class="text-blue-400" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="text-blue-400" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

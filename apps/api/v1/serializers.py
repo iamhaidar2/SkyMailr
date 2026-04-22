@@ -119,3 +119,18 @@ class EmailTemplateVersionSerializer(serializers.ModelSerializer):
             "preview_text_template",
             "created_at",
         ]
+
+
+class SuppressionCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    applies_to_marketing = serializers.BooleanField(default=True)
+    applies_to_transactional = serializers.BooleanField(default=False)
+    note = serializers.CharField(required=False, allow_blank=True, default="")
+    source_message_id = serializers.UUIDField(required=False, allow_null=True)
+
+    def validate(self, attrs):
+        if not attrs.get("applies_to_marketing") and not attrs.get("applies_to_transactional"):
+            raise serializers.ValidationError(
+                "At least one of applies_to_marketing or applies_to_transactional must be true."
+            )
+        return attrs

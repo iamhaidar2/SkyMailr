@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import status
@@ -30,7 +31,12 @@ from apps.messages.services.send_pipeline import create_raw_message, create_temp
 from apps.messages.services.message_actions import cancel_outbound_message, retry_outbound_message
 from apps.providers.registry import get_email_provider
 from apps.providers.webhook_service import ProviderWebhookService
-from apps.subscriptions.models import UnsubscribeRecord
+from apps.subscriptions.models import DeliverySuppression, UnsubscribeRecord
+from apps.subscriptions.services.suppression_ops import (
+    create_manual_suppression,
+    merge_manual_suppression_metadata,
+    remove_suppression_with_audit,
+)
 from apps.tenants.crypto import generate_api_key, hash_api_key
 from apps.tenants.models import Tenant, TenantAPIKey
 from apps.workflows.models import Workflow, WorkflowEnrollment
@@ -43,6 +49,7 @@ from .serializers import (
     PreviewSerializer,
     SendRawSerializer,
     SendTemplateSerializer,
+    SuppressionCreateSerializer,
     TemplateGenerateSerializer,
     TemplateReviseSerializer,
     UnsubscribeSerializer,
@@ -422,24 +429,115 @@ class CreateApiKeyView(APIView):
         return Response({"api_key": raw, "warning": "Store once; not shown again."})
 
 
+def _suppressions_visible_to_tenant(tenant: Tenant):
+    return DeliverySuppression.objects.filter(
+        Q(tenant=tenant) | Q(tenant__isnull=True)
+    ).select_related("tenant")
+
+
+def _serialize_suppression(s: DeliverySuppression) -> dict:
+    return {
+        "id": str(s.id),
+        "email": s.email,
+        "reason": s.reason,
+        "reason_label": s.get_reason_display(),
+        "tenant_id": str(s.tenant_id) if s.tenant_id else None,
+        "tenant_slug": s.tenant.slug if s.tenant_id else None,
+        "is_global": s.tenant_id is None,
+        "applies_to_marketing": s.applies_to_marketing,
+        "applies_to_transactional": s.applies_to_transactional,
+        "metadata": s.metadata or {},
+        "created_at": s.created_at.isoformat(),
+    }
+
+
+def _filter_suppression_queryset(qs, request, tenant: Tenant):
+    if em := (request.query_params.get("email") or "").strip():
+        qs = qs.filter(email__icontains=em)
+    if r := (request.query_params.get("reason") or "").strip():
+        qs = qs.filter(reason=r)
+    aff = (request.query_params.get("affects") or "").strip()
+    if aff == "marketing":
+        qs = qs.filter(applies_to_marketing=True)
+    elif aff == "transactional":
+        qs = qs.filter(applies_to_transactional=True)
+    elif aff == "both":
+        qs = qs.filter(applies_to_marketing=True, applies_to_transactional=True)
+    scope = (request.query_params.get("scope") or "").strip()
+    if scope == "global":
+        qs = qs.filter(tenant__isnull=True)
+    elif scope == "tenant_only":
+        qs = qs.filter(tenant=tenant)
+    if df := request.query_params.get("date_from"):
+        qs = qs.filter(created_at__date__gte=df)
+    if dt := request.query_params.get("date_to"):
+        qs = qs.filter(created_at__date__lte=dt)
+    return qs
+
+
 class SuppressionListView(APIView):
     permission_classes = [IsAuthenticated, HasTenant]
 
     def get(self, request):
-        from apps.subscriptions.models import DeliverySuppression
-
         tenant = _tenant(request)
-        qs = DeliverySuppression.objects.filter(tenant=tenant)[:200]
-        return Response(
-            [
-                {
-                    "email": s.email,
-                    "reason": s.reason,
-                    "created_at": s.created_at.isoformat(),
-                }
-                for s in qs
-            ]
+        qs = _suppressions_visible_to_tenant(tenant).order_by("-created_at")
+        qs = _filter_suppression_queryset(qs, request, tenant)[:200]
+        return Response([_serialize_suppression(s) for s in qs])
+
+    def post(self, request):
+        tenant = _tenant(request)
+        ser = SuppressionCreateSerializer(data=request.data)
+        if not ser.is_valid():
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        d = ser.validated_data
+        smid = d.get("source_message_id")
+        om_id = None
+        extra: dict = {}
+        if smid:
+            msg = OutboundMessage.objects.filter(pk=smid, tenant=tenant).first()
+            if msg:
+                om_id = str(msg.id)
+                extra["outbound_tenant_slug"] = msg.tenant.slug
+        actor = getattr(request.auth, "name", None) or "api_key"
+        meta = merge_manual_suppression_metadata(
+            note=d.get("note") or "",
+            actor_username=str(actor),
+            source_message_id=om_id,
+            extra=extra or None,
         )
+        row = create_manual_suppression(
+            email=d["email"],
+            tenant=tenant,
+            applies_to_marketing=bool(d.get("applies_to_marketing")),
+            applies_to_transactional=bool(d.get("applies_to_transactional")),
+            metadata=meta,
+        )
+        return Response(_serialize_suppression(row), status=status.HTTP_201_CREATED)
+
+
+class SuppressionDetailView(APIView):
+    permission_classes = [IsAuthenticated, HasTenant]
+
+    def get(self, request, suppression_id):
+        tenant = _tenant(request)
+        s = get_object_or_404(_suppressions_visible_to_tenant(tenant), pk=suppression_id)
+        return Response(_serialize_suppression(s))
+
+    def delete(self, request, suppression_id):
+        tenant = _tenant(request)
+        try:
+            s = DeliverySuppression.objects.get(pk=suppression_id)
+        except DeliverySuppression.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if s.tenant_id is None:
+            return Response(
+                {"detail": "Global suppressions cannot be removed via the tenant API."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if s.tenant_id != tenant.pk:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        remove_suppression_with_audit(s, removed_by=None)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MessageEventsView(APIView):

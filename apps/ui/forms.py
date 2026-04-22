@@ -9,6 +9,7 @@ from django import forms
 
 from apps.email_templates.models import TemplateCategory
 from apps.messages.models import MessageType, OutboundStatus
+from apps.subscriptions.models import SuppressionReason
 from apps.tenants.models import SenderProfile, Tenant
 from apps.ui.tenant_validators import from_email_allowed_for_tenant
 from apps.workflows.models import WorkflowStepType
@@ -93,6 +94,93 @@ _inp = (
     "text-white placeholder:text-slate-500"
 )
 _chk = "h-4 w-4 rounded border-surface-600 text-accent"
+
+
+class SuppressionFilterForm(forms.Form):
+    email = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _select, "placeholder": "Email contains…", "autocomplete": "off"}
+        ),
+    )
+    reason = forms.ChoiceField(
+        required=False,
+        choices=[("", "Any reason")] + list(SuppressionReason.choices),
+        widget=forms.Select(attrs={"class": _select}),
+    )
+    tenant = forms.ModelChoiceField(
+        queryset=Tenant.objects.order_by("name"),
+        required=False,
+        empty_label="Any tenant",
+        widget=forms.Select(attrs={"class": _select}),
+    )
+    scope = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("", "Global + tenant rows"),
+            ("global", "Global only"),
+            ("tenant_only", "Tenant-scoped only"),
+        ],
+        widget=forms.Select(attrs={"class": _select}),
+    )
+    affects = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("", "Any channel flags"),
+            ("marketing", "Affects marketing"),
+            ("transactional", "Affects transactional"),
+            ("both", "Affects both"),
+        ],
+        widget=forms.Select(attrs={"class": _select}),
+    )
+    date_from = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": _select}))
+    date_to = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date", "class": _select}))
+
+
+class ManualSuppressionForm(forms.Form):
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": _inp, "placeholder": "recipient@example.com"}),
+    )
+    tenant = forms.ModelChoiceField(
+        queryset=Tenant.objects.order_by("name"),
+        required=False,
+        empty_label="Global (all tenants)",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    applies_to_marketing = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={"class": _chk}),
+    )
+    applies_to_transactional = forms.BooleanField(
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(attrs={"class": _chk}),
+    )
+    source_message_id = forms.UUIDField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "Optional outbound message UUID", "autocomplete": "off"}
+        ),
+    )
+    note = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": _inp,
+                "placeholder": "Optional note (stored in suppression metadata)",
+            }
+        ),
+    )
+
+    def clean(self):
+        data = super().clean()
+        m = bool(data.get("applies_to_marketing"))
+        t = bool(data.get("applies_to_transactional"))
+        if not m and not t:
+            raise forms.ValidationError("Select at least one of marketing or transactional.")
+        return data
 
 
 def _sender_profile_label(obj: SenderProfile) -> str:

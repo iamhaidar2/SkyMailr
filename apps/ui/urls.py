@@ -127,6 +127,12 @@ urlpatterns = [
     ),
     path("providers/health/", ops_views.provider_health, name="provider_health"),
     path("webhooks/", ops_views.webhooks_list, name="webhooks_list"),
+    path("suppressions/add/", suppressions_views.suppression_manual, name="suppression_add"),
+    path(
+        "suppressions/<uuid:suppression_id>/delete/",
+        suppressions_views.suppression_delete,
+        name="suppression_delete",
+    ),
     path("suppressions/", suppressions_views.suppressions_list, name="suppressions_list"),
     path("unsubscribes/", suppressions_views.unsubscribes_list, name="unsubscribes_list"),
     path("setup/", setup_view.setup, name="setup"),
