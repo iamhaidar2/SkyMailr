@@ -28,6 +28,7 @@ from apps.providers.normalizers import (
     normalize_provider_webhook,
 )
 from apps.subscriptions.models import DeliverySuppression, SuppressionReason
+from apps.tenants.services.sending_risk import apply_automated_risk_pause
 
 logger = logging.getLogger(__name__)
 
@@ -270,6 +271,7 @@ class ProviderWebhookService:
                         extra={"reason": reason},
                     ),
                 )
+                apply_automated_risk_pause(msg.tenant)
             else:
                 # Soft bounce: record only; do not auto-suppress.
                 # TODO: after N soft bounces for the same tenant+email in a window, create
@@ -305,6 +307,7 @@ class ProviderWebhookService:
                     extra={"feedback_type": feedback[:256]},
                 ),
             )
+            apply_automated_risk_pause(msg.tenant)
             return
 
         if event_type == EVENT_FAILED:

@@ -1,0 +1,103 @@
+{% extends "ui/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-4xl space-y-8">
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Abuse &amp; reputation</p>
+      <h2 class="text-2xl font-semibold text-white">Sending risk — {{ tenant.name }}</h2>
+      <p class="mt-1 font-mono text-sm text-slate-400">{{ tenant.slug }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'ui:tenant_detail' tenant.id %}" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-surface-800">← Tenant</a>
+      <a href="{% url 'ui:tenant_deliverability' tenant.id %}" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-surface-800">Deliverability</a>
+    </div>
+  </div>
+
+  <div class="rounded-xl border {% if tenant.sending_paused %}border-amber-700 bg-amber-950/30{% else %}border-surface-600 bg-surface-850{% endif %} p-5">
+    <h3 class="text-sm font-semibold text-white">Pause status</h3>
+    <dl class="mt-3 space-y-2 text-sm text-slate-300">
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Sending paused</dt><dd>{% if tenant.sending_paused %}<span class="text-amber-300">Yes</span>{% else %}<span class="text-emerald-400">No</span>{% endif %}</dd></div>
+      {% if tenant.sending_paused %}
+        <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Scope</dt><dd>{{ tenant.get_sending_pause_scope_display }}</dd></div>
+        <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Source</dt><dd>{% if tenant.sending_pause_source %}{{ tenant.get_sending_pause_source_display }}{% else %}—{% endif %}</dd></div>
+        <div class="mt-2"><dt class="text-slate-500">Reason</dt><dd class="mt-1 whitespace-pre-wrap text-slate-300">{{ tenant.sending_pause_reason|default:"—" }}</dd></div>
+      {% endif %}
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Risk score</dt><dd>{{ tenant.risk_score }} / 100</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Last auto eval</dt><dd>{% if tenant.last_risk_eval_at %}{{ tenant.last_risk_eval_at }}{% else %}—{% endif %}</dd></div>
+      <div class="flex flex-wrap gap-2"><dt class="text-slate-500">Last operator review</dt><dd>{% if tenant.last_risk_review_at %}{{ tenant.last_risk_review_at }}{% else %}—{% endif %}</dd></div>
+    </dl>
+    <div class="mt-4 flex flex-wrap gap-2">
+      {% if tenant.sending_paused %}
+        <form method="post" class="inline">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="resume" />
+          <button type="submit" class="rounded-md bg-emerald-800 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">Resume sending</button>
+        </form>
+      {% endif %}
+      <form method="post" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="recompute" />
+        <button type="submit" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-200 hover:bg-surface-800">Recompute risk / auto rules</button>
+      </form>
+      <form method="post" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_reviewed" />
+        <button type="submit" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-200 hover:bg-surface-800">Mark reviewed</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Live 24h metrics</h3>
+    <p class="mt-1 text-xs text-slate-500">Same window as deliverability (outcome time = message <code class="text-slate-500">updated_at</code>).</p>
+    <dl class="mt-4 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">
+      <div><span class="text-slate-500">Sent path</span> {{ live_metrics.sent_path }}</div>
+      <div><span class="text-slate-500">Bounced</span> {{ live_metrics.bounced }}</div>
+      <div><span class="text-slate-500">Complained</span> {{ live_metrics.complained }}</div>
+      <div><span class="text-slate-500">Failed</span> {{ live_metrics.failed }}</div>
+      <div><span class="text-slate-500">Bounce rate</span> {{ live_metrics.bounce_rate|floatformat:4 }}</div>
+      <div><span class="text-slate-500">Complaint rate</span> {{ live_metrics.complaint_rate|floatformat:4 }}</div>
+      <div><span class="text-slate-500">Failed rate</span> {{ live_metrics.failed_rate|floatformat:4 }}</div>
+      <div><span class="text-slate-500">Volume spike ratio</span> {{ live_metrics.volume_spike_ratio|floatformat:2 }}×</div>
+    </dl>
+    {% if tenant.risk_metrics_cache %}
+      <p class="mt-4 text-xs font-medium uppercase text-slate-500">Cached snapshot (last eval)</p>
+      <pre class="mt-2 max-h-40 overflow-auto rounded bg-surface-900 p-3 text-xs text-slate-400">{{ tenant.risk_metrics_cache|default:"{}" }}</pre>
+    {% endif %}
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Manual pause</h3>
+    <p class="mt-1 text-xs text-slate-500">Marketing / lifecycle pause still allows transactional and system mail. Non-critical pause blocks everything except <code class="text-slate-400">system</code> messages.</p>
+    <form method="post" class="mt-4 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="pause" />
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Scope</label>
+        {{ pause_form.sending_pause_scope }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Reason (optional)</label>
+        {{ pause_form.sending_pause_reason }}
+      </div>
+      {% if pause_form.non_field_errors %}
+        <div class="text-sm text-red-300">{{ pause_form.non_field_errors }}</div>
+      {% endif %}
+      <button type="submit" class="rounded-md bg-amber-800 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700">Apply pause</button>
+    </form>
+  </div>
+
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5">
+    <h3 class="text-sm font-semibold text-white">Operator notes</h3>
+    <form method="post" class="mt-4 space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_notes" />
+      {{ notes_form.operator_risk_notes }}
+      {% if notes_form.non_field_errors %}
+        <div class="text-sm text-red-300">{{ notes_form.non_field_errors }}</div>
+      {% endif %}
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Save notes</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

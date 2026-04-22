@@ -109,6 +109,11 @@ urlpatterns = [
         tenants_views.sender_profile_delete,
         name="sender_profile_delete",
     ),
+    path(
+        "tenants/<uuid:tenant_id>/sending-risk/",
+        tenants_views.tenant_sending_risk,
+        name="tenant_sending_risk",
+    ),
     path("tenants/<uuid:tenant_id>/", tenants_views.tenant_detail, name="tenant_detail"),
     path(
         "tenants/<uuid:tenant_id>/api-keys/",

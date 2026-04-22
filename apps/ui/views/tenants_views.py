@@ -2,18 +2,27 @@ from django.contrib import messages as django_messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.defaults import get_or_create_internal_account
 from apps.accounts.policy import PolicyError
 from apps.email_templates.models import EmailTemplate
 from apps.tenants.crypto import generate_api_key, hash_api_key
-from apps.tenants.models import SenderProfile, Tenant, TenantAPIKey
+from apps.tenants.models import SenderProfile, SendingPauseScope, SendingPauseSource, Tenant, TenantAPIKey
+from apps.tenants.services.sending_risk import apply_automated_risk_pause, compute_tenant_sending_risk_metrics
 from apps.ui.context import operator_shell_context
 from apps.ui.decorators import operator_required
 from apps.messages.models import MessageType
 from apps.messages.services.send_pipeline import create_raw_message, create_templated_message
-from apps.ui.forms import ApiKeyCreateForm, SenderProfileForm, TenantForm, TenantTestSendForm
+from apps.ui.forms import (
+    ApiKeyCreateForm,
+    SenderProfileForm,
+    TenantForm,
+    TenantSendingRiskNotesForm,
+    TenantSendingRiskPauseForm,
+    TenantTestSendForm,
+)
 from apps.ui.services.deliverability_thresholds import (
     BOUNCE_RATE_DANGER,
     BOUNCE_RATE_WARNING,
@@ -298,6 +307,7 @@ def tenant_deliverability_test_send(request, tenant_id):
                 idempotency_key=None,
                 sender_profile=sp,
                 bypass_quota=request.user.is_staff,
+                bypass_sending_pause=request.user.is_staff,
                 bypass_domain_verification=request.user.is_staff,
             )
         else:
@@ -318,6 +328,7 @@ def tenant_deliverability_test_send(request, tenant_id):
                 idempotency_key=None,
                 sender_profile=sp,
                 bypass_quota=request.user.is_staff,
+                bypass_sending_pause=request.user.is_staff,
                 bypass_domain_verification=request.user.is_staff,
             )
     except PolicyError as e:
@@ -330,3 +341,73 @@ def tenant_deliverability_test_send(request, tenant_id):
     )
     url = reverse("ui:message_detail", kwargs={"message_id": msg.id}) + "?test_send=1"
     return HttpResponseRedirect(url)
+
+
+@operator_required
+def tenant_sending_risk(request, tenant_id):
+    tenant = get_object_or_404(Tenant, pk=tenant_id)
+    live_metrics = compute_tenant_sending_risk_metrics(tenant)
+
+    pause_form = TenantSendingRiskPauseForm(
+        initial={
+            "sending_pause_scope": tenant.sending_pause_scope or SendingPauseScope.MARKETING_LIFECYCLE,
+            "sending_pause_reason": tenant.sending_pause_reason,
+        }
+    )
+    notes_form = TenantSendingRiskNotesForm(initial={"operator_risk_notes": tenant.operator_risk_notes})
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        if action == "resume":
+            Tenant.objects.filter(pk=tenant.pk).update(
+                sending_paused=False,
+                sending_pause_reason="",
+                sending_pause_source=None,
+                sending_pause_scope=SendingPauseScope.MARKETING_LIFECYCLE,
+            )
+            django_messages.success(request, "Sending resumed for this tenant.")
+            return redirect("ui:tenant_sending_risk", tenant_id=tenant.id)
+        if action == "pause":
+            pause_form = TenantSendingRiskPauseForm(request.POST)
+            if pause_form.is_valid():
+                d = pause_form.cleaned_data
+                Tenant.objects.filter(pk=tenant.pk).update(
+                    sending_paused=True,
+                    sending_pause_scope=d["sending_pause_scope"],
+                    sending_pause_source=SendingPauseSource.MANUAL,
+                    sending_pause_reason=(d.get("sending_pause_reason") or "").strip()[:4000],
+                )
+                django_messages.warning(request, "Sending pause is now active for this tenant.")
+                return redirect("ui:tenant_sending_risk", tenant_id=tenant.id)
+            django_messages.error(request, "Fix the pause form and try again.")
+        elif action == "save_notes":
+            notes_form = TenantSendingRiskNotesForm(request.POST)
+            if notes_form.is_valid():
+                Tenant.objects.filter(pk=tenant.pk).update(
+                    operator_risk_notes=(notes_form.cleaned_data.get("operator_risk_notes") or "").strip()[:8000]
+                )
+                django_messages.success(request, "Notes saved.")
+                return redirect("ui:tenant_sending_risk", tenant_id=tenant.id)
+            django_messages.error(request, "Fix the notes form and try again.")
+        elif action == "mark_reviewed":
+            Tenant.objects.filter(pk=tenant.pk).update(last_risk_review_at=timezone.now())
+            django_messages.success(request, "Marked as reviewed.")
+            return redirect("ui:tenant_sending_risk", tenant_id=tenant.id)
+        elif action == "recompute":
+            apply_automated_risk_pause(tenant)
+            django_messages.info(request, "Risk metrics recomputed (auto-pause rules may apply).")
+            return redirect("ui:tenant_sending_risk", tenant_id=tenant.id)
+
+    tenant.refresh_from_db()
+    ctx = operator_shell_context(request)
+    ctx.update(
+        {
+            "page_title": f"Sending risk · {tenant.name}",
+            "nav_active": "tenants",
+            "tenant": tenant,
+            "live_metrics": live_metrics,
+            "pause_form": pause_form,
+            "notes_form": notes_form,
+        }
+    )
+    return render(request, "ui/pages/tenant_sending_risk.html", ctx)

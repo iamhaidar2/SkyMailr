@@ -8,6 +8,18 @@ class TenantStatus(models.TextChoices):
     SUSPENDED = "suspended", "Suspended"
 
 
+class SendingPauseScope(models.TextChoices):
+    """When sending_paused is true, which message types are blocked."""
+
+    MARKETING_LIFECYCLE = "marketing_lifecycle", "Marketing & lifecycle only"
+    NON_CRITICAL = "non_critical", "All except system (critical)"
+
+
+class SendingPauseSource(models.TextChoices):
+    MANUAL = "manual", "Operator"
+    AUTO = "auto", "Automated risk"
+
+
 class SenderCategory(models.TextChoices):
     TRANSACTIONAL = "transactional", "Transactional"
     MARKETING = "marketing", "Marketing / lifecycle"
@@ -38,6 +50,43 @@ class Tenant(models.Model):
     timezone = models.CharField(max_length=64, default="UTC")
     rate_limit_per_minute = models.PositiveIntegerField(
         default=120, help_text="Soft cap; enforced in dispatcher."
+    )
+    # Abuse / reputation protection (Postal VPS); softer than full tenant suspension.
+    sending_paused = models.BooleanField(default=False, db_index=True)
+    sending_pause_scope = models.CharField(
+        max_length=32,
+        choices=SendingPauseScope.choices,
+        default=SendingPauseScope.MARKETING_LIFECYCLE,
+        blank=True,
+    )
+    sending_pause_source = models.CharField(
+        max_length=16,
+        choices=SendingPauseSource.choices,
+        null=True,
+        blank=True,
+        help_text="Who set the current pause (null when not paused).",
+    )
+    sending_pause_reason = models.TextField(blank=True)
+    risk_score = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="0–100 heuristic from recent bounces/complaints/volume (operator visibility).",
+    )
+    last_risk_eval_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last automated risk evaluation (e.g. after webhook).",
+    )
+    last_risk_review_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When an operator last acknowledged risk on this tenant.",
+    )
+    risk_metrics_cache = models.JSONField(default=dict, blank=True)
+    operator_risk_notes = models.TextField(blank=True)
+    max_daily_sends_override = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional per-tenant daily cap (future dispatcher use); null = plan/default only.",
     )
     webhook_secret = models.CharField(max_length=128, blank=True)
     branding = models.JSONField(default=dict, blank=True)

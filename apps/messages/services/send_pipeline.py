@@ -106,12 +106,15 @@ def create_templated_message(
     workflow_execution=None,
     bypass_quota: bool = False,
     bypass_suspension: bool = False,
+    bypass_sending_pause: bool = False,
     bypass_domain_verification: bool = False,
 ) -> OutboundMessage:
     assert_send_allowed(
         tenant,
+        message_type=message_type,
         bypass_quota=bypass_quota,
         bypass_suspension=bypass_suspension,
+        bypass_sending_pause=bypass_sending_pause,
     )
     suppressed, reason = should_suppress(tenant, to_email, message_type)
     status = OutboundStatus.SUPPRESSED if suppressed else OutboundStatus.QUEUED
@@ -216,14 +219,17 @@ def create_raw_message(
     sender_profile: SenderProfile | None = None,
     bypass_quota: bool = False,
     bypass_suspension: bool = False,
+    bypass_sending_pause: bool = False,
     bypass_domain_verification: bool = False,
 ) -> OutboundMessage:
     from apps.email_templates.services.render_service import sanitize_html
 
     assert_send_allowed(
         tenant,
+        message_type=message_type,
         bypass_quota=bypass_quota,
         bypass_suspension=bypass_suspension,
+        bypass_sending_pause=bypass_sending_pause,
     )
     suppressed, reason = should_suppress(tenant, to_email, message_type)
     status = OutboundStatus.SUPPRESSED if suppressed else OutboundStatus.QUEUED

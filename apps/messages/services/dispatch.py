@@ -4,6 +4,7 @@ from apps.messages.models import MessageEvent, MessageEventType, OutboundMessage
 from apps.providers.base import EmailMessageDTO
 from apps.providers.registry import get_email_provider
 from apps.tenants.services.domain_verification import dispatch_should_block_unverified_managed_domain
+from apps.tenants.services.sending_risk import dispatch_blocked_by_sending_pause
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +14,29 @@ class EmailDispatchService:
 
     def dispatch(self, message: OutboundMessage) -> None:
         tenant = message.tenant
+        tenant.refresh_from_db(fields=["sending_paused", "sending_pause_scope"])
         profile = message.sender_profile
         from_email = profile.from_email if profile else tenant.default_sender_email
         from_name = profile.from_name if profile else tenant.default_sender_name
         reply_to = profile.reply_to if profile and profile.reply_to else tenant.reply_to
+
+        sp_blocked, sp_code = dispatch_blocked_by_sending_pause(message)
+        if sp_blocked:
+            message.status = OutboundStatus.FAILED
+            message.last_error = (
+                f"sending_paused:{sp_code} — tenant reputation pause is active; "
+                "message will not be sent to the provider."
+            )
+            message.retry_count += 1
+            message.save(
+                update_fields=["status", "last_error", "retry_count", "updated_at"]
+            )
+            MessageEvent.objects.create(
+                message=message,
+                event_type=MessageEventType.FAILED,
+                payload={"code": sp_code, "detail": "blocked_by_sending_pause"},
+            )
+            return
 
         blocked, block_reason = dispatch_should_block_unverified_managed_domain(message)
         if blocked:

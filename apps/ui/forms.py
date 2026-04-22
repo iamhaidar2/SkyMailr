@@ -10,7 +10,7 @@ from django import forms
 from apps.email_templates.models import TemplateCategory
 from apps.messages.models import MessageType, OutboundStatus
 from apps.subscriptions.models import SuppressionReason
-from apps.tenants.models import SenderProfile, Tenant
+from apps.tenants.models import SenderProfile, SendingPauseScope, Tenant
 from apps.ui.tenant_validators import from_email_allowed_for_tenant
 from apps.workflows.models import WorkflowStepType
 
@@ -181,6 +181,33 @@ class ManualSuppressionForm(forms.Form):
         if not m and not t:
             raise forms.ValidationError("Select at least one of marketing or transactional.")
         return data
+
+
+class TenantSendingRiskPauseForm(forms.Form):
+    sending_pause_scope = forms.ChoiceField(
+        label="Pause scope",
+        choices=SendingPauseScope.choices,
+        initial=SendingPauseScope.MARKETING_LIFECYCLE,
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    sending_pause_reason = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": _inp,
+                "placeholder": "Shown to API callers when sends are blocked (optional)",
+            }
+        ),
+    )
+
+
+class TenantSendingRiskNotesForm(forms.Form):
+    operator_risk_notes = forms.CharField(
+        required=False,
+        label="Operator notes",
+        widget=forms.Textarea(attrs={"rows": 6, "class": _inp}),
+    )
 
 
 def _sender_profile_label(obj: SenderProfile) -> str:

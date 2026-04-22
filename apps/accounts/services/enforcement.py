@@ -9,6 +9,7 @@ from apps.accounts.plans import get_effective_limits
 from apps.accounts.policy import PolicyError
 from apps.accounts.services.usage import usage_snapshot
 from apps.tenants.models import Tenant, TenantAPIKey, TenantDomain, TenantStatus
+from apps.tenants.services.sending_risk import message_type_blocked_by_sending_pause
 
 logger = logging.getLogger("apps.accounts.audit")
 
@@ -42,17 +43,26 @@ def assert_tenant_operational(tenant: Tenant) -> None:
 def assert_send_allowed(
     tenant: Tenant,
     *,
+    message_type: str | None = None,
     bypass_quota: bool = False,
     bypass_suspension: bool = False,
+    bypass_sending_pause: bool = False,
 ) -> None:
     """
     Enforce account/tenant status and monthly send quota before creating outbound mail.
-    Operator UI may pass bypass_quota / bypass_suspension for staff-only recovery paths.
+    Operator UI may pass bypass_quota / bypass_suspension / bypass_sending_pause for staff paths.
     """
     account = tenant.account
     if not bypass_suspension:
         assert_account_operational(account)
         assert_tenant_operational(tenant)
+    if message_type and not bypass_sending_pause:
+        paused, code = message_type_blocked_by_sending_pause(tenant, message_type)
+        if paused:
+            detail = (tenant.sending_pause_reason or "").strip() or (
+                "Sending is paused for this tenant due to reputation safeguards. Contact support."
+            )
+            raise PolicyError(code, detail, status_code=403)
     if bypass_quota:
         return
 
