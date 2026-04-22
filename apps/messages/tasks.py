@@ -5,8 +5,6 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from django.db import transaction
-
 from apps.messages.models import MessageEvent, MessageEventType, OutboundMessage, OutboundStatus
 from apps.messages.services.dispatch import EmailDispatchService
 from apps.messages.services.throttling import (
@@ -24,9 +22,9 @@ TRANSIENT_RETRY_MAX = 8
 def dispatch_message_task(self, message_id: str):
     """Send a single outbound message via the configured provider."""
     try:
-        msg = OutboundMessage.objects.select_related("tenant", "sender_profile").get(
-            pk=message_id
-        )
+        msg = OutboundMessage.objects.select_related("tenant", "sender_profile").prefetch_related(
+            "tenant__domains"
+        ).get(pk=message_id)
     except OutboundMessage.DoesNotExist:
         logger.warning("dispatch_message_task: missing message %s", message_id)
         return

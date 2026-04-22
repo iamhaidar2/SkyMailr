@@ -5,7 +5,7 @@
     <div>
       <p class="text-xs text-slate-500"><a href="{% url 'portal:tenant_detail' tenant.id %}" class="text-slate-400 hover:text-white">{{ tenant.name }}</a></p>
       <h2 class="text-2xl font-semibold text-white">Sending domains</h2>
-      <p class="mt-1 text-sm text-slate-400">Add DNS records at your DNS host, then run a check here.</p>
+      <p class="mt-1 text-sm text-slate-400">Add SPF, DKIM, and DMARC at your DNS host so inbox providers trust mail from your domain, then run a check here.</p>
     </div>
     <div class="flex flex-wrap gap-2">
       <a href="{% url 'portal:tenant_detail' tenant.id %}" class="text-sm text-slate-400 hover:text-white">← Connected app</a>

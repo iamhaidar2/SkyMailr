@@ -32,7 +32,7 @@ def compute_sending_readiness(tenant: Tenant) -> dict:
     if not (tenant.sending_domain or "").strip():
         issues.append("Tenant sending domain is not set.")
     if not verified:
-        issues.append("No verified sending domain yet — publish DNS and run “Check records”.")
+        issues.append("No verified sending domain yet — publish DNS and use Check records now in the portal.")
     if primary and primary.verification_status != DomainVerificationStatus.VERIFIED:
         issues.append("Primary domain is not fully verified.")
     if default_email and verified and not _matches_any_verified(default_dom):

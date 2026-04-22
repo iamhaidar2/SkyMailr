@@ -106,6 +106,7 @@ def create_templated_message(
     workflow_execution=None,
     bypass_quota: bool = False,
     bypass_suspension: bool = False,
+    bypass_domain_verification: bool = False,
 ) -> OutboundMessage:
     assert_send_allowed(
         tenant,
@@ -118,6 +119,10 @@ def create_templated_message(
     if not version:
         raise ValueError("Template has no approved active version")
 
+    meta = dict(metadata or {})
+    if bypass_domain_verification:
+        meta["bypass_domain_verification"] = True
+
     msg = OutboundMessage.objects.create(
         tenant=tenant,
         source_app=source_app,
@@ -127,7 +132,7 @@ def create_templated_message(
         sender_profile=sender_profile,
         to_email=to_email,
         to_name=to_name or "",
-        metadata=metadata or {},
+        metadata=meta,
         tags=tags or {},
         priority=_priority_for(message_type),
         scheduled_for=scheduled_for,
@@ -211,6 +216,7 @@ def create_raw_message(
     sender_profile: SenderProfile | None = None,
     bypass_quota: bool = False,
     bypass_suspension: bool = False,
+    bypass_domain_verification: bool = False,
 ) -> OutboundMessage:
     from apps.email_templates.services.render_service import sanitize_html
 
@@ -221,6 +227,10 @@ def create_raw_message(
     )
     suppressed, reason = should_suppress(tenant, to_email, message_type)
     status = OutboundStatus.SUPPRESSED if suppressed else OutboundStatus.QUEUED
+    meta = dict(metadata or {})
+    if bypass_domain_verification:
+        meta["bypass_domain_verification"] = True
+
     msg = OutboundMessage.objects.create(
         tenant=tenant,
         source_app=source_app,
@@ -230,7 +240,7 @@ def create_raw_message(
         sender_profile=sender_profile,
         to_email=to_email,
         to_name=to_name or "",
-        metadata=metadata or {},
+        metadata=meta,
         tags={},
         priority=_priority_for(message_type),
         scheduled_for=scheduled_for,

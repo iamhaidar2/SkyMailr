@@ -155,6 +155,10 @@ SKYMAILR_RETURN_PATH_HOST = os.environ.get("SKYMAILR_RETURN_PATH_HOST", "").stri
 SKYMAILR_RETURN_PATH_PREFIX = os.environ.get("SKYMAILR_RETURN_PATH_PREFIX", "psrp").strip() or "psrp"
 # Comma-separated MX hostnames when the bridge did not store mx_targets on TenantDomain.
 SKYMAILR_MX_TARGETS = os.environ.get("SKYMAILR_MX_TARGETS", "").strip()
+# When true, Postal dispatch does not require a verified TenantDomain for the From domain (local/staging only).
+SKYMAILR_ALLOW_UNVERIFIED_DOMAIN_SEND = (
+    os.environ.get("SKYMAILR_ALLOW_UNVERIFIED_DOMAIN_SEND", "").lower() in ("1", "true", "yes")
+)
 
 # --- LLM (BrainList-compatible env names) ---
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "dummy").lower()

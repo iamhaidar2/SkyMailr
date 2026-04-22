@@ -78,11 +78,11 @@ class DnsMetadataSource(models.TextChoices):
 
 
 class PostalProvisionStatus(models.TextChoices):
-    """Whether the domain exists in Postal / could be provisioned automatically."""
+    """Whether the domain exists with the outbound email provider (Postal today)."""
 
-    PENDING = "pending", "Pending"
-    CREATED = "created", "Created in mail server"
-    EXISTS = "exists", "Already in mail server"
+    PENDING = "pending", "Provisioning pending"
+    CREATED = "created", "Created with email provider"
+    EXISTS = "exists", "Registered with email provider"
     FAILED = "failed", "Provisioning failed"
 
 

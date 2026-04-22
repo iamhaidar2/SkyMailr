@@ -367,3 +367,20 @@ def test_plan_override_allows_third_sending_domain(
 def test_staff_operator_dashboard_still_ok(staff_client):
     r = staff_client.get(reverse("ui:dashboard"))
     assert r.status_code == 200
+
+
+@pytest.mark.django_db
+@patch("apps.ui.views.portal_tenant_domains.check_tenant_domain_dns", side_effect=RuntimeError("dns boom"))
+def test_tenant_domain_verify_survives_check_exception(_mock_chk, client, customer_user, customer_account, portal_tenant):
+    td = TenantDomain.objects.create(
+        tenant=portal_tenant,
+        domain="boom.example.com",
+        verification_status=DomainVerificationStatus.UNVERIFIED,
+    )
+    bind_portal_account_session(client, customer_user, customer_account)
+    url = reverse("portal:tenant_domain_verify", kwargs={"tenant_id": portal_tenant.id, "domain_id": td.id})
+    r = client.post(url)
+    assert r.status_code == 302
+    td.refresh_from_db()
+    assert td.last_checked_at is not None
+    assert "could not finish" in (td.verification_notes or "").lower()

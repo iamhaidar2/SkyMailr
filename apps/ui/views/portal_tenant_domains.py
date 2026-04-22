@@ -7,14 +7,15 @@ import logging
 from django.contrib import messages as django_messages
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from apps.accounts.policy import PolicyError
 from apps.accounts.services.enforcement import assert_can_add_sending_domain, assert_tenant_operational
 from apps.tenants.models import DomainVerificationStatus, PostalProvisionStatus, Tenant, TenantDomain
-from apps.tenants.services.domain_dns_instructions import build_dns_instructions_for_domain
+from apps.providers.domain_records import get_expected_dns_records
 from apps.providers.postal_provisioning import delete_postal_domain
-from apps.tenants.services.domain_verification import check_tenant_domain_dns
+from apps.tenants.services.domain_verification import check_tenant_domain_dns, evaluate_dns_instruction_rows
 from apps.tenants.services.postal_tenant_domain import process_postal_for_tenant_domain
 from apps.tenants.services.sending_readiness import compute_sending_readiness
 from apps.ui.decorators import customer_login_required, portal_account_required, portal_manage_required
@@ -129,11 +130,12 @@ def tenant_domain_detail(request, tenant_id, domain_id):
     postal_fields = process_postal_for_tenant_domain(td, force_provision=False)
     if postal_fields:
         td.save(update_fields=list(dict.fromkeys(postal_fields + ["updated_at"])))
-    dns_instruction_set = build_dns_instructions_for_domain(td)
+    dns_instruction_set = get_expected_dns_records(td)
     show_dns_table = dns_instruction_set.is_customer_ready or any(
         r.kind == "postal_verification" for r in dns_instruction_set.rows
     )
-    dns_rows = dns_instruction_set.rows if show_dns_table else ()
+    dns_row_checks, dns_lib_available = evaluate_dns_instruction_rows(td)
+    dns_row_checks = dns_row_checks if show_dns_table else ()
     readiness = compute_sending_readiness(tenant)
     ctx = _portal_ctx(request, td.domain, "sending_domains")
     ctx.update(
@@ -141,7 +143,8 @@ def tenant_domain_detail(request, tenant_id, domain_id):
             "tenant": tenant,
             "td": td,
             "dns_instruction_set": dns_instruction_set,
-            "dns_rows": dns_rows,
+            "dns_row_checks": dns_row_checks,
+            "dns_lib_available": dns_lib_available,
             "readiness": readiness,
             "can_manage": portal_user_can_manage_tenants(request.user, account),
             "DomainVerificationStatus": DomainVerificationStatus,
@@ -174,7 +177,20 @@ def tenant_domain_verify(request, tenant_id, domain_id):
     denied = _redirect_if_tenant_suspended(request, tenant)
     if denied is not None:
         return denied
-    check_tenant_domain_dns(td)
+    try:
+        check_tenant_domain_dns(td)
+    except Exception:
+        logger.exception(
+            "tenant_domain_verify_failed tenant_id=%s domain_id=%s user_id=%s",
+            tenant.id,
+            td.id,
+            request.user.pk,
+        )
+        td.last_checked_at = timezone.now()
+        td.verification_notes = (
+            "We could not finish the DNS check right now. This is usually temporary — "
+            "try again in a few minutes. If it keeps happening, contact support."
+        )
     td.save(
         update_fields=[
             "verified",

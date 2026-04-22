@@ -103,6 +103,7 @@ def send_raw(request):
             idempotency_key=raw_idem or None,
             sender_profile=sp,
             bypass_quota=request.user.is_staff,
+            bypass_domain_verification=request.user.is_staff,
         )
     except PolicyError as e:
         django_messages.error(request, e.detail)
@@ -202,6 +203,7 @@ def send_template(request):
             scheduled_for=d.get("scheduled_for"),
             sender_profile=sp,
             bypass_quota=request.user.is_staff,
+            bypass_domain_verification=request.user.is_staff,
         )
     except PolicyError as e:
         form.add_error(None, e.detail)

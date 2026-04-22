@@ -191,10 +191,10 @@ def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
                 host_label=host_label_for_record(d, d),
                 value=pv,
                 ttl=300,
-                title="Mail server domain verification",
+                title="Domain control verification",
                 purpose=(
-                    "Proves you control this domain name to our outbound mail server (Postal). "
-                    "This is separate from SPF and DKIM."
+                    "Proves you control this hostname to your email provider. "
+                    "This is separate from SPF and DKIM authentication."
                 ),
                 staff_source="postal",
             )
@@ -271,8 +271,8 @@ def build_dns_instructions_for_domain(td: TenantDomain) -> DnsInstructionSet:
                 ttl=300,
                 title="MX (incoming mail)",
                 purpose=(
-                    "Optional: points inbound mail for this domain at your mail server (Postal). "
-                    "You do not need this record only to send outbound mail."
+                    "Optional: tells the internet where to deliver inbound mail for this domain. "
+                    "You can skip this if you only send outbound mail and receive mail elsewhere."
                 ),
                 staff_source=mx_src,
             )

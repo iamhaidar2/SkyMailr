@@ -1,10 +1,9 @@
 import logging
 
-from django.conf import settings
-
 from apps.messages.models import MessageEvent, MessageEventType, OutboundMessage, OutboundStatus
 from apps.providers.base import EmailMessageDTO
 from apps.providers.registry import get_email_provider
+from apps.tenants.services.domain_verification import dispatch_should_block_unverified_managed_domain
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +17,21 @@ class EmailDispatchService:
         from_email = profile.from_email if profile else tenant.default_sender_email
         from_name = profile.from_name if profile else tenant.default_sender_name
         reply_to = profile.reply_to if profile and profile.reply_to else tenant.reply_to
+
+        blocked, block_reason = dispatch_should_block_unverified_managed_domain(message)
+        if blocked:
+            message.status = OutboundStatus.FAILED
+            message.last_error = block_reason
+            message.retry_count += 1
+            message.save(
+                update_fields=["status", "last_error", "retry_count", "updated_at"]
+            )
+            MessageEvent.objects.create(
+                message=message,
+                event_type=MessageEventType.FAILED,
+                payload={"code": "unverified_sending_domain", "detail": block_reason},
+            )
+            return
 
         dto = EmailMessageDTO(
             to_email=message.to_email,

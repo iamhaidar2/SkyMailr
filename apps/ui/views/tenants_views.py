@@ -298,6 +298,7 @@ def tenant_deliverability_test_send(request, tenant_id):
                 idempotency_key=None,
                 sender_profile=sp,
                 bypass_quota=request.user.is_staff,
+                bypass_domain_verification=request.user.is_staff,
             )
         else:
             tpl = EmailTemplate.objects.filter(tenant=tenant, key=d["template_key"].strip()).first()
@@ -317,6 +318,7 @@ def tenant_deliverability_test_send(request, tenant_id):
                 idempotency_key=None,
                 sender_profile=sp,
                 bypass_quota=request.user.is_staff,
+                bypass_domain_verification=request.user.is_staff,
             )
     except PolicyError as e:
         django_messages.error(request, e.detail)
