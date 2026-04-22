@@ -526,6 +526,67 @@ class ApiKeyCreateForm(forms.Form):
     )
 
 
+class TenantTestSendForm(forms.Form):
+    """Operator test send from tenant deliverability page (uses normal send pipeline)."""
+
+    MODE_RAW = "raw"
+    MODE_TEMPLATE = "template"
+
+    mode = forms.ChoiceField(
+        choices=[(MODE_RAW, "Raw HTML email"), (MODE_TEMPLATE, "Approved template")],
+        initial=MODE_RAW,
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    to_email = forms.EmailField(
+        widget=forms.EmailInput(attrs={"class": _inp, "placeholder": "recipient@example.com"}),
+    )
+    sender_profile = forms.ModelChoiceField(
+        queryset=SenderProfile.objects.none(),
+        required=False,
+        empty_label="Use tenant default sender",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    subject = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "Subject (raw mode)"}),
+    )
+    html_body = forms.CharField(
+        required=False,
+        widget=forms.Textarea(
+            attrs={"rows": 8, "class": _inp + " font-mono text-xs", "placeholder": "<p>…</p> (raw mode)"}
+        ),
+    )
+    text_body = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={"rows": 4, "class": _inp + " font-mono text-xs"}),
+    )
+    template_key = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={"class": _inp, "placeholder": "template_key (template mode)"}),
+    )
+
+    def __init__(self, *args, tenant: Tenant, **kwargs):
+        self.tenant = tenant
+        super().__init__(*args, **kwargs)
+        self.fields["sender_profile"].queryset = SenderProfile.objects.filter(
+            tenant=tenant, is_active=True
+        ).order_by("name")
+
+    def clean(self):
+        data = super().clean()
+        mode = data.get("mode")
+        if mode == self.MODE_RAW:
+            if not (data.get("subject") or "").strip():
+                raise forms.ValidationError("Subject is required for raw test send.")
+            if not (data.get("html_body") or "").strip():
+                raise forms.ValidationError("HTML body is required for raw test send.")
+        elif mode == self.MODE_TEMPLATE:
+            key = (data.get("template_key") or "").strip()
+            if not key:
+                raise forms.ValidationError("Template key is required for template test send.")
+        return data
+
+
 class NewEmailTemplateForm(forms.Form):
     name = forms.CharField(
         widget=forms.TextInput(

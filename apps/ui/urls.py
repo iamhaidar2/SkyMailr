@@ -115,6 +115,16 @@ urlpatterns = [
         tenants_views.tenant_create_api_key,
         name="tenant_create_api_key",
     ),
+    path(
+        "tenants/<uuid:tenant_id>/deliverability/test-send/",
+        tenants_views.tenant_deliverability_test_send,
+        name="tenant_deliverability_test_send",
+    ),
+    path(
+        "tenants/<uuid:tenant_id>/deliverability/",
+        tenants_views.tenant_deliverability,
+        name="tenant_deliverability",
+    ),
     path("providers/health/", ops_views.provider_health, name="provider_health"),
     path("webhooks/", ops_views.webhooks_list, name="webhooks_list"),
     path("suppressions/", suppressions_views.suppressions_list, name="suppressions_list"),

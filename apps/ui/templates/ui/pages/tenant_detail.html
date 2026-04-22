@@ -8,6 +8,7 @@
       <p class="mt-1 text-sm text-slate-500">Status: {{ tenant.get_status_display }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
+      <a href="{% url 'ui:tenant_deliverability' tenant.id %}" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-surface-800">Deliverability</a>
       <a href="{% url 'ui:tenant_edit' tenant.id %}" class="rounded-md border border-surface-600 px-3 py-1.5 text-sm text-slate-200 hover:bg-surface-800">Edit tenant</a>
       <a href="{% url 'ui:tenant_delete' tenant.id %}" class="rounded-md border border-red-900/60 px-3 py-1.5 text-sm text-red-300 hover:bg-red-950/50">Delete tenant</a>
     </div>
