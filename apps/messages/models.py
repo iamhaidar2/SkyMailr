@@ -3,7 +3,7 @@ import uuid
 from django.db import models
 
 from apps.email_templates.models import EmailTemplate, EmailTemplateVersion
-from apps.tenants.models import SenderProfile, Tenant
+from apps.tenants.models import SenderProfile, Tenant, TenantDomain
 
 
 class MessageType(models.TextChoices):
@@ -111,10 +111,43 @@ class OutboundMessage(models.Model):
             models.Index(fields=["tenant", "status", "created_at"]),
             models.Index(fields=["tenant", "to_email", "status"]),
             models.Index(fields=["status", "scheduled_for"]),
+            models.Index(fields=["status", "send_after", "priority", "created_at"]),
         ]
 
     def __str__(self):
         return f"{self.id} -> {self.to_email}"
+
+
+class DispatchRateSlot(models.Model):
+    """
+    One row per accepted dispatch attempt (reserves capacity in sliding windows).
+    Used for tenant per-minute and optional per-domain daily / per-minute caps.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="dispatch_rate_slots")
+    tenant_domain = models.ForeignKey(
+        TenantDomain,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="dispatch_rate_slots",
+    )
+    outbound_message = models.ForeignKey(
+        "OutboundMessage",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="dispatch_rate_slots",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["tenant", "created_at"]),
+            models.Index(fields=["tenant_domain", "created_at"]),
+        ]
 
 
 class OutboundAttempt(models.Model):

@@ -114,6 +114,11 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# Minimum tenant dispatch rate when rate_limit_per_minute is 0 or unset (messages/min rolling window).
+SKYMAILR_DISPATCH_RATE_LIMIT_FLOOR_PER_MINUTE = int(
+    os.environ.get("SKYMAILR_DISPATCH_RATE_LIMIT_FLOOR_PER_MINUTE", "30")
+)
+
 CELERY_BEAT_SCHEDULE = {
     "skymailr-sweep-dispatch": {
         "task": "apps.messages.tasks.sweep_dispatch_queue",

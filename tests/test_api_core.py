@@ -17,11 +17,17 @@ from apps.email_templates.models import (
     VersionSourceType,
 )
 from apps.messages.models import (
+    BounceRecord,
+    ComplaintRecord,
+    MessageEvent,
     MessageEventType,
+    MessageType,
     OutboundMessage,
     OutboundStatus,
     ProviderWebhookEvent,
 )
+from apps.messages.services.send_pipeline import should_suppress
+from apps.subscriptions.models import DeliverySuppression, SuppressionReason
 from apps.messages.services.message_actions import cancel_outbound_message, retry_outbound_message
 from apps.workflows.models import Workflow, WorkflowEnrollment, WorkflowStep, WorkflowStepType
 
@@ -280,7 +286,16 @@ def test_webhook_persists_and_updates_message(api_key, tenant):
     assert ProviderWebhookEvent.objects.filter(provider="postal").exists()
     msg.refresh_from_db()
     assert msg.status == OutboundStatus.DELIVERED
-    assert msg.events.filter(event_type=MessageEventType.DELIVERED).exists()
+    assert msg.events.filter(event_type=MessageEventType.DELIVERED).count() == 1
+    # Same payload twice: idempotent MessageEvent (stable derived provider_event_id).
+    r2 = c.post(
+        f"/api/v1/webhooks/provider/postal/",
+        body,
+        content_type="application/json",
+    )
+    assert r2.status_code == 200
+    msg.refresh_from_db()
+    assert msg.events.filter(event_type=MessageEventType.DELIVERED).count() == 1
 
 
 @pytest.mark.django_db
@@ -294,7 +309,175 @@ def test_webhook_invalid_json_safe():
     assert r.status_code == 200
     ev = ProviderWebhookEvent.objects.order_by("-id").first()
     assert ev is not None
-    assert ev.normalized == {}
+    assert ev.normalized.get("event_type") == "unknown"
+    assert ev.normalized.get("provider") == "postal"
+    assert ev.processing_error.startswith("invalid_json")
+
+
+@pytest.mark.django_db
+def test_webhook_postal_hard_bounce_suppresses_transactional(api_key, tenant):
+    mid = "postal-msg-hard-1"
+    msg = OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.TRANSACTIONAL,
+        to_email="hardbounce@example.com",
+        status=OutboundStatus.SENT,
+        provider_message_id=mid,
+    )
+    body = {
+        "original_message": {
+            "id": mid,
+            "to": "hardbounce@example.com",
+        },
+        "bounce": {
+            "id": 555001,
+            "subject": "550 5.1.1 User unknown",
+        },
+    }
+    c = APIClient()
+    r = c.post(
+        "/api/v1/webhooks/provider/postal/",
+        json.dumps(body),
+        content_type="application/json",
+    )
+    assert r.status_code == 200
+    msg.refresh_from_db()
+    assert msg.status == OutboundStatus.BOUNCED
+    assert BounceRecord.objects.filter(message=msg, bounce_type="hard").exists()
+    sup = DeliverySuppression.objects.filter(
+        tenant=tenant,
+        email__iexact="hardbounce@example.com",
+        reason=SuppressionReason.HARD_BOUNCE,
+    )
+    assert sup.count() == 1
+    assert sup.first().applies_to_marketing is True
+    assert sup.first().applies_to_transactional is True
+    m_sup, _ = should_suppress(tenant, "hardbounce@example.com", MessageType.MARKETING.value)
+    t_sup, _ = should_suppress(tenant, "hardbounce@example.com", MessageType.TRANSACTIONAL.value)
+    assert m_sup and t_sup
+
+
+@pytest.mark.django_db
+def test_webhook_complaint_suppresses_marketing_only(api_key, tenant):
+    mid = str(uuid.uuid4())
+    msg = OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.MARKETING,
+        to_email="complainer@example.com",
+        status=OutboundStatus.SENT,
+        provider_message_id=mid,
+    )
+    body = json.dumps({"message_id": mid, "event": "complaint", "recipient": "complainer@example.com"})
+    c = APIClient()
+    r = c.post("/api/v1/webhooks/provider/postal/", body, content_type="application/json")
+    assert r.status_code == 200
+    msg.refresh_from_db()
+    assert msg.status == OutboundStatus.COMPLAINED
+    assert ComplaintRecord.objects.filter(message=msg).exists()
+    sup = DeliverySuppression.objects.filter(
+        tenant=tenant,
+        email__iexact="complainer@example.com",
+        reason=SuppressionReason.COMPLAINT,
+    )
+    assert sup.count() == 1
+    assert sup.first().applies_to_marketing is True
+    assert sup.first().applies_to_transactional is False
+    m_sup, _ = should_suppress(tenant, "complainer@example.com", MessageType.MARKETING.value)
+    t_sup, _ = should_suppress(tenant, "complainer@example.com", MessageType.TRANSACTIONAL.value)
+    assert m_sup
+    assert not t_sup
+
+
+@pytest.mark.django_db
+def test_webhook_unknown_shape_stored_no_message_change(api_key, tenant):
+    mid = str(uuid.uuid4())
+    msg = OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.TRANSACTIONAL,
+        to_email="u@example.com",
+        status=OutboundStatus.SENT,
+        provider_message_id=mid,
+    )
+    c = APIClient()
+    body = json.dumps({"hello": "world", "nested": {"x": 1}})
+    r = c.post("/api/v1/webhooks/provider/postal/", body, content_type="application/json")
+    assert r.status_code == 200
+    msg.refresh_from_db()
+    assert msg.status == OutboundStatus.SENT
+    ev = ProviderWebhookEvent.objects.order_by("-created_at").first()
+    assert ev.normalized.get("event_type") == "unknown"
+
+
+@pytest.mark.django_db
+def test_webhook_unknown_message_id_no_outbound_update(api_key, tenant):
+    c = APIClient()
+    body = json.dumps({"message_id": "nonexistent-postal-id", "event": "delivered"})
+    r = c.post("/api/v1/webhooks/provider/postal/", body, content_type="application/json")
+    assert r.status_code == 200
+    assert ProviderWebhookEvent.objects.filter(provider="postal").exists()
+
+
+@pytest.mark.django_db
+def test_webhook_hard_bounce_duplicate_no_extra_suppression(api_key, tenant):
+    mid = "dup-bounce-mid"
+    OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.TRANSACTIONAL,
+        to_email="dup@example.com",
+        status=OutboundStatus.SENT,
+        provider_message_id=mid,
+    )
+    body = {
+        "original_message": {"id": mid, "to": "dup@example.com"},
+        "bounce": {"id": 777001, "subject": "550 5.1.1 permanent failure"},
+    }
+    c = APIClient()
+    payload = json.dumps(body)
+    r1 = c.post("/api/v1/webhooks/provider/postal/", payload, content_type="application/json")
+    r2 = c.post("/api/v1/webhooks/provider/postal/", payload, content_type="application/json")
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert (
+        DeliverySuppression.objects.filter(
+            tenant=tenant,
+            email__iexact="dup@example.com",
+            reason=SuppressionReason.HARD_BOUNCE,
+        ).count()
+        == 1
+    )
+    assert MessageEvent.objects.filter(message__provider_message_id=mid).count() == 1
+    assert BounceRecord.objects.filter(message__provider_message_id=mid).count() == 1
+
+
+@pytest.mark.django_db
+def test_webhook_soft_bounce_defers_without_suppression(api_key, tenant):
+    mid = "postal-soft-1"
+    msg = OutboundMessage.objects.create(
+        tenant=tenant,
+        source_app="tests",
+        message_type=MessageType.TRANSACTIONAL,
+        to_email="soft@example.com",
+        status=OutboundStatus.SENT,
+        provider_message_id=mid,
+    )
+    body = {
+        "original_message": {"id": mid, "to": "soft@example.com"},
+        "bounce": {"id": 888001, "subject": "451 4.7.1 Try again later greylisted"},
+    }
+    c = APIClient()
+    r = c.post("/api/v1/webhooks/provider/postal/", json.dumps(body), content_type="application/json")
+    assert r.status_code == 200
+    msg.refresh_from_db()
+    assert msg.status == OutboundStatus.DEFERRED
+    assert BounceRecord.objects.filter(message=msg, bounce_type="soft").exists()
+    assert not DeliverySuppression.objects.filter(
+        tenant=tenant,
+        email__iexact="soft@example.com",
+        reason=SuppressionReason.HARD_BOUNCE,
+    ).exists()
 
 
 @pytest.mark.django_db

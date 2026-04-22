@@ -3,6 +3,7 @@ from django.contrib import admin
 from apps.messages.models import (
     BounceRecord,
     ComplaintRecord,
+    DispatchRateSlot,
     IdempotencyKeyRecord,
     MessageEvent,
     OutboundAttempt,
@@ -24,6 +25,13 @@ class OutboundMessageAdmin(admin.ModelAdmin):
     search_fields = ("to_email", "subject_rendered")
     readonly_fields = ("id", "created_at", "updated_at")
     inlines = [MessageEventInline]
+
+
+@admin.register(DispatchRateSlot)
+class DispatchRateSlotAdmin(admin.ModelAdmin):
+    list_display = ("id", "tenant", "tenant_domain", "outbound_message", "created_at")
+    list_filter = ("tenant",)
+    readonly_fields = ("id", "created_at")
 
 
 @admin.register(OutboundAttempt)

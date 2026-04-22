@@ -185,6 +185,41 @@ class TenantDomain(models.Model):
         return f"{self.domain} ({self.tenant.slug})"
 
 
+class TenantDomainSendingPolicy(models.Model):
+    """
+    Optional per-domain send caps (warmup / reputation protection).
+    When enabled, per_minute_limit and daily_limit tighten dispatch alongside tenant limits.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tenant_domain = models.OneToOneField(
+        TenantDomain,
+        on_delete=models.CASCADE,
+        related_name="sending_policy",
+    )
+    enabled = models.BooleanField(default=True)
+    daily_limit = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Max dispatch slots per calendar day (tenant timezone); null = no daily cap.",
+    )
+    per_minute_limit = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Max dispatch slots per rolling minute for this domain; null = use tenant limit only.",
+    )
+    warmup_stage = models.PositiveIntegerField(default=0)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"SendingPolicy<{self.tenant_domain.domain}>"
+
+
 class SenderProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="sender_profiles")

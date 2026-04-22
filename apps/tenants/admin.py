@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from apps.tenants.models import SenderProfile, Tenant, TenantAPIKey, TenantDomain
+from apps.tenants.models import (
+    SenderProfile,
+    Tenant,
+    TenantAPIKey,
+    TenantDomain,
+    TenantDomainSendingPolicy,
+)
 
 
 @admin.register(Tenant)
@@ -83,6 +89,20 @@ class TenantDomainAdmin(admin.ModelAdmin):
         ),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
+
+
+@admin.register(TenantDomainSendingPolicy)
+class TenantDomainSendingPolicyAdmin(admin.ModelAdmin):
+    list_display = (
+        "tenant_domain",
+        "enabled",
+        "per_minute_limit",
+        "daily_limit",
+        "warmup_stage",
+        "updated_at",
+    )
+    list_filter = ("enabled",)
+    readonly_fields = ("id", "created_at", "updated_at")
 
 
 @admin.register(SenderProfile)

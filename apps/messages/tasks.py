@@ -5,8 +5,15 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
 
-from apps.messages.models import OutboundMessage, OutboundStatus
+from django.db import transaction
+
+from apps.messages.models import MessageEvent, MessageEventType, OutboundMessage, OutboundStatus
 from apps.messages.services.dispatch import EmailDispatchService
+from apps.messages.services.throttling import (
+    calculate_next_send_time,
+    can_send_now,
+    record_send_attempt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +39,33 @@ def dispatch_message_task(self, message_id: str):
             args=[str(msg.id)], eta=msg.send_after
         )
         return
+
+    with transaction.atomic():
+        allowed, next_when, reason = can_send_now(msg)
+        if not allowed:
+            when = next_when or calculate_next_send_time(msg)
+            msg.status = OutboundStatus.DEFERRED
+            msg.next_retry_at = when
+            msg.last_error = reason[:2000]
+            msg.save(update_fields=["status", "next_retry_at", "last_error", "updated_at"])
+            MessageEvent.objects.create(
+                message=msg,
+                event_type=MessageEventType.DEFERRED,
+                payload={"reason": reason, "next_retry_at": when.isoformat()},
+            )
+            return
+        if not record_send_attempt(msg):
+            when = calculate_next_send_time(msg)
+            msg.status = OutboundStatus.DEFERRED
+            msg.next_retry_at = when
+            msg.last_error = "rate_limited: capacity race; retry later"
+            msg.save(update_fields=["status", "next_retry_at", "last_error", "updated_at"])
+            MessageEvent.objects.create(
+                message=msg,
+                event_type=MessageEventType.DEFERRED,
+                payload={"reason": "rate_limited: capacity race", "next_retry_at": when.isoformat()},
+            )
+            return
 
     try:
         EmailDispatchService().dispatch(msg)
@@ -61,7 +95,7 @@ def sweep_dispatch_queue():
     qs = OutboundMessage.objects.filter(
         status=OutboundStatus.QUEUED,
         send_after__lte=now,
-    ).order_by("send_after")[:200]
+    ).order_by("priority", "send_after", "created_at")[:200]
     for msg in qs:
         dispatch_message_task.delay(str(msg.id))
 
