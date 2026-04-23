@@ -1,0 +1,19 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-lg space-y-6">
+  <h2 class="text-xl font-semibold text-white">Remove suppression?</h2>
+  <div class="rounded-xl border border-surface-600 bg-surface-850 p-5 text-sm text-slate-300">
+    <p><span class="text-slate-500">Email</span> <span class="font-mono">{{ suppression.email }}</span></p>
+    <p class="mt-2"><span class="text-slate-500">Reason</span> {{ suppression.get_reason_display }}</p>
+    <p class="mt-2"><span class="text-slate-500">Connected app</span> {% if suppression.tenant %}{{ suppression.tenant.name }}{% else %}—{% endif %}</p>
+    <p class="mt-2"><span class="text-slate-500">Marketing</span> {{ suppression.applies_to_marketing|yesno:"Yes,No" }} · <span class="text-slate-500">Transactional</span> {{ suppression.applies_to_transactional|yesno:"Yes,No" }}</p>
+    <p class="mt-3 text-xs text-slate-500">Details: {{ metadata_summary }}</p>
+    <p class="mt-4 text-amber-200/90">After removal, mail to this address may be sent again if policy allows. Other blocks (e.g. global) may still apply.</p>
+  </div>
+  <form method="post" class="flex flex-wrap gap-3">
+    {% csrf_token %}
+    <button type="submit" class="rounded-md bg-red-900/80 px-4 py-2 text-sm text-white hover:bg-red-800">Yes, remove suppression</button>
+    <a href="{% url 'portal:suppressions_list' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Cancel</a>
+  </form>
+</div>
+{% endblock %}

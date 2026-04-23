@@ -1,0 +1,42 @@
+{% extends "ui/customer/base.html" %}
+{% block content %}
+<div class="mx-auto max-w-xl space-y-6">
+  <div class="flex items-center justify-between gap-4">
+    <h2 class="text-xl font-semibold text-white">Add suppression</h2>
+    <a href="{% url 'portal:suppressions_list' %}" class="text-sm text-slate-400 hover:text-white">← Suppressions</a>
+  </div>
+  <p class="text-sm text-slate-400">Creates a <strong class="text-slate-300">manual</strong> block for the selected connected app. If a manual row already exists for that app and email, we update the marketing/transactional flags and your note.</p>
+
+  <section class="rounded-xl border border-surface-600 bg-surface-850/80 p-4 text-xs text-slate-400">
+    <p><strong class="text-slate-300">Marketing only</strong> is the safest default: receipts and security mail can still be sent if your integration marks them as transactional. Checking <strong class="text-slate-300">transactional / system</strong> stops all mail types covered by the suppression layer—use when the address must not receive anything from that app.</p>
+  </section>
+
+  <form method="post" class="space-y-4 rounded-xl border border-surface-600 bg-surface-850 p-6">
+    {% csrf_token %}
+    <div>
+      <label class="mb-1 block text-xs text-slate-500" for="id_email">Email</label>
+      {{ form.email }}
+    </div>
+    <div>
+      <label class="mb-1 block text-xs text-slate-500" for="id_tenant">Connected app</label>
+      {{ form.tenant }}
+    </div>
+    <div class="flex flex-wrap gap-6">
+      <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+        {{ form.applies_to_marketing }} {{ form.applies_to_marketing.label }}
+      </label>
+      <label class="inline-flex items-center gap-2 text-sm text-slate-300">
+        {{ form.applies_to_transactional }} {{ form.applies_to_transactional.label }}
+      </label>
+    </div>
+    <div>
+      <label class="mb-1 block text-xs text-slate-500" for="id_note">{{ form.note.label }}</label>
+      {{ form.note }}
+    </div>
+    {% if form.non_field_errors %}
+      <div class="text-sm text-red-300">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Save suppression</button>
+  </form>
+</div>
+{% endblock %}

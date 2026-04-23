@@ -102,6 +102,8 @@ def portal_nav_items() -> list[dict[str, str]]:
         {"label": "Sending domains", "url": reverse("portal:sending_domains"), "name": "sending_domains"},
         {"label": "Members", "url": reverse("portal:members_list"), "name": "members"},
         {"label": "Messages", "url": reverse("portal:messages_list"), "name": "messages"},
+        {"label": "Suppressions", "url": reverse("portal:suppressions_list"), "name": "suppressions"},
+        {"label": "Webhooks", "url": reverse("portal:webhooks_overview"), "name": "webhooks"},
         {"label": "Usage", "url": reverse("portal:account_usage"), "name": "usage"},
         {"label": "Billing", "url": reverse("portal:account_billing"), "name": "billing"},
     ]

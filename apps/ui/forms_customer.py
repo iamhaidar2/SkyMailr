@@ -14,6 +14,8 @@ from django.utils.text import slugify
 
 from apps.accounts.models import Account, AccountMembership, AccountRole, AccountStatus
 from apps.email_templates.models import TemplateCategory
+from apps.messages.models import MessageEventType
+from apps.subscriptions.models import SuppressionReason
 from apps.tenants.models import SenderProfile, Tenant, TenantDomain
 from apps.tenants.services.domain_dns_instructions import normalize_fqdn
 from apps.ui.forms import TenantForm, WorkflowEnrollForm
@@ -582,6 +584,165 @@ class InviteSignupForm(forms.Form):
         if p1:
             validate_password(p1)
         return self.cleaned_data
+
+
+class PortalSuppressionFilterForm(forms.Form):
+    """Filter suppressions visible in the customer portal (own tenants + global)."""
+
+    email = forms.CharField(
+        required=False,
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "Email contains…", "autocomplete": "off"}
+        ),
+    )
+    reason = forms.ChoiceField(
+        required=False,
+        choices=[("", "Any reason")] + list(SuppressionReason.choices),
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    tenant = forms.ModelChoiceField(
+        queryset=Tenant.objects.none(),
+        required=False,
+        empty_label="Any connected app",
+        label="Connected app",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    scope = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("", "Your rows + global"),
+            ("mine", "Your rows only"),
+            ("global", "Global only"),
+        ],
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    affects = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("", "Any channel"),
+            ("marketing", "Affects marketing"),
+            ("transactional", "Affects transactional"),
+        ],
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date", "class": _inp}),
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date", "class": _inp}),
+    )
+
+    def __init__(self, *args, account: Account, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._account = account
+        self.fields["tenant"].queryset = Tenant.objects.filter(
+            account=account
+        ).order_by("name")
+
+
+class PortalManualSuppressionForm(forms.Form):
+    """Add a manual suppression in the customer portal, scoped to one of the account's tenants."""
+
+    email = forms.EmailField(
+        widget=forms.EmailInput(
+            attrs={"class": _inp, "placeholder": "recipient@example.com"}
+        ),
+    )
+    tenant = forms.ModelChoiceField(
+        queryset=Tenant.objects.none(),
+        empty_label=None,
+        label="Connected app",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    applies_to_marketing = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Block marketing / lifecycle email",
+        widget=forms.CheckboxInput(attrs={"class": _chk}),
+    )
+    applies_to_transactional = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Block transactional / system email",
+        widget=forms.CheckboxInput(attrs={"class": _chk}),
+    )
+    note = forms.CharField(
+        required=False,
+        label="Note (saved in metadata)",
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "class": _inp,
+                "placeholder": "Why are you blocking this address? (optional)",
+            }
+        ),
+    )
+
+    def __init__(self, *args, account: Account, single_tenant: Tenant | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._account = account
+        qs = Tenant.objects.filter(account=account).order_by("name")
+        self.fields["tenant"].queryset = qs
+        if single_tenant is not None:
+            self.fields["tenant"].initial = single_tenant.pk
+            self.fields["tenant"].queryset = qs.filter(pk=single_tenant.pk)
+
+    def clean_tenant(self):
+        t = self.cleaned_data.get("tenant")
+        if t is None or t.account_id != self._account.id:
+            raise forms.ValidationError("Choose one of your connected apps.")
+        return t
+
+    def clean(self):
+        data = super().clean()
+        m = bool(data.get("applies_to_marketing"))
+        t = bool(data.get("applies_to_transactional"))
+        if not m and not t:
+            raise forms.ValidationError(
+                "Select at least one of marketing or transactional."
+            )
+        return data
+
+
+class PortalWebhookEventFilterForm(forms.Form):
+    """Filter the portal webhook / delivery event feed."""
+
+    tenant = forms.ModelChoiceField(
+        queryset=Tenant.objects.none(),
+        required=False,
+        empty_label="Any connected app",
+        label="Connected app",
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    event_type = forms.ChoiceField(
+        required=False,
+        choices=[("", "Any event")] + list(MessageEventType.choices),
+        widget=forms.Select(attrs={"class": _inp}),
+    )
+    to_email = forms.CharField(
+        required=False,
+        label="Recipient contains",
+        widget=forms.TextInput(
+            attrs={"class": _inp, "placeholder": "user@example.com", "autocomplete": "off"}
+        ),
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date", "class": _inp}),
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date", "class": _inp}),
+    )
+
+    def __init__(self, *args, account: Account, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._account = account
+        self.fields["tenant"].queryset = Tenant.objects.filter(
+            account=account
+        ).order_by("name")
 
 
 class PortalTenantDomainForm(forms.Form):

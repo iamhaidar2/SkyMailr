@@ -18,11 +18,12 @@ def merge_manual_suppression_metadata(
     actor_username: str,
     source_message_id: str | None = None,
     extra: dict[str, Any] | None = None,
+    source: str = "operator_manual",
 ) -> dict[str, Any]:
     meta: dict[str, Any] = {
         "note": (note or "").strip(),
         "created_by_username": actor_username,
-        "source": "operator_manual",
+        "source": source,
     }
     if source_message_id:
         meta["outbound_message_id"] = str(source_message_id)

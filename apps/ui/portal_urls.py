@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.ui.views import portal_automation, portal_tenant_domains
+from apps.ui.views import portal_automation, portal_suppressions, portal_tenant_domains, portal_webhooks
 from apps.ui.views.customer_portal import (
     CustomerLoginView,
     CustomerLogoutView,
@@ -136,6 +136,26 @@ urlpatterns = [
     path("account/api-keys/", api_keys_hub, name="api_keys"),
     path("account/api-keys/create/", api_keys_hub_create, name="api_keys_hub_create"),
     path("account/messages/", messages_list, name="messages_list"),
+    path(
+        "account/suppressions/",
+        portal_suppressions.portal_suppression_list,
+        name="suppressions_list",
+    ),
+    path(
+        "account/suppressions/add/",
+        portal_suppressions.portal_suppression_add,
+        name="suppression_add",
+    ),
+    path(
+        "account/suppressions/<uuid:suppression_id>/delete/",
+        portal_suppressions.portal_suppression_delete,
+        name="suppression_delete",
+    ),
+    path(
+        "account/webhooks/",
+        portal_webhooks.portal_webhooks_overview,
+        name="webhooks_overview",
+    ),
     # Sender profiles
     path("account/sender-profiles/", portal_automation.sender_profile_list, name="sender_profile_list"),
     path(

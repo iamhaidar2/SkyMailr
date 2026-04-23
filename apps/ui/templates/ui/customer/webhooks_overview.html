@@ -1,0 +1,112 @@
+{% extends "ui/customer/base.html" %}
+{% block extra_head %}
+<style>
+  .wh-code { font-family: ui-monospace, monospace; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-8">
+  <div>
+    <h2 class="text-2xl font-semibold text-white">Webhooks &amp; delivery events</h2>
+    <p class="mt-1 text-sm text-slate-400">See what happened to your mail after send: delivered, bounced, opened, and more. Use this page to debug a recipient or campaign; use the API to integrate with your own systems.</p>
+  </div>
+
+  <section class="space-y-4 rounded-xl border border-surface-600 bg-surface-850/80 p-5 text-sm text-slate-300">
+    <h3 class="text-sm font-semibold text-white">Why, when, and how</h3>
+    <div class="space-y-3">
+      <p><strong class="text-slate-200">Inbound webhooks (provider → SkyMailr):</strong> Your mail provider (e.g. Postal) sends delivery feedback to SkyMailr so we can update message status, record bounces/complaints, and apply suppressions. You do not call this URL from your product code—your provider is configured once on the server. The path pattern is:</p>
+      <pre class="wh-code overflow-x-auto rounded-lg bg-surface-900 p-3 text-xs text-emerald-200/85">{{ inbound_webhook_url_pattern }}</pre>
+      <p class="text-xs text-slate-500">Replace <span class="wh-code text-slate-400">&lt;provider_name&gt;</span> with the provider configured in SkyMailr (e.g. <span class="wh-code text-slate-400">postal</span>). Operators configure the exact URL in the provider / Postal project settings.</p>
+
+      <p><strong class="text-slate-200">Outbound events (SkyMailr → your app):</strong> Poll or stream events from your backend using the API—there is a stable events feed per message:</p>
+      <pre class="wh-code overflow-x-auto rounded-lg bg-surface-900 p-3 text-xs text-emerald-200/85">GET {{ request.scheme }}://{{ request.get_host }}/api/v1/messages/&lt;message_uuid&gt;/events/
+Authorization: Bearer &lt;your API key&gt;</pre>
+      <p class="text-xs text-slate-500">Create an API key under <a href="{% url 'portal:api_keys' %}" class="text-blue-400 hover:underline">API keys</a>. The response lists events (delivered, bounced, etc.) with payloads. The table below is the same data, filtered to your account.</p>
+
+      <p><strong class="text-slate-200">Webhook secret (per connected app):</strong> On each app’s <span class="text-slate-400">Manage app</span> page you can set an optional <em>webhook secret</em> for future signed callbacks or integrations. Keep it in a secret manager; if you rotate it, update any code that verifies signatures.</p>
+    </div>
+  </section>
+
+  {% if portal_tenants_for_webhooks %}
+  <section class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+    <h3 class="text-sm font-semibold text-white">Connected apps</h3>
+    <ul class="mt-3 divide-y divide-surface-700 text-sm text-slate-400">
+      {% for t in portal_tenants_for_webhooks %}
+        <li class="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0">
+          <span class="text-slate-200">{{ t.name }}</span>
+          <a href="{% url 'portal:tenant_detail' t.id %}" class="text-xs text-blue-400 hover:underline">App settings (webhook secret)</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <form method="get" class="rounded-xl border border-surface-600 bg-surface-850 p-4">
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Connected app</label>
+        {{ filter_form.tenant }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Event type</label>
+        {{ filter_form.event_type }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">Recipient contains</label>
+        {{ filter_form.to_email }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">From date</label>
+        {{ filter_form.date_from }}
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-slate-500">To date</label>
+        {{ filter_form.date_to }}
+      </div>
+    </div>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button type="submit" class="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white">Apply</button>
+      <a href="{% url 'portal:webhooks_overview' %}" class="rounded-md border border-surface-600 px-4 py-2 text-sm text-slate-300 hover:bg-surface-800">Reset</a>
+    </div>
+  </form>
+
+  <div class="overflow-hidden rounded-xl border border-surface-600 bg-surface-850">
+    <table class="min-w-full text-left text-sm">
+      <thead class="bg-surface-800 text-xs uppercase text-slate-500">
+        <tr>
+          <th class="px-4 py-2">Time</th>
+          <th class="px-4 py-2">App</th>
+          <th class="px-4 py-2">Recipient</th>
+          <th class="px-4 py-2">Event</th>
+          <th class="px-4 py-2">Payload preview</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-700">
+        {% for row in event_rows %}
+          <tr class="hover:bg-surface-800/80">
+            <td class="whitespace-nowrap px-4 py-2 text-slate-500">{{ row.ev.created_at }}</td>
+            <td class="px-4 py-2 text-slate-300">{{ row.tenant.name }}</td>
+            <td class="max-w-[12rem] truncate px-4 py-2 font-mono text-xs text-slate-400" title="{{ row.to_email }}">{{ row.to_email }}</td>
+            <td class="px-4 py-2">{{ row.ev.get_event_type_display }}</td>
+            <td class="max-w-md truncate px-4 py-2 font-mono text-xs text-slate-500" title="{{ row.payload_preview }}">{{ row.payload_preview }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" class="px-4 py-10 text-center text-slate-500">No delivery events yet for this filter. Send mail and wait for provider callbacks, or widen the date range.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+    <div class="flex justify-center gap-2 text-sm">
+      {% if page_obj.has_previous %}
+        <a class="text-blue-400" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+      <span class="text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="text-blue-400" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
